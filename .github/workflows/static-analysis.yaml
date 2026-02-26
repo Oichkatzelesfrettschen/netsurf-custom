@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v2
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
@@ -37,7 +37,7 @@ jobs:
                pkg-config
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.0
       with:
         key: ${{ github.job }}
         max-size: 128M
@@ -65,3 +65,34 @@ jobs:
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
+
+  cppcheck:
+    name: cppcheck
+    runs-on: ubuntu-22.04
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Install cppcheck
+      run: sudo apt-get update -qq && sudo apt-get install --no-install-recommends -y cppcheck
+
+    - name: Run cppcheck
+      # Suppress duktape.c (large vendored file with intentional patterns)
+      # and generated binding files which are auto-generated from WebIDL
+      run: |
+        cppcheck \
+          --error-exitcode=1 \
+          --force \
+          --suppress=*:content/handlers/javascript/duktape/duktape.c \
+          --inline-suppr \
+          -j "$(nproc)" \
+          --std=c99 \
+          -I include \
+          -I . \
+          content/ \
+          desktop/ \
+          utils/ \
+          2>&1

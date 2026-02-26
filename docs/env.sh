@@ -171,6 +171,36 @@ ns_freebsdpkg_install()
 }
 
 
+# packages for Arch Linux / CachyOS install
+# pacman commandline to install necessary dev packages
+ns_pacman_install()
+{
+    NS_DEV_PAC="base-devel pkgconf git gperf curl expat libpng libjpeg-turbo libutf8proc openssl"
+
+    NS_TOOL_PAC="flex bison perl-html-parser ccache check"
+
+    case "${TARGET_TOOLKIT}" in
+	gtk2)
+	    NS_TK_PAC="gtk2 librsvg"
+	    ;;
+	gtk3)
+	    NS_TK_PAC="gtk3 librsvg"
+	    ;;
+	qt6)
+	    NS_TK_PAC="qt6-base"
+	    ;;
+	framebuffer)
+	    NS_TK_PAC="freetype2 sdl12-compat"
+	    ;;
+	*)
+	    NS_TK_PAC=""
+	    ;;
+    esac
+
+    sudo pacman -S --needed $(echo ${NS_DEV_PAC} ${NS_TOOL_PAC} ${NS_TK_PAC})
+}
+
+
 # generic for help text
 ns_generic_install()
 {
@@ -206,7 +236,9 @@ ns_generic_install()
 #  looks for package managers and tries to use them if present
 ns-package-install()
 {
-    if [ -x "/usr/bin/zypper" ]; then
+    if [ -x "/usr/bin/pacman" ]; then
+        ns_pacman_install
+    elif [ -x "/usr/bin/zypper" ]; then
         ns_zypper_install
     elif [ -x "/usr/bin/apt-get" ]; then
         ns_apt_get_install

@@ -23,7 +23,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
@@ -50,7 +50,7 @@ jobs:
                wbritish # Needed for `/usr/share/dict/words`, used by test
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.0
       with:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.compiler.vendor }}
         max-size: 128M
@@ -66,11 +66,6 @@ jobs:
           ns-clone -d -s -b ${GITHUB_REF_NAME}
           ns-make-tools install
           ns-make-libs install
-
-    - name: Disable -Werror
-      # We can remove this step if we ever move to GitHub properly.
-      run: |
-          find . -type f -name Makefile | xargs sed -i 's/-Werror//'
 
     - name: Unit Tests
       # Fails when built with clang:
@@ -132,7 +127,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
@@ -159,7 +154,7 @@ jobs:
                pkg-config
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.0
       with:
         key: ${{ github.job }}-${{ matrix.build.toolchain }}
         max-size: 128M
@@ -293,3 +288,53 @@ jobs:
         name: ${{ matrix.build.toolchain }}-${{ matrix.build.frontend }}
         path: ${{ matrix.build.pkg-file }}
         compression-level: 0 # Avoid pointless recompression
+
+  # Arch Linux native build
+  arch:
+    name: 'Arch Linux: GTK3'
+    runs-on: ubuntu-latest
+    container:
+      image: archlinux:latest
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: Install system packages
+      run: |
+        pacman -Syu --noconfirm --needed \
+          base-devel pkgconf git gperf curl expat \
+          libpng libjpeg-turbo libutf8proc openssl flex bison \
+          perl-html-parser ccache check gtk3 librsvg
+
+    - name: Build and install project libs
+      env:
+        REPO_BASE_URI: https://github.com/netsurf-browser
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        TARGET_TOOLKIT: gtk3
+      run: |
+        unset HOST
+        source docs/env.sh
+        ns-clone -d -b ${GITHUB_REF_NAME} || ns-clone -d
+        ns-make-tools install
+        ns-make-libs install
+
+    - name: Build NetSurf GTK3
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        TARGET_TOOLKIT: gtk3
+      run: |
+        unset HOST
+        source docs/env.sh
+        make -j"$(nproc)" TARGET=gtk
+
+    - name: Unit Tests
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        TARGET_TOOLKIT: gtk3
+      run: |
+        unset HOST
+        source docs/env.sh
+        make test

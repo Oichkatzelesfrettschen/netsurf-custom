@@ -14,7 +14,7 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4
       with:
         fetch-depth: 1
 
@@ -42,7 +42,7 @@ jobs:
                wbritish # Needed for `/usr/share/dict/words`, used by test
 
     - name: ccache
-      uses: hendrikmuhs/ccache-action@v1.2
+      uses: hendrikmuhs/ccache-action@v1.2.0
       with:
         key: ${{ github.job }}
         max-size: 128M
@@ -56,11 +56,6 @@ jobs:
           ns-clone -d -s -b ${GITHUB_REF_NAME}
           ns-make-tools install
           ns-make-libs install
-
-    - name: Disable -Werror
-      # We can remove this step if we ever move to GitHub properly.
-      run: |
-          find . -type f -name Makefile | xargs sed -i 's/-Werror//'
 
     - name: Build NetSurf Monkey
       run: |
