@@ -156,7 +156,7 @@ box_normalise_table_row(struct box *row,
 	struct box *cell = NULL;
 	css_computed_style *style;
 	unsigned int i;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 
 	assert(row != NULL);
 	assert(row->type == BOX_TABLE_ROW);
@@ -294,7 +294,7 @@ box_normalise_table_row_group(struct box *row_group,
 	struct box *next_child;
 	struct box *row;
 	css_computed_style *style;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 	unsigned int group_row_count = 0;
 
 	assert(row_group != 0);
@@ -465,7 +465,7 @@ box_normalise_table_spans(struct box *table,
 	unsigned int rows_left = table->rows;
 	unsigned int group_rows_left;
 	unsigned int col;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 
 	ctx.root_style = root->style;
 
@@ -621,7 +621,7 @@ box_normalise_table(struct box *table, const struct box *root, html_content * c)
 	struct box *row_group;
 	css_computed_style *style;
 	struct columns col_info;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 
 	assert(table != NULL);
 	assert(table->type == BOX_TABLE);
@@ -824,7 +824,7 @@ static bool box_normalise_flex(
 	struct box *next_child;
 	struct box *implied_flex_item;
 	css_computed_style *style;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 
 	assert(flex_container != NULL);
 	assert(root != NULL);
@@ -1091,7 +1091,7 @@ box_normalise_block(struct box *block, const struct box *root, html_content *c)
 	struct box *next_child;
 	struct box *table;
 	css_computed_style *style;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 
 	assert(block != NULL);
 	assert(root != NULL);

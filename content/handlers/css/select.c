@@ -1528,6 +1528,55 @@ css_error node_is_visited(void *pw, void *node, bool *match)
 }
 
 /**
+ * Test whether candidate is node or an ancestor of node.
+ *
+ * Used by :hover and :active: when the pointer is over a descendant,
+ * all ancestors also match :hover per CSS Selectors Level 3 sec 6.6.1.
+ *
+ * \param candidate  Node to test ancestry for (not ref-counted by caller)
+ * \param node       The hovered / active leaf node (not ref-counted by caller)
+ * \return true if candidate == node or candidate is an ancestor of node
+ *
+ * Note: This function walks the ancestor chain using dom_node_get_parent_node
+ * which increments the ref-count on each returned parent.  All intermediate
+ * parents (everything except the initial \a node pointer) are unref'd before
+ * the function returns.
+ */
+static bool node_is_ancestor_or_self(dom_node *candidate, dom_node *node)
+{
+	dom_node *cur = node;
+	bool first = true;
+
+	while (cur != NULL) {
+		bool match = (cur == candidate);
+
+		dom_node *parent = NULL;
+		dom_exception exc = dom_node_get_parent_node(cur, &parent);
+
+		/* Release intermediate parents (not the initial node pointer) */
+		if (!first) {
+			dom_node_unref(cur);
+		}
+		first = false;
+
+		if (match) {
+			if (parent != NULL) {
+				dom_node_unref(parent);
+			}
+			return true;
+		}
+
+		if (exc != DOM_NO_ERR) {
+			break;
+		}
+
+		cur = parent;
+	}
+
+	return false;
+}
+
+/**
  * Callback to determine if a node is currently being hovered over.
  *
  * \param pw     HTML document
@@ -1536,12 +1585,21 @@ css_error node_is_visited(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match will contain true if the node matches and false otherwise.
+ *
+ * Per CSS Selectors Level 3 section 6.6.1, :hover applies to the element
+ * under the pointer and all its ancestors.  We test whether \a node is
+ * the hover_node stored in the selection context or an ancestor of it.
  */
 css_error node_is_hover(void *pw, void *node, bool *match)
 {
-	/** \todo Support hovering */
+	nscss_select_ctx *ctx = pw;
 
 	*match = false;
+
+	if (ctx->hover_node != NULL) {
+		*match = node_is_ancestor_or_self((dom_node *)node,
+						  ctx->hover_node);
+	}
 
 	return CSS_OK;
 }
@@ -1555,12 +1613,20 @@ css_error node_is_hover(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match will contain true if the node matches and false otherwise.
+ *
+ * :active matches the element being activated (mouse button held) and its
+ * ancestors, mirroring the :hover ancestor rule.
  */
 css_error node_is_active(void *pw, void *node, bool *match)
 {
-	/** \todo Support active nodes */
+	nscss_select_ctx *ctx = pw;
 
 	*match = false;
+
+	if (ctx->active_node != NULL) {
+		*match = node_is_ancestor_or_self((dom_node *)node,
+						  ctx->active_node);
+	}
 
 	return CSS_OK;
 }
@@ -1574,14 +1640,46 @@ css_error node_is_active(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match will contain true if the node matches and false otherwise.
+ *
+ * :focus matches exactly the focused element; it does not propagate to
+ * ancestors (unlike :hover).
  */
 css_error node_is_focus(void *pw, void *node, bool *match)
 {
-	/** \todo Support focussed nodes */
+	nscss_select_ctx *ctx = pw;
 
-	*match = false;
+	*match = (ctx->focus_node != NULL && ctx->focus_node == (dom_node *)node);
 
 	return CSS_OK;
+}
+
+/**
+ * Test whether a node is a disableable form control (input, button, select,
+ * or textarea).
+ *
+ * \param n     DOM element node
+ * \return true if the element can carry the disabled state
+ */
+static bool node_is_form_control(dom_node *n)
+{
+	dom_string *name = NULL;
+	dom_exception exc;
+	bool result = false;
+
+	exc = dom_node_get_node_name(n, &name);
+	if (exc != DOM_NO_ERR || name == NULL) {
+		return false;
+	}
+
+	if (dom_string_caseless_lwc_isequal(name, corestring_lwc_input) ||
+	    dom_string_caseless_lwc_isequal(name, corestring_lwc_button) ||
+	    dom_string_caseless_lwc_isequal(name, corestring_lwc_select) ||
+	    dom_string_caseless_lwc_isequal(name, corestring_lwc_textarea)) {
+		result = true;
+	}
+
+	dom_string_unref(name);
+	return result;
 }
 
 /**
@@ -1593,12 +1691,35 @@ css_error node_is_focus(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match with contain true if the node is enabled and false otherwise.
+ *
+ * Applies to form elements (input, button, select, textarea).  An element is
+ * enabled when it is a form control that does NOT have the "disabled"
+ * attribute present.
  */
 css_error node_is_enabled(void *pw, void *node, bool *match)
 {
-	/** \todo Support enabled nodes */
+	dom_exception exc;
+	dom_node *n = (dom_node *)node;
+	dom_node_type ntype;
+	bool has_disabled;
 
+	(void)pw;
 	*match = false;
+
+	exc = dom_node_get_node_type(n, &ntype);
+	if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+		return CSS_OK;
+	}
+
+	if (!node_is_form_control(n)) {
+		return CSS_OK;
+	}
+
+	exc = dom_element_has_attribute(n, corestring_dom_disabled,
+					&has_disabled);
+	if (exc == DOM_NO_ERR) {
+		*match = !has_disabled;
+	}
 
 	return CSS_OK;
 }
@@ -1612,12 +1733,29 @@ css_error node_is_enabled(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match with contain true if the node is disabled and false otherwise.
+ *
+ * A form element is disabled when it has the "disabled" attribute present.
  */
 css_error node_is_disabled(void *pw, void *node, bool *match)
 {
-	/** \todo Support disabled nodes */
+	dom_exception exc;
+	dom_node *n = (dom_node *)node;
+	dom_node_type ntype;
+	bool has_disabled;
 
+	(void)pw;
 	*match = false;
+
+	exc = dom_node_get_node_type(n, &ntype);
+	if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+		return CSS_OK;
+	}
+
+	exc = dom_element_has_attribute(n, corestring_dom_disabled,
+					&has_disabled);
+	if (exc == DOM_NO_ERR) {
+		*match = has_disabled;
+	}
 
 	return CSS_OK;
 }
@@ -1631,12 +1769,43 @@ css_error node_is_disabled(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match with contain true if the node is checked and false otherwise.
+ *
+ * Applies to input[type=checkbox] and input[type=radio].  We query the live
+ * IDL "checked" property via dom_html_input_element_get_checked so that
+ * scripted changes (not just the initial "checked" attribute) are reflected.
  */
 css_error node_is_checked(void *pw, void *node, bool *match)
 {
-	/** \todo Support checked nodes */
+	dom_exception exc;
+	dom_node *n = (dom_node *)node;
+	dom_node_type ntype;
+	dom_string *name = NULL;
+	bool checked = false;
 
+	(void)pw;
 	*match = false;
+
+	exc = dom_node_get_node_type(n, &ntype);
+	if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+		return CSS_OK;
+	}
+
+	exc = dom_node_get_node_name(n, &name);
+	if (exc != DOM_NO_ERR || name == NULL) {
+		return CSS_OK;
+	}
+
+	if (!dom_string_caseless_lwc_isequal(name, corestring_lwc_input)) {
+		dom_string_unref(name);
+		return CSS_OK;
+	}
+	dom_string_unref(name);
+
+	exc = dom_html_input_element_get_checked(
+			(dom_html_input_element *)n, &checked);
+	if (exc == DOM_NO_ERR) {
+		*match = checked;
+	}
 
 	return CSS_OK;
 }
@@ -1650,12 +1819,52 @@ css_error node_is_checked(void *pw, void *node, bool *match)
  * \return CSS_OK.
  *
  * \post \a match with contain true if the node matches and false otherwise.
+ *
+ * :target matches the element whose id equals the fragment portion of the
+ * document URL.  We compare the element's "id" attribute against the fragment
+ * stored in ctx->base_url.
  */
 css_error node_is_target(void *pw, void *node, bool *match)
 {
-	/** \todo Support target */
+	nscss_select_ctx *ctx = pw;
+	dom_exception exc;
+	dom_node *n = (dom_node *)node;
+	dom_node_type ntype;
+	lwc_string *fragment;
 
 	*match = false;
+
+	if (ctx->base_url == NULL) {
+		return CSS_OK;
+	}
+
+	fragment = nsurl_get_component(ctx->base_url, NSURL_FRAGMENT);
+	if (fragment == NULL) {
+		return CSS_OK;
+	}
+
+	exc = dom_node_get_node_type(n, &ntype);
+	if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+		lwc_string_unref(fragment);
+		return CSS_OK;
+	}
+
+	dom_string *id = NULL;
+	exc = dom_element_get_attribute(n, corestring_dom_id, &id);
+	if (exc == DOM_NO_ERR && id != NULL) {
+		lwc_string *id_lwc = NULL;
+		if (dom_string_intern(id, &id_lwc) == DOM_NO_ERR) {
+			bool isequal;
+			if (lwc_string_caseless_isequal(fragment, id_lwc,
+							&isequal) == lwc_error_ok) {
+				*match = isequal;
+			}
+			lwc_string_unref(id_lwc);
+		}
+		dom_string_unref(id);
+	}
+
+	lwc_string_unref(fragment);
 
 	return CSS_OK;
 }

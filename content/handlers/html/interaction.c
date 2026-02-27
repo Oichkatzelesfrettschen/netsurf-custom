@@ -41,6 +41,7 @@
 #include "netsurf/misc.h"
 #include "netsurf/layout.h"
 #include "netsurf/keypress.h"
+#include "content/content_protected.h"
 #include "content/hlcache.h"
 #include "content/textsearch.h"
 #include "desktop/browser_history.h"
@@ -1341,6 +1342,35 @@ mouse_action_drag_none(html_content *html,
 	res = get_mouse_action_node(html, x, y, &mas);
 	if (res != NSERROR_OK) {
 		return res;
+	}
+
+	/* Update hover and active node for :hover / :active CSS matching.
+	 * The node returned by get_mouse_action_node is the deepest DOM node
+	 * under the pointer.  We store it so that the CSS selection callbacks
+	 * in css/select.c can compare against it without re-doing hit-testing.
+	 * Changing the tracked node triggers a redraw so that the restyled
+	 * subtree is repainted immediately. */
+	if (html->hover_node != mas.node) {
+		html->hover_node = mas.node;
+		content__reformat(&html->base,
+				  false,
+				  html->base.available_width,
+				  html->base.height);
+	}
+	if (mouse & (BROWSER_MOUSE_PRESS_1 | BROWSER_MOUSE_HOLDING_1)) {
+		if (html->active_node != mas.node) {
+			html->active_node = mas.node;
+			content__reformat(&html->base,
+					  false,
+					  html->base.available_width,
+					  html->base.height);
+		}
+	} else if (html->active_node != NULL) {
+		html->active_node = NULL;
+		content__reformat(&html->base,
+				  false,
+				  html->base.available_width,
+				  html->base.height);
 	}
 
 	if (mouse & BROWSER_MOUSE_CLICK_4) {

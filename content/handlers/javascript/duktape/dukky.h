@@ -57,4 +57,22 @@ void dukky_push_generics(duk_context *ctx, const char *generic);
 /* Log the current stack frame if possible */
 void dukky_log_stack_frame(duk_context *ctx, const char * reason);
 
+/**
+ * Serialize the inner HTML of a DOM node and push it as a JS string.
+ *
+ * Walks the children of \a node and serialises them as HTML5, following
+ * the "serialize a subtree" algorithm (simplified: handles element, text,
+ * comment, and CDATA section nodes; void elements are serialised without
+ * a closing tag).
+ *
+ * On success, a JS string is pushed onto the Duktape stack and 1 is returned.
+ * On error, a JS error may be thrown (the caller should use duk_safe_call if
+ * needed).
+ *
+ * \param ctx   Duktape context
+ * \param node  DOM node whose children to serialise
+ * \return 1 (one string pushed onto the stack), or 0 on fatal error
+ */
+duk_ret_t dukky_push_node_innerhtml(duk_context *ctx, struct dom_node *node);
+
 #endif

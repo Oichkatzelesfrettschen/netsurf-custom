@@ -253,7 +253,7 @@ box_get_style(html_content *c,
 	dom_string *s = NULL;
 	css_stylesheet *inline_style = NULL;
 	css_select_results *styles;
-	nscss_select_ctx ctx;
+	nscss_select_ctx ctx = {0};
 
 	/* Firstly, construct inline stylesheet, if any */
 	if (nsoption_bool(author_level_css)) {
@@ -285,6 +285,20 @@ box_get_style(html_content *c,
 	ctx.universal = c->universal;
 	ctx.root_style = root_style;
 	ctx.parent_style = parent_style;
+	ctx.hover_node = c->hover_node;
+	ctx.active_node = c->active_node;
+	/* Derive focus_node from focus_owner: the focused element's box holds
+	 * a dom_node pointer.  Only HTML_FOCUS_SELF focuses a specific element
+	 * in this document (textarea or content box). */
+	if (c->focus_type == HTML_FOCUS_TEXTAREA &&
+	    c->focus_owner.textarea != NULL) {
+		ctx.focus_node = c->focus_owner.textarea->node;
+	} else if (c->focus_type == HTML_FOCUS_CONTENT &&
+		   c->focus_owner.content != NULL) {
+		ctx.focus_node = c->focus_owner.content->node;
+	} else {
+		ctx.focus_node = NULL;
+	}
 
 	/* Select style for element */
 	styles = nscss_get_style(&ctx, n, &c->media, &c->unit_len_ctx,

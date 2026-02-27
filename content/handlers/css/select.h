@@ -30,6 +30,17 @@ struct nsurl;
 
 /**
  * Selection context
+ *
+ * Carries per-document state used by the libcss selection callbacks,
+ * including live interactive state so that the :hover, :active, and
+ * :focus pseudo-class callbacks can return accurate results.
+ *
+ * hover_node  -- DOM node currently under the pointer, or NULL
+ * active_node -- DOM node with mouse button held down, or NULL
+ * focus_node  -- DOM node with keyboard focus, or NULL
+ *
+ * These are not ref-counted; their lifetimes are the document lifetime.
+ * The html handler sets them on mouse-track / focus-change events.
  */
 typedef struct nscss_select_ctx
 {
@@ -39,6 +50,12 @@ typedef struct nscss_select_ctx
 	lwc_string *universal;
 	const css_computed_style *root_style;
 	const css_computed_style *parent_style;
+	/** DOM node currently under the pointer (:hover), or NULL. */
+	struct dom_node *hover_node;
+	/** DOM node with mouse button held down (:active), or NULL. */
+	struct dom_node *active_node;
+	/** DOM node with keyboard focus (:focus), or NULL. */
+	struct dom_node *focus_node;
 } nscss_select_ctx;
 
 css_stylesheet *nscss_create_inline_style(const uint8_t *data, size_t len,

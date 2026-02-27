@@ -210,6 +210,19 @@ typedef struct html_content {
 	 */
 	struct form_control *visible_select_menu;
 
+	/**
+	 * DOM node currently under the pointer (for :hover matching), or NULL.
+	 * Set by interaction.c on mouse-track; used by css/select.c callbacks.
+	 * Not ref-counted: the node lifetime is the document lifetime.
+	 */
+	dom_node *hover_node;
+
+	/**
+	 * DOM node currently being activated (mouse button held, for :active
+	 * matching), or NULL.
+	 */
+	dom_node *active_node;
+
 } html_content;
 
 /**

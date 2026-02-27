@@ -1681,3 +1681,274 @@ bool js_fire_event(jsthread *thread, const char *type, struct dom_document *doc,
 	dukky_leave_thread(thread);
 	return true;
 }
+
+/* ---- innerHTML serializer ------------------------------------------------ */
+
+/**
+ * HTML5 void elements -- elements that must not have a closing tag.
+ *
+ * Per WHATWG HTML Living Standard "void elements" category.
+ */
+static const char * const void_elements[] = {
+	"area", "base", "br", "col", "embed", "hr", "img", "input",
+	"link", "meta", "param", "source", "track", "wbr",
+	NULL
+};
+
+/**
+ * Return true if \a name (lower-case element name) is a void element.
+ */
+static bool is_void_element(const char *name)
+{
+	for (int i = 0; void_elements[i] != NULL; i++) {
+		if (strcmp(name, void_elements[i]) == 0) {
+			return true;
+		}
+	}
+	return false;
+}
+
+/**
+ * Append a text-content string to the Duktape stack, HTML-escaping
+ * '<', '>', '&', and optionally '"' (for attribute values).
+ *
+ * Pushes pieces as individual strings; caller must concatenate them.
+ *
+ * \param ctx        Duktape context
+ * \param s          UTF-8 text to escape
+ * \param len        Byte length of \a s
+ * \param in_attr    true if inside an attribute value (escape '"' too)
+ * \return Number of strings pushed onto the stack
+ */
+static duk_idx_t push_html_escaped(duk_context *ctx,
+				   const char *s, size_t len, bool in_attr)
+{
+	duk_idx_t pushed = 0;
+	size_t start = 0;
+
+	for (size_t i = 0; i < len; i++) {
+		const char *entity = NULL;
+
+		switch (s[i]) {
+		case '&':  entity = "&amp;";  break;
+		case '<':  entity = "&lt;";   break;
+		case '>':  entity = "&gt;";   break;
+		case '"':  if (in_attr) entity = "&quot;"; break;
+		default:   break;
+		}
+
+		if (entity != NULL) {
+			if (i > start) {
+				duk_push_lstring(ctx, s + start, i - start);
+				pushed++;
+			}
+			duk_push_string(ctx, entity);
+			pushed++;
+			start = i + 1;
+		}
+	}
+
+	if (start < len) {
+		duk_push_lstring(ctx, s + start, len - start);
+		pushed++;
+	}
+
+	return pushed;
+}
+
+/**
+ * Forward declaration for mutual recursion with serialize_element.
+ */
+static duk_idx_t serialize_children(duk_context *ctx, dom_node *parent);
+
+/**
+ * Serialize a single DOM node to HTML, pushing string pieces onto the stack.
+ *
+ * \param ctx   Duktape context
+ * \param node  Node to serialize (not ref'd by this function)
+ * \return Number of string pieces pushed
+ */
+static duk_idx_t serialize_node(duk_context *ctx, dom_node *node)
+{
+	dom_node_type type;
+	dom_exception exc;
+	duk_idx_t pushed = 0;
+
+	exc = dom_node_get_node_type(node, &type);
+	if (exc != DOM_NO_ERR) {
+		return 0;
+	}
+
+	switch (type) {
+	case DOM_ELEMENT_NODE: {
+		/* Get tag name (lower-case for HTML documents) */
+		dom_string *name_s = NULL;
+		exc = dom_node_get_node_name(node, &name_s);
+		if (exc != DOM_NO_ERR || name_s == NULL) {
+			break;
+		}
+
+		/* Convert to lower-case C string for void-element check */
+		size_t name_len = dom_string_byte_length(name_s);
+		const char *name_data = dom_string_data(name_s);
+
+		/* Use a fixed-size buffer for tag names; truncate silently */
+		char tag_lower[64];
+		size_t copy_len = name_len < 63 ? name_len : 63;
+		for (size_t i = 0; i < copy_len; i++) {
+			char c = name_data[i];
+			tag_lower[i] = (c >= 'A' && c <= 'Z') ? c + 32 : c;
+		}
+		tag_lower[copy_len] = '\0';
+
+		/* Opening tag */
+		duk_push_string(ctx, "<");
+		duk_push_lstring(ctx, tag_lower, copy_len);
+		pushed += 2;
+
+		/* Serialize attributes */
+		dom_namednodemap *attrs = NULL;
+		exc = dom_node_get_attributes(node, &attrs);
+		if (exc == DOM_NO_ERR && attrs != NULL) {
+			uint32_t attr_len = 0;
+			exc = dom_namednodemap_get_length(attrs, &attr_len);
+			for (uint32_t ai = 0; exc == DOM_NO_ERR && ai < attr_len; ai++) {
+				dom_node *attr = NULL;
+				exc = dom_namednodemap_item(attrs, ai, &attr);
+				if (exc != DOM_NO_ERR || attr == NULL) {
+					continue;
+				}
+
+				dom_string *aname = NULL;
+				dom_string *aval  = NULL;
+				dom_node_get_node_name(attr, &aname);
+				dom_node_get_node_value(attr, &aval);
+
+				if (aname != NULL) {
+					duk_push_string(ctx, " ");
+					duk_push_lstring(ctx,
+						dom_string_data(aname),
+						dom_string_byte_length(aname));
+					pushed += 2;
+					if (aval != NULL) {
+						duk_push_string(ctx, "=\"");
+						pushed++;
+						pushed += push_html_escaped(ctx,
+							dom_string_data(aval),
+							dom_string_byte_length(aval),
+							true);
+						duk_push_string(ctx, "\"");
+						pushed++;
+					}
+				}
+
+				if (aval != NULL)  dom_string_unref(aval);
+				if (aname != NULL) dom_string_unref(aname);
+				dom_node_unref(attr);
+			}
+			dom_namednodemap_unref(attrs);
+		}
+
+		duk_push_string(ctx, ">");
+		pushed++;
+
+		if (!is_void_element(tag_lower)) {
+			/* Serialize children */
+			pushed += serialize_children(ctx, node);
+
+			/* Closing tag */
+			duk_push_string(ctx, "</");
+			duk_push_lstring(ctx, tag_lower, copy_len);
+			duk_push_string(ctx, ">");
+			pushed += 3;
+		}
+
+		dom_string_unref(name_s);
+		break;
+	}
+
+	case DOM_TEXT_NODE:
+	case DOM_CDATA_SECTION_NODE: {
+		dom_string *text = NULL;
+		exc = dom_node_get_node_value(node, &text);
+		if (exc == DOM_NO_ERR && text != NULL) {
+			pushed += push_html_escaped(ctx,
+				dom_string_data(text),
+				dom_string_byte_length(text),
+				false);
+			dom_string_unref(text);
+		}
+		break;
+	}
+
+	case DOM_COMMENT_NODE: {
+		dom_string *data = NULL;
+		exc = dom_node_get_node_value(node, &data);
+		if (exc == DOM_NO_ERR && data != NULL) {
+			duk_push_string(ctx, "<!--");
+			duk_push_lstring(ctx,
+				dom_string_data(data),
+				dom_string_byte_length(data));
+			duk_push_string(ctx, "-->");
+			pushed += 3;
+			dom_string_unref(data);
+		}
+		break;
+	}
+
+	default:
+		/* Processing instructions, document types etc. are omitted per
+		 * the HTML5 serialization spec's inner-HTML algorithm. */
+		break;
+	}
+
+	return pushed;
+}
+
+/**
+ * Serialize all children of \a parent, pushing string pieces onto the stack.
+ *
+ * \param ctx     Duktape context
+ * \param parent  Parent node whose children to walk
+ * \return Total number of string pieces pushed
+ */
+static duk_idx_t serialize_children(duk_context *ctx, dom_node *parent)
+{
+	dom_node *child = NULL;
+	dom_exception exc;
+	duk_idx_t pushed = 0;
+
+	exc = dom_node_get_first_child(parent, &child);
+	if (exc != DOM_NO_ERR || child == NULL) {
+		return 0;
+	}
+
+	while (child != NULL) {
+		dom_node *next = NULL;
+		pushed += serialize_node(ctx, child);
+
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		if (exc != DOM_NO_ERR) {
+			break;
+		}
+		child = next;
+	}
+
+	return pushed;
+}
+
+/* exported interface documented in dukky.h */
+duk_ret_t dukky_push_node_innerhtml(duk_context *ctx, struct dom_node *node)
+{
+	duk_idx_t pieces = serialize_children(ctx, node);
+
+	if (pieces == 0) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	/* Concatenate all pieces into one string */
+	duk_concat(ctx, pieces);
+	return 1;
+}
