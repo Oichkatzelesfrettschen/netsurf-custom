@@ -156,3 +156,64 @@ The libcss select callback API does not provide a hook for cache invalidation,
 so any memoization must be done conservatively (cache per full selector pass,
 not per node).  This is deferred until there is a measured performance
 regression to justify the complexity.
+
+---
+
+## performance.now() / timeOrigin
+
+**Status:** Implemented in `content/handlers/javascript/duktape/Performance.bnd`.
+Uses `nsu_getmonotonic_ms()` from libnsutils for monotonic millisecond timing.
+
+**KNOWN DEVIATION -- epoch:** `timeOrigin` returns the monotonic clock value at
+Performance object creation time (effectively process-relative), not the
+navigation-start timestamp as the High Resolution Time spec requires.  This
+means `performance.timeOrigin + performance.now()` does not equal `Date.now()`.
+For relative timing (the primary use case), this is correct.
+
+---
+
+## Element.tagName / localName
+
+**Status:** Implemented in `content/handlers/javascript/duktape/Element.bnd`.
+
+`tagName` returns `dom_node_get_node_name()` which is uppercase for HTML
+elements (e.g. "DIV").  `localName` uses `dom_node_get_local_name()` with a
+fallback to `dom_node_get_node_name()` for HTML elements that may not have
+namespace-aware local names.
+
+---
+
+## HTMLElement.hidden / tabIndex
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLElement.bnd`.
+
+`hidden` is a boolean attribute: getter uses `dom_element_has_attribute()`,
+setter uses `dom_element_set_attribute()` / `dom_element_remove_attribute()`.
+
+`tabIndex` is an integer attribute defaulting to -1.  Getter uses
+`dom_element_get_attribute()` + `strtol()`, setter uses `snprintf()` +
+`dom_element_set_attribute()`.
+
+---
+
+## HTMLInputElement Properties
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLInputElement.bnd`.
+
+All properties use the `dom_html_input_element_get_*` / `set_*` APIs from libdom:
+- String: accept, align, alt, defaultValue, name, src, useMap, value
+- Boolean: checked, defaultChecked, disabled, readOnly
+- Integer: maxLength, size
+- Read-only: type (defaults to "text" if NULL)
+
+**Deferred:** `valueAsNumber`, `valueHigh`, `valueLow` remain as stubs.
+
+---
+
+## HTMLButtonElement / HTMLSelectElement Properties
+
+**Status:** Implemented in their respective `.bnd` files.
+
+HTMLButtonElement: disabled (bool), name (string), value (string).
+HTMLSelectElement: disabled (bool), multiple (bool), name (string),
+type (read-only, defaults to "select-one"), value (string).
