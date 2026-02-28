@@ -1,51 +1,73 @@
 #
-# NetSurf build configuration example
+# NetSurf build configuration for netsurf-custom (Arch Linux / CachyOS)
 #
+# HOW TO USE:
+#   cp Makefile.config.example Makefile.config
+#   unset HOST
+#   source docs/env.sh
+#   make -j$(nproc) TARGET=gtk
 #
-# To configure NetSurf's build options create a Makefile.config file. This is
-# an example Makefile.config.
+# NOTE: Makefile.config is gitignored (it holds local user settings).
+#       This example file is tracked and should reflect the known-good
+#       configuration used in CI and development on Arch Linux.
 #
-# To see the available config options, look at Makefile.defaults, but make any
-# alterations in your Makefile.config
+# WHY YES not AUTO:
+#   NetSurf's pkg_config_find_and_add_enabled macro evaluates feature variables
+#   at Makefile include time. If a variable is still set to AUTO at that point,
+#   the feature is excluded from the link regardless of library availability.
+#   Setting features explicitly to YES avoids this timing bug.
 
-### To enable/disable PNG support, uncomment the appropriate line below.
-# override NETSURF_USE_PNG := YES
-# override NETSURF_USE_PNG := NO
+# Treat first-party code warnings as errors.
+# WHY: Prevents gradual drift of -Werror violations into the codebase.
+override COMMON_WARNFLAGS += -Werror
 
-### To enable/disable SVGTiny support, uncomment the appropriate line below.
-# override NETSURF_USE_NSSVG := YES
-# override NETSURF_USE_NSSVG := NO
+# Keep debug symbols for development builds.
+override NETSURF_STRIP_BINARY := NO
 
-### To enable/disable RSVG support, uncomment the appropriate line below.
-# override NETSURF_USE_RSVG := YES
-# override NETSURF_USE_RSVG := NO
+# Image formats -- all available on Arch via standard packages.
+override NETSURF_USE_JPEG   := YES
+override NETSURF_USE_PNG    := YES
+override NETSURF_USE_BMP    := YES
+override NETSURF_USE_GIF    := YES
+override NETSURF_USE_WEBP   := YES
+override NETSURF_USE_JPEGXL := YES
 
-### To enable/disable BMP support, uncomment the appropriate line below.
-# override NETSURF_USE_BMP := YES
-# override NETSURF_USE_BMP := NO
+# SVG support via both libsvgtiny (lightweight) and librsvg (full).
+override NETSURF_USE_NSSVG := YES
+override NETSURF_USE_RSVG  := YES
 
-### To make the framebuffer front end use freetype for text, uncomment the
-### following line
-# override NETSURF_FB_FONTLIB := freetype
+# RISC OS sprite format -- DISABLED.
+# WHY: librosprite is not built by ns-make-libs by default. Setting AUTO causes
+#      a linker failure (nssprite_init undefined). Enable only if you install
+#      librosprite manually in the workspace and then set this to YES.
+override NETSURF_USE_ROSPRITE := NO
 
-### To disable JavaScript support, uncomment the appropriate line below.
-# override NETSURF_USE_DUKTAPE := NO
+# Network and crypto.
+override NETSURF_USE_CURL    := YES
+override NETSURF_USE_OPENSSL := YES
 
-### To change flags to javascript binding generator
-# GBFLAGS:=-g
+# Text processing (libutf8proc for Unicode normalization).
+override NETSURF_USE_UTF8PROC := YES
 
-### To enable ASAN and UBSAN support in builds regardless of target
+# JavaScript engine (Duktape 2.7).
+override NETSURF_USE_DUKTAPE := YES
+
+# Logging and Public Suffix List.
+override NETSURF_USE_NSLOG  := YES
+override NETSURF_USE_NSPSL  := YES
+
+# Log level for development; change to INFO or WARNING for quieter builds.
+override NETSURF_LOG_LEVEL := VERBOSE
+
+### Optional: uncomment to enable address/undefined-behavior sanitizers.
 # override NETSURF_USE_SANITIZER := YES
-
-### If you're using the sanitizers and you want it to stop on failure...
 # override NETSURF_RECOVER_SANITIZERS := NO
 
-### To change the compiled in log level, alter this.
-# Valid options are: DEEPDEBUG, DEBUG, VERBOSE, INFO, WARNING, ERROR, CRITICAL
-# override NETSURF_LOG_LEVEL := DEBUG
-
-### To change the compiled in default log, change this
+### To change the compiled-in default log filter:
 # override NETSURF_BUILTIN_LOG_FILTER := "(level:WARNING || cat:jserrors)"
 
-### To change the compiled in *verbose* log, change this
+### To change the compiled-in verbose log filter:
 # override NETSURF_BUILTIN_VERBOSE_FILTER := "(level:VERBOSE || cat:jserrors)"
+
+### To use freetype for the framebuffer frontend:
+# override NETSURF_FB_FONTLIB := freetype

@@ -1685,27 +1685,30 @@ bool js_fire_event(jsthread *thread, const char *type, struct dom_document *doc,
 /* ---- innerHTML serializer ------------------------------------------------ */
 
 /**
- * HTML5 void elements -- elements that must not have a closing tag.
- *
- * Per WHATWG HTML Living Standard "void elements" category.
- */
-static const char * const void_elements[] = {
-	"area", "base", "br", "col", "embed", "hr", "img", "input",
-	"link", "meta", "param", "source", "track", "wbr",
-	NULL
-};
-
-/**
  * Return true if \a name (lower-case element name) is a void element.
+ *
+ * Uses a first-character dispatch to reduce worst-case comparisons from
+ * 14 (linear scan) to at most 2.  Covers all 14 WHATWG void elements:
+ * area, base, br, col, embed, hr, img, input, link, meta, param,
+ * source, track, wbr.
  */
 static bool is_void_element(const char *name)
 {
-	for (int i = 0; void_elements[i] != NULL; i++) {
-		if (strcmp(name, void_elements[i]) == 0) {
-			return true;
-		}
+	switch (name[0]) {
+	case 'a': return strcmp(name, "area")   == 0;
+	case 'b': return strcmp(name, "base")   == 0 || strcmp(name, "br") == 0;
+	case 'c': return strcmp(name, "col")    == 0;
+	case 'e': return strcmp(name, "embed")  == 0;
+	case 'h': return strcmp(name, "hr")     == 0;
+	case 'i': return strcmp(name, "img")    == 0 || strcmp(name, "input") == 0;
+	case 'l': return strcmp(name, "link")   == 0;
+	case 'm': return strcmp(name, "meta")   == 0;
+	case 'p': return strcmp(name, "param")  == 0;
+	case 's': return strcmp(name, "source") == 0;
+	case 't': return strcmp(name, "track")  == 0;
+	case 'w': return strcmp(name, "wbr")    == 0;
+	default:  return false;
 	}
-	return false;
 }
 
 /**
@@ -1763,6 +1766,16 @@ static duk_idx_t serialize_children(duk_context *ctx, dom_node *parent);
 
 /**
  * Serialize a single DOM node to HTML, pushing string pieces onto the stack.
+ *
+ * COMPLEXITY NOTE:
+ *   O(N * M) where N = total nodes in subtree, M = attributes per element.
+ *   Each element generates 5 + 2*M duk_push_* calls, then a duk_concat.
+ *   All pieces are buffered on the Duktape value stack; there is no streaming.
+ *
+ * FUTURE OPTIMIZATION:
+ *   Cache the serialized string and invalidate via MutationObserver when the
+ *   subtree changes.  This would make repeated elem.innerHTML reads free.
+ *   MutationObserver is not yet implemented (XL effort; requires libdom hooks).
  *
  * \param ctx   Duktape context
  * \param node  Node to serialize (not ref'd by this function)

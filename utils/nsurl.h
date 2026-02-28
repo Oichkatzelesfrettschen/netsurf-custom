@@ -107,6 +107,19 @@ bool nsurl_compare(const nsurl *url1, const nsurl *url2, nsurl_component parts);
 
 
 /**
+ * Test whether two URLs share the same origin (scheme, host, port)
+ *
+ * \param a  First NetSurf URL
+ * \param b  Second NetSurf URL
+ * \return true if both URLs have the same scheme, host, and port
+ *
+ * Convenience wrapper around nsurl_compare() for the common same-origin check
+ * needed by History API, localStorage, and Fetch bindings.
+ */
+bool nsurl_same_origin(const nsurl *a, const nsurl *b);
+
+
+/**
  * Get URL (section) as a string, from a NetSurf URL object
  *
  * \param url	  NetSurf URL

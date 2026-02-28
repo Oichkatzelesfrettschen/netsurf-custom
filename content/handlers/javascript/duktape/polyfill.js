@@ -102,19 +102,141 @@ DOMTokenList.prototype.toString = function () {
 // Inherit the same toString for settable lists
 DOMSettableTokenList.prototype.toString = DOMTokenList.prototype.toString;
 
+// ---- CustomEvent polyfill --------------------------------------------------
+// WHY: new CustomEvent(type, {detail: x}) is used by sites and frameworks
+//      for intra-component messaging. The native CustomEvent stub in
+//      netsurf.bnd stores only the C-level dom_event; it does not expose the
+//      JS `detail` property. This polyfill shadows the native binding.
+// WHAT: Wraps the native Event (or creates a plain object) and adds `detail`.
+// HOW: If typeof CustomEvent === 'undefined' or it lacks `detail`, replace it.
+//      We always define it to ensure `detail` is accessible.
+
+(function () {
+  var _NativeCustomEvent = (typeof CustomEvent === 'function') ? CustomEvent : null;
+
+  function CustomEvent(type, params) {
+    params = params || {};
+    var detail = (params.detail !== undefined) ? params.detail : null;
+
+    // Attempt to create the native event for proper type/bubbles/cancelable
+    var evt;
+    if (_NativeCustomEvent) {
+      try {
+        evt = new _NativeCustomEvent(type, params);
+      } catch (e) {
+        evt = null;
+      }
+    }
+
+    if (!evt) {
+      // Fallback: plain object that looks like an event
+      evt = {};
+      evt.type = type;
+      evt.bubbles = !!(params.bubbles);
+      evt.cancelable = !!(params.cancelable);
+    }
+
+    evt.detail = detail;
+    return evt;
+  }
+
+  // Expose to global scope
+  if (typeof this !== 'undefined') {
+    this.CustomEvent = CustomEvent;
+  }
+}.call(typeof globalThis !== 'undefined' ? globalThis : this));
+
+// ---- AbortController / AbortSignal polyfills --------------------------------
+// WHY: AbortController is a prerequisite for any usable Fetch API. Sites use
+//      it to cancel in-flight network requests. No native binding exists.
+// WHAT: Pure JS implementation. AbortController owns an AbortSignal. Calling
+//      controller.abort() sets signal.aborted = true and fires abort listeners.
+// HOW: Listener callbacks stored in a plain array on the signal object.
+
+if (typeof AbortController === 'undefined') {
+  (function () {
+    function AbortSignal() {
+      this.aborted = false;
+      this._listeners = [];
+    }
+
+    AbortSignal.prototype.addEventListener = function (type, fn) {
+      if (type === 'abort' && typeof fn === 'function') {
+        this._listeners.push(fn);
+      }
+    };
+
+    AbortSignal.prototype.removeEventListener = function (type, fn) {
+      if (type !== 'abort') return;
+      var idx = this._listeners.indexOf(fn);
+      if (idx >= 0) this._listeners.splice(idx, 1);
+    };
+
+    AbortSignal.prototype._abort = function () {
+      if (this.aborted) return;
+      this.aborted = true;
+      var evt = { type: 'abort', target: this };
+      for (var i = 0; i < this._listeners.length; i++) {
+        try { this._listeners[i].call(this, evt); } catch (e) { /* swallow */ }
+      }
+    };
+
+    function AbortController() {
+      this.signal = new AbortSignal();
+    }
+
+    AbortController.prototype.abort = function () {
+      this.signal._abort();
+    };
+
+    this.AbortSignal = AbortSignal;
+    this.AbortController = AbortController;
+  }.call(typeof globalThis !== 'undefined' ? globalThis : this));
+}
+
 // ---- Map polyfill ----------------------------------------------------------
 // WHY: Duktape 2.7 does not expose Map. Many modern sites use Map for
 //      ordered key-value storage with arbitrary keys (including objects).
 // WHAT: ES6-compatible Map backed by a pair of arrays (keys[], values[]).
 //       Supports get, set, has, delete, clear, forEach, size, keys, values,
 //       entries, and Symbol.iterator via a synthetic @@iterator.
+//       Internal storage uses Symbol keys when available (Duktape 2.7 has
+//       DUK_USE_SYMBOL_BUILTIN enabled) so that Object.keys(new Map()) returns
+//       [] instead of exposing '_keys' / '_vals'.
 // HOW: Uses strict equality (===) for key lookup, matching the ES6 spec.
+//      For string and finite-number keys, a hash object provides O(1) average
+//      lookup. Object/null/boolean/NaN keys fall back to O(n) linear scan.
+//      The hash is kept in sync with the arrays by set(), delete(), and clear().
 
 if (typeof Map === 'undefined') {
   (function () {
+    // Use Symbol-based private slots when available, string fallbacks otherwise.
+    // WHY: Symbol-keyed properties are non-enumerable and not returned by
+    //      Object.keys(), preventing user code from accidentally seeing or
+    //      mutating internal state. String keys ('_keys'/'_vals') are still
+    //      correct but visible to enumeration.
+    var MAP_KEYS = (typeof Symbol === 'function') ? Symbol('Map.keys') : '_keys';
+    var MAP_VALS = (typeof Symbol === 'function') ? Symbol('Map.vals') : '_vals';
+    // MAP_HASH: plain object used as a string->index lookup table for
+    // primitive (string, finite number) keys. Keys are prefixed to avoid
+    // collisions between string 'x' and number x.
+    var MAP_HASH = (typeof Symbol === 'function') ? Symbol('Map.hash') : '_hash';
+
+    // _hashKey(key): return the hash bucket string for a primitive key,
+    // or null if the key is not hashable (object, NaN, boolean, etc.).
+    // WHY: NaN !== NaN so it cannot be a reliable hash key; booleans
+    // are rare as Map keys and the linear scan is negligible for them.
+    function _hashKey(key) {
+      var t = typeof key;
+      if (t === 'string') return 's:' + key;
+      if (t === 'number' && key === key && isFinite(key)) return 'n:' + key;
+      return null;
+    }
+
     function Map(iterable) {
-      this._keys = [];
-      this._vals = [];
+      this[MAP_KEYS] = [];
+      this[MAP_VALS] = [];
+      this[MAP_HASH] = Object.create(null); /* null prototype avoids __proto__ conflicts */
       if (iterable) {
         var arr = Array.isArray(iterable) ? iterable : null;
         if (arr) {
@@ -126,8 +248,16 @@ if (typeof Map === 'undefined') {
     }
 
     Map.prototype._indexOf = function (key) {
-      for (var i = 0; i < this._keys.length; i++) {
-        if (this._keys[i] === key || (key !== key && this._keys[i] !== this._keys[i])) {
+      // Fast path: O(1) average for string/finite-number keys via hash.
+      var hk = _hashKey(key);
+      if (hk !== null) {
+        var idx = this[MAP_HASH][hk];
+        return (idx !== undefined) ? idx : -1;
+      }
+      // Slow path: linear scan for object keys and NaN.
+      var ks = this[MAP_KEYS];
+      for (var i = 0; i < ks.length; i++) {
+        if (ks[i] === key || (key !== key && ks[i] !== ks[i])) {
           return i;
         }
       }
@@ -135,23 +265,28 @@ if (typeof Map === 'undefined') {
     };
 
     Object.defineProperty(Map.prototype, 'size', {
-      get: function () { return this._keys.length; }
+      get: function () { return this[MAP_KEYS].length; }
     });
 
     Map.prototype.set = function (key, value) {
+      var hk = _hashKey(key);
       var idx = this._indexOf(key);
       if (idx >= 0) {
-        this._vals[idx] = value;
+        this[MAP_VALS][idx] = value;
       } else {
-        this._keys.push(key);
-        this._vals.push(value);
+        idx = this[MAP_KEYS].length;
+        this[MAP_KEYS].push(key);
+        this[MAP_VALS].push(value);
+        if (hk !== null) {
+          this[MAP_HASH][hk] = idx;
+        }
       }
       return this;
     };
 
     Map.prototype.get = function (key) {
       var idx = this._indexOf(key);
-      return idx >= 0 ? this._vals[idx] : undefined;
+      return idx >= 0 ? this[MAP_VALS][idx] : undefined;
     };
 
     Map.prototype.has = function (key) {
@@ -161,34 +296,50 @@ if (typeof Map === 'undefined') {
     Map.prototype['delete'] = function (key) {
       var idx = this._indexOf(key);
       if (idx < 0) return false;
-      this._keys.splice(idx, 1);
-      this._vals.splice(idx, 1);
+      var hk = _hashKey(key);
+      this[MAP_KEYS].splice(idx, 1);
+      this[MAP_VALS].splice(idx, 1);
+      // Rebuild hash: indices of all entries at or after idx have shifted.
+      // WHY full rebuild vs patching: splice shifts every subsequent index by
+      // -1, so partial patch is as expensive as rebuild for the common case.
+      if (hk !== null) {
+        var hash = Object.create(null);
+        var ks = this[MAP_KEYS];
+        for (var i = 0; i < ks.length; i++) {
+          var k = _hashKey(ks[i]);
+          if (k !== null) hash[k] = i;
+        }
+        this[MAP_HASH] = hash;
+      }
       return true;
     };
 
     Map.prototype.clear = function () {
-      this._keys = [];
-      this._vals = [];
+      this[MAP_KEYS] = [];
+      this[MAP_VALS] = [];
+      this[MAP_HASH] = Object.create(null);
     };
 
     Map.prototype.forEach = function (cb, thisArg) {
-      for (var i = 0; i < this._keys.length; i++) {
-        cb.call(thisArg, this._vals[i], this._keys[i], this);
+      var ks = this[MAP_KEYS], vs = this[MAP_VALS];
+      for (var i = 0; i < ks.length; i++) {
+        cb.call(thisArg, vs[i], ks[i], this);
       }
     };
 
     Map.prototype.keys = function () {
-      return makeIterator(this._keys.slice());
+      return makeIterator(this[MAP_KEYS].slice());
     };
 
     Map.prototype.values = function () {
-      return makeIterator(this._vals.slice());
+      return makeIterator(this[MAP_VALS].slice());
     };
 
     Map.prototype.entries = function () {
+      var ks = this[MAP_KEYS], vs = this[MAP_VALS];
       var pairs = [];
-      for (var i = 0; i < this._keys.length; i++) {
-        pairs.push([this._keys[i], this._vals[i]]);
+      for (var i = 0; i < ks.length; i++) {
+        pairs.push([ks[i], vs[i]]);
       }
       return makeIterator(pairs);
     };
@@ -206,11 +357,22 @@ if (typeof Map === 'undefined') {
 //      collections.
 // WHAT: ES6-compatible Set backed by an array. Supports add, has, delete,
 //       clear, forEach, size, values, keys, entries.
+//       Internal storage uses Symbol keys when available (same rationale as Map).
+//       For string and finite-number values, SET_HASH provides O(1) average
+//       lookup (same hash-object strategy as Map). Object/NaN values fall back
+//       to O(n) linear scan.
+// HOW: SET_HASH is kept in sync with SET_VALS by add(), delete(), and clear().
 
 if (typeof Set === 'undefined') {
   (function () {
+    var SET_VALS = (typeof Symbol === 'function') ? Symbol('Set.vals') : '_svals';
+    // SET_HASH: plain null-prototype object mapping _hashKey(val) -> index in
+    // SET_VALS array.  Same prefix scheme as MAP_HASH ('s:' / 'n:').
+    var SET_HASH = (typeof Symbol === 'function') ? Symbol('Set.hash') : '_shash';
+
     function Set(iterable) {
-      this._vals = [];
+      this[SET_VALS] = [];
+      this[SET_HASH] = Object.create(null);
       if (iterable) {
         var arr = Array.isArray(iterable) ? iterable : null;
         if (arr) {
@@ -222,8 +384,16 @@ if (typeof Set === 'undefined') {
     }
 
     Set.prototype._indexOf = function (val) {
-      for (var i = 0; i < this._vals.length; i++) {
-        if (this._vals[i] === val || (val !== val && this._vals[i] !== this._vals[i])) {
+      // Fast path: O(1) average for string/finite-number values.
+      var hk = _hashKey(val);
+      if (hk !== null) {
+        var idx = this[SET_HASH][hk];
+        return (idx !== undefined) ? idx : -1;
+      }
+      // Slow path: linear scan for objects and NaN.
+      var vs = this[SET_VALS];
+      for (var i = 0; i < vs.length; i++) {
+        if (vs[i] === val || (val !== val && vs[i] !== vs[i])) {
           return i;
         }
       }
@@ -231,12 +401,17 @@ if (typeof Set === 'undefined') {
     };
 
     Object.defineProperty(Set.prototype, 'size', {
-      get: function () { return this._vals.length; }
+      get: function () { return this[SET_VALS].length; }
     });
 
     Set.prototype.add = function (val) {
       if (this._indexOf(val) < 0) {
-        this._vals.push(val);
+        var idx = this[SET_VALS].length;
+        this[SET_VALS].push(val);
+        var hk = _hashKey(val);
+        if (hk !== null) {
+          this[SET_HASH][hk] = idx;
+        }
       }
       return this;
     };
@@ -248,31 +423,47 @@ if (typeof Set === 'undefined') {
     Set.prototype['delete'] = function (val) {
       var idx = this._indexOf(val);
       if (idx < 0) return false;
-      this._vals.splice(idx, 1);
+      var hk = _hashKey(val);
+      this[SET_VALS].splice(idx, 1);
+      // Rebuild hash: splice shifts every subsequent index by -1.
+      // WHY full rebuild: same reasoning as Map.delete -- partial patch is
+      // as expensive as rebuild for the common case.
+      if (hk !== null) {
+        var hash = Object.create(null);
+        var vs = this[SET_VALS];
+        for (var i = 0; i < vs.length; i++) {
+          var k = _hashKey(vs[i]);
+          if (k !== null) hash[k] = i;
+        }
+        this[SET_HASH] = hash;
+      }
       return true;
     };
 
     Set.prototype.clear = function () {
-      this._vals = [];
+      this[SET_VALS] = [];
+      this[SET_HASH] = Object.create(null);
     };
 
     Set.prototype.forEach = function (cb, thisArg) {
-      for (var i = 0; i < this._vals.length; i++) {
-        cb.call(thisArg, this._vals[i], this._vals[i], this);
+      var vs = this[SET_VALS];
+      for (var i = 0; i < vs.length; i++) {
+        cb.call(thisArg, vs[i], vs[i], this);
       }
     };
 
     Set.prototype.values = function () {
-      return makeIterator(this._vals.slice());
+      return makeIterator(this[SET_VALS].slice());
     };
 
     // Per spec, keys() is an alias for values() on Set
     Set.prototype.keys = Set.prototype.values;
 
     Set.prototype.entries = function () {
+      var vs = this[SET_VALS];
       var pairs = [];
-      for (var i = 0; i < this._vals.length; i++) {
-        pairs.push([this._vals[i], this._vals[i]]);
+      for (var i = 0; i < vs.length; i++) {
+        pairs.push([vs[i], vs[i]]);
       }
       return makeIterator(pairs);
     };
@@ -400,6 +591,15 @@ function makeIterator(arr) {
 //       - .then() / .catch() / .finally()
 // HOW: State machine with PENDING/FULFILLED/REJECTED states. Callbacks are
 //      deferred via an internal micro-queue flushed by setTimeout(0).
+//
+// KNOWN DEVIATION: This polyfill schedules .then() callbacks via setTimeout(0)
+// (macrotask queue) rather than the spec-mandated microtask queue. Duktape 2.7
+// does not expose a native microtask queue hook. As a result, the execution
+// order of `Promise.resolve().then(cb)` vs synchronous code that follows it is
+// INCORRECT per ECMA-262 section 8.6 (the callback fires after the next event
+// loop turn, not immediately after the current task). Code that relies on
+// microtask ordering (e.g. `let x=0; Promise.resolve().then(()=>x=1); x===0`)
+// may behave differently under this polyfill than in a compliant engine.
 
 if (typeof Promise === 'undefined') {
   (function () {

@@ -300,8 +300,9 @@ nserror browser_window_history_create(struct browser_window *bw)
 		return NSERROR_NOMEM;
 	}
 
-	history->width = LOCAL_HISTORY_RIGHT_MARGIN / 2;
-	history->height = LOCAL_HISTORY_BOTTOM_MARGIN / 2;
+	history->width        = LOCAL_HISTORY_RIGHT_MARGIN / 2;
+	history->height       = LOCAL_HISTORY_BOTTOM_MARGIN / 2;
+	history->length_valid = false; /* invalidated; no entries yet */
 
 	bw->history = history;
 
@@ -614,6 +615,10 @@ nserror browser_window_history_go(struct browser_window *bw,
 		url = nsurl_ref(entry->page.url);
 	}
 
+	/* WHY: moving current changes both back and forward chain lengths so
+	 *      any cached history.length is stale. */
+	history->length_valid = false;
+
 	if (new_window) {
 		current = history->current;
 		history->current = entry;
@@ -705,4 +710,112 @@ const char *browser_window_history_entry_get_title(
 		const struct history_entry *entry)
 {
 	return entry->page.title;
+}
+
+
+/* exported interface documented in desktop/browser_history.h */
+int browser_window_history_length(struct browser_window *bw)
+{
+	struct history_entry *e;
+	int count;
+
+	if (bw == NULL || bw->history == NULL || bw->history->current == NULL) {
+		return 0;
+	}
+
+	/* Return cached value when valid.
+	 * WHY: JS code like `for (let i=0; i<history.length; i++)` calls
+	 *      this once per iteration, making a naive traversal O(n^2). */
+	if (bw->history->length_valid) {
+		return bw->history->cached_length;
+	}
+
+	/* Count backward chain (entries behind current, inclusive of current) */
+	count = 1;
+	for (e = bw->history->current->back; e != NULL; e = e->back) {
+		count++;
+	}
+
+	/* Count forward-pref chain (preferred forward path only) */
+	for (e = bw->history->current->forward_pref; e != NULL;
+	     e = e->forward_pref) {
+		count++;
+	}
+
+	bw->history->cached_length = count;
+	bw->history->length_valid  = true;
+
+	return count;
+}
+
+
+/* exported interface documented in desktop/browser_history.h */
+nserror browser_window_history_replace_state(struct browser_window *bw,
+					     struct nsurl *url)
+{
+	if (bw == NULL || bw->history == NULL || bw->history->current == NULL) {
+		return NSERROR_INVALID;
+	}
+
+	/* Replace URL on current entry in place.
+	 * WHY: HTML5 replaceState updates the current session history entry URL
+	 *      without navigation.  We swap the stored nsurl and refresh the bar. */
+	nsurl_unref(bw->history->current->page.url);
+	bw->history->current->page.url = nsurl_ref(url);
+
+	if (bw->window != NULL) {
+		guit->window->set_url(bw->window, url);
+	}
+
+	return NSERROR_OK;
+}
+
+
+/* exported interface documented in desktop/browser_history.h */
+nserror browser_window_history_push_state(struct browser_window *bw,
+					  struct nsurl *url)
+{
+	struct history_entry *entry;
+
+	if (bw == NULL || bw->history == NULL || bw->history->current == NULL) {
+		return NSERROR_INVALID;
+	}
+
+	/* Allocate a new entry cloned from the current one.
+	 * WHY: HTML5 pushState appends a new session-history entry after the
+	 *      current position, truncating any forward entries.  We create a
+	 *      minimal entry with the new URL, chain it in, and update the bar. */
+	entry = calloc(1, sizeof(*entry));
+	if (entry == NULL) {
+		return NSERROR_NOMEM;
+	}
+
+	entry->page.url   = nsurl_ref(url);
+	entry->page.title = strdup(bw->history->current->page.title ?
+				   bw->history->current->page.title : "");
+	if (entry->page.title == NULL) {
+		nsurl_unref(entry->page.url);
+		free(entry);
+		return NSERROR_NOMEM;
+	}
+
+	/* Link: new entry's back -> current; truncate any existing forward. */
+	entry->back = bw->history->current;
+	/* Drop any existing forward children from the current entry. */
+	bw->history->current->forward      = entry;
+	bw->history->current->forward_pref = entry;
+	bw->history->current->forward_last = entry;
+	bw->history->current->children     = 1;
+
+	/* Advance current pointer. */
+	bw->history->current = entry;
+
+	/* WHY: a new entry was appended; chain length increased by 1. */
+	bw->history->length_valid = false;
+
+	if (bw->window != NULL) {
+		guit->window->set_url(bw->window, url);
+	}
+
+	return NSERROR_OK;
 }

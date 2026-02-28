@@ -46,31 +46,50 @@ getter Event::type ()
 
 getter Event::target ()
 %{
-	/** @todo Decide HTF this works wrt. Window as an event target */
+	/*
+	 * When an event fires on Window (a non-DOM EventTarget), libdom's
+	 * dom_event_get_target() returns NULL or a non-node pointer.
+	 * dukky_push_node() returns false when it cannot represent the node.
+	 * In both cases fall back to the global object (Window) which IS the
+	 * correct target per the HTML spec (Window inherits EventTarget).
+	 */
 	dom_node *et;
 	dom_exception exc;
 
 	exc = dom_event_get_target(priv->evt, &et);
 	if (exc != DOM_NO_ERR) return 0;
 
-	dukky_push_node(ctx, et);
+	if (et == NULL || !dukky_push_node(ctx, et)) {
+		/* Target is not a DOM node; return Window (global object) */
+		duk_push_global_object(ctx);
+	}
 
-	dom_node_unref(et);
+	if (et != NULL) {
+		dom_node_unref(et);
+	}
 	return 1;
 %}
 
 getter Event::currentTarget ()
 %{
-	/** @todo Decide HTF this works wrt. Window as an event target */
+	/*
+	 * Same rationale as target: fall back to Window when the current
+	 * target is not representable as a DOM node.
+	 */
 	dom_node *et;
 	dom_exception exc;
 
 	exc = dom_event_get_current_target(priv->evt, &et);
 	if (exc != DOM_NO_ERR) return 0;
 
-	dukky_push_node(ctx, et);
+	if (et == NULL || !dukky_push_node(ctx, et)) {
+		/* Current target is not a DOM node; return Window */
+		duk_push_global_object(ctx);
+	}
 
-	dom_node_unref(et);
+	if (et != NULL) {
+		dom_node_unref(et);
+	}
 	return 1;
 %}
 

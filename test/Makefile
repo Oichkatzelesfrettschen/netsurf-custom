@@ -1,6 +1,26 @@
 #
 # NetSurf unit tests
 
+# Tests that depend on malloc injection via dlsym(RTLD_NEXT,"malloc").
+# The interception does not work reliably under Clang (malloc may be
+# inlined or the dynamic interposition is absent). Set
+# SKIP_MALLOC_LIMIT_TESTS=1 to exclude these two tests when building
+# with Clang so the rest of the suite can still run.
+MALLOC_LIMIT_TESTS := hashmap corestrings
+
+ifeq ($(SKIP_MALLOC_LIMIT_TESTS),1)
+TESTS := \
+	nsurl \
+	urldbtest \
+	nsoption \
+	bloom \
+	hashtable \
+	urlescape \
+	utils \
+	messages \
+	time \
+	mimesniff
+else
 TESTS := \
 	nsurl \
 	urldbtest \
@@ -14,6 +34,7 @@ TESTS := \
 	time \
 	mimesniff \
 	corestrings #llcache
+endif
 
 # sources necessary to use nsurl functionality
 NSURL_SOURCES := utils/nsurl/nsurl.c utils/nsurl/parse.c utils/idna.c \
@@ -232,3 +253,36 @@ test-clean:
 	$(VQ)echo "   CLEAN: $(COV_ROOT)"
 	$(Q)$(RM) -r $(TESTROOT) $(COV_ROOT)
 CLEANS += test-clean
+
+# WHY: WPT provides an independent cross-browser test suite.  Running the
+#      css-selectors and css-flexbox subsets gives a baseline pass rate that
+#      tracks regressions as new CSS features are added.
+#
+# wpt-fetch: download the two initial WPT subsets (css/selectors, css/css-flexbox).
+#            Uses sparse git checkout to avoid the full WPT repo (>1 GB).
+#
+# wpt: run the fetched tests through nsmonkey and write test/wpt-results.json.
+
+WPT_DIR  := $(CURDIR)/test/wpt
+WPT_REPO := https://github.com/web-platform-tests/wpt.git
+
+.PHONY: wpt-fetch
+wpt-fetch:
+	$(VQ)echo "  MKDIR: $(WPT_DIR)"
+	$(Q)$(MKDIR) -p $(WPT_DIR)
+	$(Q)if [ ! -d "$(WPT_DIR)/.git" ]; then \
+		git -C $(WPT_DIR) init -q && \
+		git -C $(WPT_DIR) remote add origin $(WPT_REPO) && \
+		git -C $(WPT_DIR) config core.sparseCheckout true && \
+		printf 'css/selectors/\ncss/css-flexbox/\nhtml/browsers/history/\n' > \
+			$(WPT_DIR)/.git/info/sparse-checkout && \
+		git -C $(WPT_DIR) fetch --depth=1 origin master -q && \
+		git -C $(WPT_DIR) checkout --quiet master; \
+	else \
+		echo "WPT already fetched ($(WPT_DIR))"; \
+	fi
+
+.PHONY: wpt
+wpt:
+	$(Q)python3 test/run-wpt.py --monkey ./nsmonkey --suite css-selectors
+	$(Q)python3 test/run-wpt.py --monkey ./nsmonkey --suite history

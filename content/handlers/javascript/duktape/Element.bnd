@@ -425,6 +425,14 @@ getter Element::classList ()
 
 getter Element::innerHTML()
 %{
+	dom_exception exc;
+	dom_node_type ntype;
+
+	exc = dom_node_get_node_type((struct dom_node *)priv->parent.node, &ntype);
+	if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "innerHTML is only defined on Element nodes");
+	}
 	return dukky_push_node_innerhtml(ctx, (struct dom_node *)priv->parent.node);
 %}
 

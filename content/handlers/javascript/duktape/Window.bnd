@@ -241,7 +241,7 @@ static duk_ret_t dukky_window_closedown_thread(duk_context *ctx)
 			if (sched->running == false) {
 				// This one is not running, we can remove it
 				to_remove = sched;
-				RING_ITERATE_STOP(window->schedule_ring, sched);
+				RING_ITERATE_STOP(priv->schedule_ring, sched);
 			} else if (sched->repeat_timeout != 0) {
 				// This one is running and has yet to be
 				// cancelled, so prevent it rescheduling itself
@@ -368,10 +368,13 @@ prototype Window()
 	/* EXPOSE(BigUint64Array); */ /* Duktape lacks this - nonstandard API */
 
 	/* ** Keyed Collections */
-	/* EXPOSE(Map); */ /* Duktape lacks this - ES6 */
-	/* EXPOSE(Set); */ /* Duktape lacks this - ES6 */
-	/* EXPOSE(WeakMap); */ /* Duktape lacks this - ES6 */
-	/* EXPOSE(WeakSet); */ /* Duktape lacks this - ES6 */
+	/* WHY: Map/Set/WeakMap/WeakSet are provided by polyfill.js at heap init.
+	 * EXPOSE() copies the global-object property onto the Window prototype
+	 * so page scripts see them as window.Map etc. */
+	EXPOSE(Map);
+	EXPOSE(Set);
+	EXPOSE(WeakMap);
+	EXPOSE(WeakSet);
 
 	/* Structured Data */
 	EXPOSE(ArrayBuffer);
@@ -381,7 +384,8 @@ prototype Window()
 	EXPOSE(JSON);
 
 	/* ** Control abstraction properties */
-	/* EXPOSE(Promise); */ /* Probably ought to be one of ours? Also ES6 */
+	/* WHY: Promise is provided by polyfill.js at heap init. */
+	EXPOSE(Promise);
 	/* EXPOSE(Generator); */ /* Duktape and async? ES6 */
 	/* EXPOSE(GeneratorFunction); */ /* Duktape and async? ES6 */
 	/* EXPOSE(AsyncFunction); */ /* Duktape lacks this - experimental API */
@@ -459,6 +463,26 @@ getter Window::location()
 	return 1;
 %}
 
+getter Window::history()
+%{
+	/* WHY: Returns the History object for this window, creating it lazily.
+	 *      Follows the same cached-on-window-object pattern as navigator. */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(History));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+
+		duk_push_pointer(ctx, priv->win);
+
+		if (dukky_create_object(ctx, PROTO_NAME(HISTORY), 1) != DUK_EXEC_SUCCESS) {
+			return duk_error(ctx, DUK_ERR_ERROR, "Unable to create history object");
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(History));
+	}
+	return 1;
+%}
+
 getter Window::navigator()
 %{
 	duk_push_this(ctx);
@@ -522,7 +546,11 @@ method Window::setTimeout()
 		return 0; /* coerced to undefined */
 	}
 
-	if (argc >= 2) {
+	/* WHY: spec ToNumber coercion of non-number to 0 is allowed, but a
+	 * missing or NaN argument must not pass raw duk_get_int (which would
+	 * return 0 only by coincidence). Explicit type guard makes intent
+	 * clear and prevents silent coercion of strings like "bad" to 0. */
+	if (argc >= 2 && duk_is_number(ctx, 1)) {
 		timeout = duk_get_int(ctx, 1);
 	}
 	/* func, [timeout, args...] */
@@ -542,7 +570,8 @@ method Window::setInterval()
 		return 0; /* coerced to undefined */
 	}
 
-	if (argc >= 2) {
+	/* WHY: same guard as setTimeout; non-number delay uses default 10ms. */
+	if (argc >= 2 && duk_is_number(ctx, 1)) {
 		timeout = duk_get_int(ctx, 1);
 	}
 	/* func, [timeout, args...] */
@@ -555,6 +584,11 @@ method Window::setInterval()
 
 method Window::clearTimeout()
 %{
+	/* WHY: spec says clearTimeout(undefined) and clearTimeout(non-number)
+	 * are no-ops; we must not pass garbage to window_remove_callback. */
+	if (duk_get_top(ctx) < 1 || !duk_is_number(ctx, 0)) {
+		return 0;
+	}
 	duk_int_t handle = duk_get_int(ctx, 0);
 	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
 
@@ -563,6 +597,10 @@ method Window::clearTimeout()
 
 method Window::clearInterval()
 %{
+	/* WHY: same no-op guard as clearTimeout. */
+	if (duk_get_top(ctx) < 1 || !duk_is_number(ctx, 0)) {
+		return 0;
+	}
 	duk_int_t handle = duk_get_int(ctx, 0);
 	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
 

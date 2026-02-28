@@ -462,3 +462,41 @@ messages-fetch-tfx:
 messages-import-tfx: messages-fetch-tfx
 	for tfxlang in $(FAT_LANGUAGES);do $(PERL) ./utils/import-messages.pl -l $${tfxlang} -p any -f transifex -o resources/FatMessages -i resources/FatMessages -I Messages.any.$${tfxlang}.tfx ; $(RM) Messages.any.$${tfxlang}.tfx; done
 
+# ----------------------------------------------------------------------------
+# compile_commands.json (for clangd, clang-tidy, scan-build)
+# WHY: A compilation database lets editors and static-analysis tools find
+#      all include paths and flags without manual -I configuration.
+#      bear wraps the build and records every compilation command.
+# WHAT: Produces compile_commands.json in the repository root.
+# HOW:  Requires bear >= 3.0 (installed as 'bear' on Arch/Ubuntu).
+#       Run in a shell that has already sourced docs/env.sh so that
+#       PKG_CONFIG_PATH points at the workspace libraries.
+# ----------------------------------------------------------------------------
+.PHONY: compile-db
+compile-db:
+	bear -- $(MAKE) -j$(shell nproc) TARGET=gtk
+
+
+# ----------------------------------------------------------------------------
+# lacunae -- JS binding gap analysis tool
+# WHY: Provides reproducible, data-driven visibility into which JS API gaps
+#      to close next, without re-running the full scanner every time.
+# HOW: Run lacunae-scan first; then use lacunae-report/lacunae-gaps for output.
+# ----------------------------------------------------------------------------
+.PHONY: lacunae-scan lacunae-report lacunae-gaps lacunae-graph lacunae-baseline
+
+lacunae-scan:
+	PYTHONPATH=tools python -m lacunae scan
+
+lacunae-report: lacunae-scan
+	PYTHONPATH=tools python -m lacunae report
+
+lacunae-gaps: lacunae-scan
+	PYTHONPATH=tools python -m lacunae gaps --top 20
+
+lacunae-graph: lacunae-scan
+	PYTHONPATH=tools python -m lacunae graph
+
+lacunae-baseline: lacunae-scan
+	cp lacunae-gaps.json test/lacunae-baseline.json
+	@echo "Baseline updated: test/lacunae-baseline.json"

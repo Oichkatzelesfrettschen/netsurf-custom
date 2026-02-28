@@ -1,0 +1,94 @@
+/* CustomEvent binding for NetSurf duktape JS engine
+ *
+ * Copyright 2026 NetSurf contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ *
+ * WHY: This C-level binding handles CustomEvent objects created by libdom
+ *      (e.g. from C event dispatch). It provides the `detail` property by
+ *      reading the dom_custom_event C struct via dom_custom_event_get_detail().
+ *
+ *      For the JS constructor `new CustomEvent(type, {detail: ...})`, the
+ *      polyfill.js implementation is used (it runs after this binding loads
+ *      and shadows the native constructor with one that preserves arbitrary
+ *      JS detail values).
+ *
+ *      NOTE: dom_custom_event_get_detail() returns a dom_string (a serialised
+ *      version of the detail used internally by libdom). For C-originated
+ *      events this is typically NULL or a string representation.
+ */
+
+class CustomEvent {
+	private dom_event *evt;
+};
+
+prologue CustomEvent()
+%{
+/* No additional headers needed: dom.h from netsurf.bnd preface provides
+ * dom_event_ref/unref and the event getters used in this binding. */
+%}
+
+init CustomEvent (struct dom_custom_event *evt::evt)
+%{
+	priv->evt = (dom_event *)evt;
+	dom_event_ref(priv->evt);
+%}
+
+fini CustomEvent ()
+%{
+	dom_event_unref(priv->evt);
+%}
+
+getter CustomEvent::detail ()
+%{
+	/*
+	 * For C-originated CustomEvents, libdom stores detail as a void * that
+	 * NetSurf does not populate with a typed value we can recover. The JS
+	 * polyfill.js CustomEvent constructor sets .detail directly on the
+	 * returned object, bypassing this getter for JS-originated events.
+	 *
+	 * WHY returning null: spec default for detail is null when not set.
+	 */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter CustomEvent::type ()
+%{
+	dom_string *ret;
+	dom_exception exc;
+
+	exc = dom_event_get_type(priv->evt, &ret);
+	if (exc != DOM_NO_ERR) return 0;
+	if (ret == NULL) {
+		duk_push_lstring(ctx, "", 0);
+	} else {
+		duk_push_lstring(ctx, dom_string_data(ret),
+				dom_string_length(ret));
+		dom_string_unref(ret);
+	}
+	return 1;
+%}
+
+getter CustomEvent::bubbles ()
+%{
+	dom_exception exc;
+	bool bubbles;
+	exc = dom_event_get_bubbles(priv->evt, &bubbles);
+	if (exc != DOM_NO_ERR) return 0;
+	duk_push_boolean(ctx, bubbles);
+	return 1;
+%}
+
+getter CustomEvent::cancelable ()
+%{
+	dom_exception exc;
+	bool cancelable;
+	exc = dom_event_get_cancelable(priv->evt, &cancelable);
+	if (exc != DOM_NO_ERR) return 0;
+	duk_push_boolean(ctx, cancelable);
+	return 1;
+%}

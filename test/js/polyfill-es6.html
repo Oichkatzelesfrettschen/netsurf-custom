@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<!-- WHY: Smoke test for ES6 polyfills (Map, Set, WeakMap, WeakSet, Promise).
+     Each test logs "PASS: <name>" or "FAIL: <name>: <reason>" so the monkey
+     wait-log step can gate on the final "DONE" line. -->
+<html>
+<head><title>ES6 Polyfill Tests</title></head>
+<body>
+<script>
+var failures = 0;
+
+function ok(name, expr) {
+  if (expr) {
+    console.log("PASS: " + name);
+  } else {
+    console.log("FAIL: " + name);
+    failures++;
+  }
+}
+
+/* --- Map --- */
+try {
+  var m = new Map();
+  m.set("a", 1);
+  m.set("b", 2);
+  ok("Map.set/get",   m.get("a") === 1 && m.get("b") === 2);
+  ok("Map.has",       m.has("a") && !m.has("c"));
+  ok("Map.size",      m.size === 2);
+  m.delete("a");
+  ok("Map.delete",    !m.has("a") && m.size === 1);
+  m.clear();
+  ok("Map.clear",     m.size === 0);
+} catch (e) {
+  console.log("FAIL: Map: " + e);
+  failures++;
+}
+
+/* --- Set --- */
+try {
+  var s = new Set([1, 2, 2, 3]);
+  ok("Set uniqueness", s.size === 3);
+  ok("Set.has",        s.has(2) && !s.has(4));
+  s.add(4);
+  ok("Set.add",        s.has(4) && s.size === 4);
+  s.delete(4);
+  ok("Set.delete",     !s.has(4) && s.size === 3);
+} catch (e) {
+  console.log("FAIL: Set: " + e);
+  failures++;
+}
+
+/* --- WeakMap --- */
+try {
+  var wm = new WeakMap();
+  var key = {};
+  wm.set(key, 42);
+  ok("WeakMap.get",    wm.get(key) === 42);
+  ok("WeakMap.has",    wm.has(key));
+  wm.delete(key);
+  ok("WeakMap.delete", !wm.has(key));
+} catch (e) {
+  console.log("FAIL: WeakMap: " + e);
+  failures++;
+}
+
+/* --- WeakSet --- */
+try {
+  var ws = new WeakSet();
+  var obj = {};
+  ws.add(obj);
+  ok("WeakSet.has",    ws.has(obj));
+  ws.delete(obj);
+  ok("WeakSet.delete", !ws.has(obj));
+} catch (e) {
+  console.log("FAIL: WeakSet: " + e);
+  failures++;
+}
+
+/* --- Promise --- */
+try {
+  var resolved = false;
+  Promise.resolve(99).then(function(v) {
+    resolved = true;
+    ok("Promise.resolve.then", v === 99);
+  });
+  /* Promise callbacks fire via setTimeout(0) so we check after a tick */
+  setTimeout(function() {
+    ok("Promise resolved flag", resolved);
+    /* all done */
+    console.log(failures === 0 ? "ALL PASS" : "FAILURES: " + failures);
+    console.log("DONE");
+  }, 50);
+} catch (e) {
+  console.log("FAIL: Promise: " + e);
+  console.log("DONE");
+}
+</script>
+</body>
+</html>

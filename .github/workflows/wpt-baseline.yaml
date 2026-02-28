@@ -1,0 +1,117 @@
+name: "WPT Baseline"
+
+# WHY: Run a subset of the W3C Web Platform Tests on every push to track
+#      feature coverage and catch regressions in implemented CSS/JS features.
+#      css-selectors is the first suite because pseudo-class support was just
+#      added; css-flexbox follows because flexbox layout is substantially complete.
+#
+# WHAT: Builds nsmonkey, fetches WPT css-selectors and css-flexbox subsets via
+#       sparse git checkout, runs run-wpt.py, and uploads results as an artifact.
+#       The job does NOT fail the build on harness-errors or timeouts (expected
+#       for unimplemented APIs); it fails only on assertion regressions.
+
+on: [push]
+
+jobs:
+  wpt-baseline:
+    name: 'WPT baseline (${{ matrix.suite }})'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        suite:
+          - css-selectors
+          - css-flexbox
+          - history
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: apt-get install packages
+      run: |
+        sudo apt-get update -qq
+        sudo apt-get install --no-install-recommends -y \
+          bison \
+          build-essential \
+          ccache \
+          check \
+          flex \
+          git \
+          gperf \
+          libcurl4-openssl-dev \
+          libgtk-3-dev \
+          libhtml-parser-perl \
+          libjpeg-dev \
+          libpng-dev \
+          librsvg2-dev \
+          libutf8proc-dev \
+          pkg-config \
+          python3-yaml \
+          wbritish
+
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2.0
+      with:
+        key: wpt-${{ matrix.suite }}
+        max-size: 128M
+
+    - name: Build and install project libs
+      env:
+        REPO_BASE_URI: https://github.com/netsurf-browser
+      run: |
+        export TARGET_WORKSPACE="$(pwd)/projects"
+        source docs/env.sh
+        ns-clone -d -s -b ${GITHUB_REF_NAME}
+        ns-make-tools install
+        ns-make-libs install
+
+    - name: Build nsmonkey
+      run: |
+        export TARGET_WORKSPACE="$(pwd)/projects"
+        source docs/env.sh
+        make -j"$(nproc)" TARGET=monkey
+
+    - name: Fetch WPT subset (${{ matrix.suite }})
+      run: |
+        mkdir -p test/wpt
+        git -C test/wpt init -q
+        git -C test/wpt remote add origin https://github.com/web-platform-tests/wpt.git
+        git -C test/wpt config core.sparseCheckout true
+        case "${{ matrix.suite }}" in
+          css-selectors) echo 'css/selectors/' > test/wpt/.git/info/sparse-checkout ;;
+          css-flexbox)   echo 'css/css-flexbox/' > test/wpt/.git/info/sparse-checkout ;;
+          history)       echo 'html/browsers/history/' > test/wpt/.git/info/sparse-checkout ;;
+        esac
+        git -C test/wpt fetch --depth=1 origin master -q
+        git -C test/wpt checkout --quiet master
+
+    - name: Run WPT ${{ matrix.suite }}
+      run: |
+        export TARGET_WORKSPACE="$(pwd)/projects"
+        source docs/env.sh
+        python3 test/run-wpt.py \
+          --monkey ./nsmonkey \
+          --suite ${{ matrix.suite }} \
+          --out test/wpt-results-${{ matrix.suite }}.json \
+          --timeout 20
+      # WHY: Exit code is non-zero only for assertion failures, not for
+      #      harness-errors or timeouts (unimplemented features).
+      continue-on-error: false
+
+    - name: Check for regressions against baseline
+      run: |
+        python3 test/check-wpt-regression.py \
+          --baseline test/wpt-baseline.json \
+          --results test/wpt-results-${{ matrix.suite }}.json \
+          --suite ${{ matrix.suite }}
+
+    - name: Upload WPT results artifact
+      uses: actions/upload-artifact@v4
+      if: always()
+      with:
+        name: wpt-results-${{ matrix.suite }}-${{ github.sha }}
+        path: test/wpt-results-${{ matrix.suite }}.json
+        retention-days: 30

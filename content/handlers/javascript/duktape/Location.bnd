@@ -41,6 +41,9 @@ method Location::reload()
 		browser_window_reload(priv_win->win, false);
 	} else {
 		NSLOG(netsurf, INFO, "failed to get browser context");
+		/* WHY: Detached window with no BW is a valid browser state
+		 * during teardown. Silently ignoring is correct per spec
+		 * (location.reload() on a detached window is a no-op). */
 	}
 	return 0;
 %}
@@ -55,12 +58,26 @@ method Location::assign()
 
 	if (priv_win == NULL || priv_win->win == NULL) {
 		NSLOG(netsurf, INFO, "failed to get browser context");
+		/* WHY: Detached window (no browser window). Navigation is a
+		 * no-op per spec when the browsing context is gone. */
+		return 0;
+	}
+
+	/* WHY: spec says assign(null) and assign(undefined) are no-ops;
+	 * duk_safe_to_lstring may return NULL if Duktape is out of memory. */
+	if (duk_get_top(ctx) == 0 ||
+	    duk_is_undefined(ctx, 0) ||
+	    duk_is_null(ctx, 0)) {
 		return 0;
 	}
 
 	nsurl *joined;
 	duk_size_t slen;
 	const char *url = duk_safe_to_lstring(ctx, 0, &slen);
+	if (url == NULL) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "Location.assign: URL must be a string");
+	}
 
 	nsurl_join(priv->url, url, &joined);
 	browser_window_navigate(priv_win->win,
@@ -84,12 +101,24 @@ method Location::replace()
 
 	if (priv_win == NULL || priv_win->win == NULL) {
 		NSLOG(netsurf, INFO, "failed to get browser context");
+		/* WHY: Same rationale as assign(): detached window, no-op. */
+		return 0;
+	}
+
+	/* WHY: same null/undefined guard as assign(); spec treats as no-op. */
+	if (duk_get_top(ctx) == 0 ||
+	    duk_is_undefined(ctx, 0) ||
+	    duk_is_null(ctx, 0)) {
 		return 0;
 	}
 
 	nsurl *joined;
 	duk_size_t slen;
 	const char *url = duk_safe_to_lstring(ctx, 0, &slen);
+	if (url == NULL) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "Location.replace: URL must be a string");
+	}
 
 	nsurl_join(priv->url, url, &joined);
 	browser_window_navigate(priv_win->win,
@@ -132,12 +161,25 @@ setter Location::href()
 
 	if (priv_win == NULL || priv_win->win == NULL) {
 		NSLOG(netsurf, INFO, "failed to get browser context");
+		/* WHY: Detached window. Setting href with no BW is a no-op. */
+		return 0;
+	}
+
+	/* WHY: setters receive the RHS value in slot 0; null/undefined
+	 * assignment is a no-op per spec. Guard against NULL string too. */
+	if (duk_get_top(ctx) == 0 ||
+	    duk_is_undefined(ctx, 0) ||
+	    duk_is_null(ctx, 0)) {
 		return 0;
 	}
 
 	nsurl *joined;
 	duk_size_t slen;
 	const char *url = duk_safe_to_lstring(ctx, 0, &slen);
+	if (url == NULL) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "Location.href: URL must be a string");
+	}
 
 	nsurl_join(priv->url, url, &joined);
 	browser_window_navigate(priv_win->win,

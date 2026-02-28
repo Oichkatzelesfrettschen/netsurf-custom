@@ -1,0 +1,191 @@
+/* History binding for browser using duktape and libdom
+ *
+ * Copyright 2024 NetSurf contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ *
+ * WHY: Implements the HTML5 History API (back, forward, go, pushState,
+ *      replaceState, length) so that single-page applications can update
+ *      the URL bar and navigate without triggering full page loads.
+ */
+
+class History {
+	private struct browser_window * win;
+};
+
+prologue History()
+%{
+#include "netsurf/browser_window.h"
+#include "desktop/browser_history.h"
+#include "utils/nsurl.h"
+%}
+
+init History(struct browser_window *bw)
+%{
+	priv->win = bw;
+%}
+
+fini History()
+%{
+	/* browser_window lifetime is managed by the window; no ref to drop */
+%}
+
+getter History::length()
+%{
+	duk_push_int(ctx, browser_window_history_length(priv->win));
+	return 1;
+%}
+
+method History::back()
+%{
+	if (priv->win != NULL) {
+		browser_window_history_back(priv->win, false);
+	}
+	return 0;
+%}
+
+method History::forward()
+%{
+	if (priv->win != NULL) {
+		browser_window_history_forward(priv->win, false);
+	}
+	return 0;
+%}
+
+method History::go()
+%{
+	/* history.go(delta): positive = forward, negative = back, 0 = reload.
+	 * WHY: The HTML5 spec defines go(n) as navigating n steps in the linear
+	 *      session history.  NetSurf only exposes single-step back/forward, so
+	 *      we implement go by looping over the back or forward chain. */
+	int delta = 0;
+	if (duk_get_top(ctx) >= 1 && duk_is_number(ctx, 0)) {
+		delta = duk_get_int(ctx, 0);
+	}
+	if (priv->win == NULL) {
+		return 0;
+	}
+	if (delta == 0) {
+		browser_window_reload(priv->win, false);
+	} else if (delta > 0) {
+		int i;
+		for (i = 0; i < delta; i++) {
+			if (!browser_window_history_forward_available(priv->win)) {
+				break;
+			}
+			browser_window_history_forward(priv->win, false);
+		}
+	} else {
+		int i;
+		for (i = 0; i > delta; i--) {
+			if (!browser_window_history_back_available(priv->win)) {
+				break;
+			}
+			browser_window_history_back(priv->win, false);
+		}
+	}
+	return 0;
+%}
+
+method History::pushState()
+%{
+	/* pushState(state, title, url): insert new history entry at current
+	 * position with new URL; no navigation occurs.
+	 * WHY: Essential for single-page apps that route via the URL bar. */
+	if (priv->win == NULL) {
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "History is not attached to a window");
+	}
+	if (duk_get_top(ctx) < 3) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "pushState requires 3 arguments (state, title, url)");
+	}
+
+	duk_size_t url_len;
+	const char *url_str = duk_safe_to_lstring(ctx, 2, &url_len);
+	if (url_str == NULL || url_len == 0) {
+		return 0;
+	}
+
+	nsurl *current_url = NULL;
+	browser_window_get_url(priv->win, false, &current_url);
+
+	nsurl *new_url = NULL;
+	if (current_url != NULL) {
+		nsurl_join(current_url, url_str, &new_url);
+	} else {
+		nsurl_create(url_str, &new_url);
+	}
+
+	/* Same-origin check: spec forbids pushState to a different origin */
+	if (new_url != NULL && current_url != NULL) {
+		if (!nsurl_same_origin(current_url, new_url)) {
+			nsurl_unref(new_url);
+			nsurl_unref(current_url);
+			return duk_error(ctx, DUK_ERR_RANGE_ERROR,
+					 "pushState: cannot navigate to a cross-origin URL");
+		}
+	}
+	if (current_url != NULL) {
+		nsurl_unref(current_url);
+	}
+
+	if (new_url != NULL) {
+		browser_window_history_push_state(priv->win, new_url);
+		nsurl_unref(new_url);
+	}
+	return 0;
+%}
+
+method History::replaceState()
+%{
+	/* replaceState(state, title, url): update current history entry URL
+	 * in place; no navigation and no new entry.
+	 * WHY: Apps use replaceState to canonicalize the current URL. */
+	if (priv->win == NULL) {
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "History is not attached to a window");
+	}
+	if (duk_get_top(ctx) < 3) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "replaceState requires 3 arguments (state, title, url)");
+	}
+
+	duk_size_t url_len;
+	const char *url_str = duk_safe_to_lstring(ctx, 2, &url_len);
+	if (url_str == NULL || url_len == 0) {
+		return 0;
+	}
+
+	nsurl *current_url = NULL;
+	browser_window_get_url(priv->win, false, &current_url);
+
+	nsurl *new_url = NULL;
+	if (current_url != NULL) {
+		nsurl_join(current_url, url_str, &new_url);
+	} else {
+		nsurl_create(url_str, &new_url);
+	}
+
+	/* Same-origin check: spec forbids replaceState to a different origin */
+	if (new_url != NULL && current_url != NULL) {
+		if (!nsurl_same_origin(current_url, new_url)) {
+			nsurl_unref(new_url);
+			nsurl_unref(current_url);
+			return duk_error(ctx, DUK_ERR_RANGE_ERROR,
+					 "replaceState: cannot navigate to a cross-origin URL");
+		}
+	}
+	if (current_url != NULL) {
+		nsurl_unref(current_url);
+	}
+
+	if (new_url != NULL) {
+		browser_window_history_replace_state(priv->win, new_url);
+		nsurl_unref(new_url);
+	}
+	return 0;
+%}

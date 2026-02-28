@@ -1,0 +1,149 @@
+/* TextDecoder / TextEncoder bindings for NetSurf duktape JS engine
+ *
+ * Copyright 2026 NetSurf contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ *
+ * WHY: TextDecoder/TextEncoder are required by many modern sites for
+ *      binary-to-string and string-to-binary conversions. Duktape 2.7
+ *      stores strings as UTF-8 internally, so the UTF-8 codec is trivial.
+ *      Only UTF-8 is supported; other encodings return a TypeError.
+ */
+
+prologue TextDecoder()
+%{
+#include <string.h>
+#include <strings.h>
+%}
+
+prologue TextEncoder()
+%{
+#include <string.h>
+%}
+
+/* ---- TextDecoder --------------------------------------------------------- */
+
+class TextDecoder {
+	private char *encoding;
+};
+
+init TextDecoder ()
+%{
+	const char *enc = "utf-8";
+	if (duk_get_top(ctx) > 0 && !duk_is_undefined(ctx, 0)) {
+		enc = duk_safe_to_string(ctx, 0);
+	}
+	/* Only UTF-8 is supported in this implementation.
+	 * duk_error is noreturn; cast to void to suppress the unused-value
+	 * warning from the macro's trailing comma expression. */
+	if (strcasecmp(enc, "utf-8") != 0 &&
+	    strcasecmp(enc, "utf8") != 0) {
+		(void)duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				"TextDecoder: unsupported encoding '%s' "
+				"(only 'utf-8' is supported)", enc);
+	}
+	priv->encoding = strdup("utf-8");
+	if (priv->encoding == NULL) {
+		(void)duk_error(ctx, DUK_ERR_ERROR,
+				"TextDecoder: out of memory");
+	}
+%}
+
+fini TextDecoder ()
+%{
+	free(priv->encoding);
+%}
+
+getter TextDecoder::encoding ()
+%{
+	duk_push_string(ctx, priv->encoding ? priv->encoding : "utf-8");
+	return 1;
+%}
+
+method TextDecoder::decode ()
+%{
+	/*
+	 * decode(input?) -- input is a BufferSource (ArrayBuffer or typed array).
+	 * Duktape stores JS strings as UTF-8, so we can directly push the raw
+	 * buffer bytes as a JS string. If input is absent/undefined, return "".
+	 *
+	 * Implementation note: duk_get_buffer_data() returns a live pointer into
+	 * Duktape's heap. The buffer object MUST remain on the Duktape value
+	 * stack while we use the pointer (i.e. until after duk_push_lstring).
+	 * Typed arrays (Uint8Array etc.) are handled by passing them directly to
+	 * duk_get_buffer_data(), which understands both ArrayBuffer and typed-
+	 * array views (it returns the view's slice automatically).
+	 */
+	if (duk_get_top(ctx) == 0 || duk_is_undefined(ctx, 0) || duk_is_null(ctx, 0)) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	/* duk_is_buffer_data() returns true for ArrayBuffer, typed arrays, and
+	 * Duktape plain buffers.  Keep arg at index 0 on the stack; get a live
+	 * pointer without popping anything. */
+	if (duk_is_buffer_data(ctx, 0)) {
+		duk_size_t sz = 0;
+		const void *buf = duk_get_buffer_data(ctx, 0, &sz);
+		/* buf is valid as long as index 0 is on the stack */
+		duk_push_lstring(ctx, (const char *)buf, sz);
+		return 1;
+	}
+
+	return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+			 "TextDecoder.decode: argument must be a BufferSource "
+			 "(ArrayBuffer or typed array)");
+%}
+
+/* ---- TextEncoder --------------------------------------------------------- */
+
+class TextEncoder {};
+
+init TextEncoder ()
+%{
+	/* Nothing to initialise; encoding is always "utf-8". */
+%}
+
+getter TextEncoder::encoding ()
+%{
+	duk_push_string(ctx, "utf-8");
+	return 1;
+%}
+
+method TextEncoder::encode ()
+%{
+	/*
+	 * encode(input?) -- converts a JS string to a Uint8Array of UTF-8 bytes.
+	 * Duktape stores strings as UTF-8 internally, so duk_get_lstring()
+	 * already gives us the UTF-8 byte sequence.
+	 */
+	const char *str;
+	duk_size_t sz;
+
+	if (duk_get_top(ctx) == 0 || duk_is_undefined(ctx, 0)) {
+		str = "";
+		sz = 0;
+	} else {
+		str = duk_safe_to_lstring(ctx, 0, &sz);
+	}
+
+	/* Allocate a Duktape fixed buffer and fill it with the UTF-8 bytes.
+	 * duk_push_fixed_buffer pushes the buffer at stack[-1] and returns
+	 * a pointer to the data; duk_push_buffer_object wraps it as Uint8Array
+	 * (at stack[-1]); the raw buffer is now at stack[-2] and must be
+	 * removed so we return only the Uint8Array. */
+	{
+		void *buf = duk_push_fixed_buffer(ctx, sz); /* stack: [buf] */
+		if (sz > 0) {
+			memcpy(buf, str, sz);
+		}
+		duk_push_buffer_object(ctx, -1, 0, sz, DUK_BUFOBJ_UINT8ARRAY);
+		/* stack: [buf, Uint8Array] -- remove the raw buffer */
+		duk_remove(ctx, -2);
+		/* stack: [Uint8Array] */
+	}
+	return 1;
+%}

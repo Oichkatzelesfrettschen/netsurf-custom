@@ -1883,12 +1883,86 @@ css_error node_is_target(void *pw, void *node, bool *match)
 css_error node_is_lang(void *pw, void *node,
 		lwc_string *lang, bool *match)
 {
-	/** \todo Support languages */
+	dom_node *n = (dom_node *)node;
+	const char *lang_str = lwc_string_data(lang);
+	size_t lang_len = lwc_string_length(lang);
 
+	(void)pw;
 	*match = false;
+
+	/*
+	 * CSS Selectors Level 3 ss 6.6.4: :lang(C) matches an element if the
+	 * element or its nearest ancestor has a language attribute value that
+	 * is exactly C or starts with C followed by '-' (e.g. :lang(en) matches
+	 * lang="en" and lang="en-US" but not lang="fr").
+	 *
+	 * Walk ancestor chain (including self) looking for a lang attribute.
+	 *
+	 * PERFORMANCE NOTE:
+	 *   This function is called once per selector match that contains :lang().
+	 *   The ancestor walk is O(depth) per call, which is visible on pages with
+	 *   many :lang() rules and deep DOM trees.
+	 *
+	 *   Memoization would require storing an effective-language cache on the
+	 *   select context (nscss_select_ctx) and invalidating it between sibling
+	 *   traversals.  The libcss select callback API does not provide a hook for
+	 *   cache invalidation, so any memoization must be conservative (cache per
+	 *   full selector pass, not per node).  This is deferred until a measured
+	 *   regression justifies the added complexity.
+	 */
+	dom_node_ref(n);
+	while (n != NULL) {
+		dom_node_type ntype;
+		dom_exception exc;
+		dom_string *attr = NULL;
+		dom_node *parent = NULL;
+
+		exc = dom_node_get_node_type(n, &ntype);
+		if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+			exc = dom_node_get_parent_node(n, &parent);
+			dom_node_unref(n);
+			n = (exc == DOM_NO_ERR) ? parent : NULL;
+			continue;
+		}
+
+		exc = dom_element_get_attribute(n, corestring_dom_lang, &attr);
+		if (exc == DOM_NO_ERR && attr != NULL) {
+			const char *av = dom_string_data(attr);
+			size_t al = dom_string_length(attr);
+
+			/* Prefix match: attr == lang, or attr starts with
+			 * lang followed by '-'. Case-insensitive per spec. */
+			if (al >= lang_len &&
+			    strncasecmp(av, lang_str, lang_len) == 0 &&
+			    (al == lang_len || av[lang_len] == '-')) {
+				*match = true;
+			}
+			dom_string_unref(attr);
+			dom_node_unref(n);
+			return CSS_OK;
+		}
+
+		exc = dom_node_get_parent_node(n, &parent);
+		dom_node_unref(n);
+		n = (exc == DOM_NO_ERR) ? parent : NULL;
+	}
 
 	return CSS_OK;
 }
+
+/*
+ * NOTE: :is() and :where() (CSS Selectors Level 4) are NOT implemented.
+ *
+ * The installed libcss does not expose a node_is_matches (or equivalent)
+ * callback in its css_select_handler table -- the handler table ends at
+ * node_is_lang (confirmed by inspection of the installed select.h).
+ * This version of libcss does not support :is()/:where() at all; the
+ * selector parser either rejects them or treats them as unknown and skips
+ * them silently. No callback can be added here without a libcss upgrade.
+ *
+ * When libcss is updated to a version that adds node_is_matches, implement
+ * it here following the same ancestor-walk pattern as node_is_lang.
+ */
 
 /**
  * Callback to retrieve the User-Agent defaults for a CSS property.

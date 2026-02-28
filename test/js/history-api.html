@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<!-- WHY: Smoke test for the HTML5 History API (history.length, pushState,
+     replaceState, back, forward, go).  Logs "PASS: <name>" or "FAIL: <name>"
+     so the monkey wait-log step can gate on the "DONE" line. -->
+<html>
+<head><title>History API Tests</title></head>
+<body>
+<script>
+var failures = 0;
+
+function ok(name, expr) {
+  if (expr) {
+    console.log("PASS: " + name);
+  } else {
+    console.log("FAIL: " + name);
+    failures++;
+  }
+}
+
+/* history object must exist */
+ok("window.history exists",    typeof window.history === 'object');
+ok("history.length is number", typeof history.length === 'number');
+ok("history.length >= 1",      history.length >= 1);
+
+/* pushState: URL bar should update without navigation */
+try {
+  var before = history.length;
+  history.pushState({}, '', '?pushed=1');
+  ok("pushState increases length", history.length === before + 1);
+} catch (e) {
+  console.log("FAIL: pushState: " + e);
+  failures++;
+}
+
+/* replaceState: length must not change */
+try {
+  var before = history.length;
+  history.replaceState({}, '', '?replaced=1');
+  ok("replaceState keeps length", history.length === before);
+} catch (e) {
+  console.log("FAIL: replaceState: " + e);
+  failures++;
+}
+
+/* back() and forward() must not throw */
+try {
+  history.back();
+  ok("history.back() does not throw", true);
+} catch (e) {
+  console.log("FAIL: history.back(): " + e);
+  failures++;
+}
+
+try {
+  history.forward();
+  ok("history.forward() does not throw", true);
+} catch (e) {
+  console.log("FAIL: history.forward(): " + e);
+  failures++;
+}
+
+/* go(0) is reload; just check it does not throw */
+try {
+  /* Skip actual reload in test to avoid infinite loop; call go(1) which
+   * is a no-op when no forward entry exists yet. */
+  history.go(1);
+  ok("history.go() does not throw", true);
+} catch (e) {
+  console.log("FAIL: history.go(): " + e);
+  failures++;
+}
+
+console.log(failures === 0 ? "ALL PASS" : "FAILURES: " + failures);
+console.log("DONE");
+</script>
+</body>
+</html>

@@ -170,4 +170,47 @@ const char *browser_window_history_entry_get_title(const struct history_entry *e
  */
 nserror browser_window_history_go(struct browser_window *bw, struct history_entry *entry, bool new_window);
 
+
+/**
+ * Return the number of entries in the linear history chain.
+ *
+ * WHY: HTML5 History API exposes window.history.length. NetSurf's history is
+ *      a tree; we count the back-chain length (entries behind current) plus
+ *      the forward-pref chain length plus the current entry itself.
+ *
+ * \param bw  browser window
+ * \return    number of history entries visible in the linear chain, or 0
+ */
+int browser_window_history_length(struct browser_window *bw);
+
+
+/**
+ * Update the current history entry URL and refresh the URL bar without
+ * performing a new fetch (HTML5 History API replaceState semantics).
+ *
+ * WHY: replaceState modifies the current session-history entry in place;
+ *      no navigation occurs and no new entry is created.
+ *
+ * \param bw    browser window
+ * \param url   new absolute URL to associate with current entry
+ * \return NSERROR_OK or error code on failure
+ */
+nserror browser_window_history_replace_state(struct browser_window *bw,
+					     struct nsurl *url);
+
+
+/**
+ * Insert a new history entry for the given URL and refresh the URL bar without
+ * performing a new fetch (HTML5 History API pushState semantics).
+ *
+ * WHY: pushState appends a new session-history entry after the current one,
+ *      truncating any forward entries, without triggering a navigation.
+ *
+ * \param bw    browser window
+ * \param url   new absolute URL for the inserted entry
+ * \return NSERROR_OK or error code on failure
+ */
+nserror browser_window_history_push_state(struct browser_window *bw,
+					  struct nsurl *url);
+
 #endif

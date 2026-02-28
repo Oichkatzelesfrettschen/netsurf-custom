@@ -25,3 +25,7 @@ NetSurf
 core
 nsfb-*
 build
+
+# lacunae gap analysis output (generated; re-run lacunae-scan to regenerate)
+lacunae-gaps.json
+lacunae-report/

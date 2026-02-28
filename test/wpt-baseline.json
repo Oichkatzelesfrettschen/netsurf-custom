@@ -1,0 +1,21 @@
+{
+  "note": "This file records the minimum acceptable WPT pass counts per suite.",
+  "comment": "Update this file by running: python3 test/update-wpt-baseline.py",
+  "suites": {
+    "css-selectors": {
+      "files_pass_min": 0,
+      "assert_pass_min": 0,
+      "assert_fail_max": 0
+    },
+    "css-flexbox": {
+      "files_pass_min": 0,
+      "assert_pass_min": 0,
+      "assert_fail_max": 0
+    },
+    "history": {
+      "files_pass_min": 0,
+      "assert_pass_min": 0,
+      "assert_fail_max": 0
+    }
+  }
+}

@@ -1,0 +1,51 @@
+# Resolution outline for {{ entry.id }}: {{ entry.class_name }}::{{ entry.member }}
+# Status : absent (no .bnd file exists)
+# Kind   : {{ entry.kind }}
+# Impact : {{ entry.impact }}/10   Effort: {{ entry.effort }}/10   Score: {{ entry.score }}
+# Notes  : {{ entry.notes or "" }}
+
+## Step 1: Create content/handlers/javascript/duktape/{{ entry.class_name }}.bnd
+
+/* {{ entry.class_name }} binding for browser using duktape and libdom
+ *
+ * WHY: {{ entry.notes or "Implements the " + entry.class_name + " Web API." }}
+ */
+
+class {{ entry.class_name }} {
+    /* TODO: add private fields, e.g.: private struct browser_window *win; */
+};
+
+prologue {{ entry.class_name }}()
+%{
+/* TODO: add #includes needed by C code in method bodies */
+%}
+
+init {{ entry.class_name }}(/* TODO: C type, e.g. struct browser_window *bw */)
+%{
+    /* TODO: store arguments into priv->fields */
+%}
+
+fini {{ entry.class_name }}()
+%{
+    /* TODO: release any refs held in priv->fields */
+%}
+
+{{ entry.kind }} {{ entry.class_name }}::{{ entry.member }}()
+%{
+    /* WHY: {{ entry.notes or "stub -- implement " + entry.member }} */
+    {{ hints.example_push }}
+    /* {{ hints.note }} */
+    return {{ hints.return_count }};
+%}
+
+## Step 2: Add to content/handlers/javascript/duktape/netsurf.bnd
+
+#include "{{ entry.class_name }}.bnd"
+
+## Step 3: Wire C implementation (if needed)
+
+/* In content/handlers/javascript/duktape/{{ entry.class_name|lower }}.c */
+/* Implement: {{ hints.return_type }} {{ entry.class_name|lower }}_{{ entry.member }}(...) */
+
+## WPT tests affected: {{ entry.wpt_tests }}
+## Effort: {{ entry.effort }}/10   ({{ entry.notes }})

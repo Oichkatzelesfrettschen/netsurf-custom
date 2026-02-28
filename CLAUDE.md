@@ -27,6 +27,12 @@ make -j$(nproc) TARGET=gtk     # GTK3
 make -j$(nproc) TARGET=qt      # Qt6
 make -j$(nproc) TARGET=framebuffer
 make test
+
+# Generate compile_commands.json for clangd / clang-tidy / scan-build
+# WHY: bear records every compilation command so tools find all -I paths.
+# Run in the same shell session that has sourced docs/env.sh.
+make compile-db
+# or directly: bear -- make -j$(nproc) TARGET=gtk
 ```
 
 PKG_CONFIG_PATH must include the workspace -- env.sh sets this. Always
@@ -38,6 +44,31 @@ source env.sh before running make.
 - All optional features set to `YES` explicitly (avoids AUTO eval-order bug)
 - CI should remain green on Ubuntu; Arch CI target added in build.yaml
 
+## Build Quirks
+
+These three issues will silently break builds if missed:
+
+1. **`HOST` must be unset**: Many shells (especially zsh on Arch) export `HOST`
+   to the machine hostname.  NetSurf's build system treats a non-empty `HOST`
+   as a cross-compilation request and selects the wrong toolchain.
+   Always run `unset HOST` before sourcing `docs/env.sh`.
+
+2. **Set features to `YES`, not `AUTO`**: The `pkg_config_find_and_add_enabled`
+   macro evaluates `S_IMAGE_$(NETSURF_USE_X)` at Makefile include time, before
+   the variable has been resolved from `AUTO` to `YES`.  This causes the feature
+   to be excluded from the link even though the library is present.
+   Set every feature you want explicitly to `YES` in `Makefile.config`
+   (see `Makefile.config.example` for the reference set).
+
+3. **`env.sh` must be sourced in the same shell that runs `make`**: `env.sh`
+   sets `PKG_CONFIG_PATH` and `LD_LIBRARY_PATH` to point at workspace libraries.
+   Those environment variables are not inherited across separate shell invocations.
+   Always use a single Bash invocation: `source docs/env.sh && make TARGET=gtk`.
+
+4. **librosprite causes linker failure**: `nssprite_init` is undefined unless
+   librosprite is installed in the workspace.  `ns-make-libs` does not build it
+   by default.  Keep `NETSURF_USE_ROSPRITE := NO` in `Makefile.config`.
+
 ## Common issues
 
 1. **HOST set to hostname**: `unset HOST` before sourcing env.sh
@@ -45,9 +76,37 @@ source env.sh before running make.
 3. **ns-clone -s fails**: Use `ns-clone -d` (drop shallow flag)
 4. **Tests need PKG_CONFIG_PATH**: Run make in the same shell that sourced env.sh
 
+## Upstream Conflicts
+
+When merging `upstream/master`, expect conflicts in these files:
+
+**Fork-local files (we own them entirely -- always keep our version):**
+- `content/handlers/javascript/duktape/History.bnd` -- new file, no upstream equivalent
+- `content/handlers/javascript/duktape/polyfill.js` -- new file
+- `content/handlers/javascript/duktape/Element.bnd` (innerHTML getter/setter additions)
+- `desktop/browser_history.c` / `desktop/browser_history.h` (pushState/replaceState additions)
+
+**Shared files (merge carefully -- keep our additions):**
+- `content/handlers/css/select.c` -- upstream owns the file; we added hover/active/focus/
+  checked/disabled/enabled/target callbacks.  On conflict, keep upstream's changes AND
+  our added callback bodies.
+- `content/handlers/javascript/duktape/Window.bnd` -- upstream owns; we added the
+  `history()` getter (lines ~374-377) and the `RING_ITERATE_STOP` typo fix (line 244).
+- `content/handlers/javascript/duktape/netsurf.bnd` -- upstream owns; we added
+  `#include "History.bnd"` between Location and Navigator.
+
+**Merge strategy:**
+```sh
+git fetch upstream
+git merge upstream/master
+# Resolve conflicts in the shared files listed above using git mergetool
+# After resolution: make -j$(nproc) TARGET=gtk && make test
+```
+
 ## References
 
 - `docs/building-Arch.md` -- Arch-specific build guide
 - `docs/dependency-matrix.md` -- Feature flag to package mapping
 - `docs/env.sh` -- Workspace setup (now includes pacman support)
-- `Makefile.config` -- Local build configuration
+- `docs/js-api-notes.md` -- JS API limitations, deviations, and implementation status
+- `Makefile.config` -- Local build configuration (gitignored; copy from Makefile.config.example)

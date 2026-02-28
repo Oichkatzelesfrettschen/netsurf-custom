@@ -1,0 +1,24 @@
+# Resolution outline for {{ entry.id }}: {{ entry.class_name }}::{{ entry.member }}
+# Status : {{ entry.status }}
+# Kind   : {{ entry.kind }}
+# Impact : {{ entry.impact }}/10   Effort: {{ entry.effort }}/10   Score: {{ entry.score }}
+# Notes  : {{ entry.notes or "" }}
+
+## .bnd body for {{ entry.class_name }}::{{ entry.member }}
+
+{{ entry.kind }} {{ entry.class_name }}::{{ entry.member }}()
+%{
+    /* WHY: {{ entry.notes or "implement this stub" }} */
+    {{ hints.example_push }}
+    /* {{ hints.note }} */
+    return {{ hints.return_count }};
+%}
+
+## C helper (if needed)
+
+/* In a new or existing .c file: */
+/* {{ hints.return_type }} {{ entry.class_name|lower }}_{{ entry.member }}(...) { ... } */
+
+## Reference .bnd file: {{ entry.bnd_file or "not yet created" }}
+## WPT tests affected: {{ entry.wpt_tests }}
+## cppcheck hits: {{ entry.cppcheck_hits }}

@@ -178,6 +178,31 @@ bool nsurl_compare(const nsurl *url1, const nsurl *url2, nsurl_component parts)
 
 
 /* exported interface, documented in nsurl.h */
+bool nsurl_same_origin(const nsurl *a, const nsurl *b)
+{
+	/*
+	 * Two URLs have the same origin when their scheme, host, and port
+	 * are identical (case-insensitive comparison per nsurl_compare).
+	 * Reference: https://html.spec.whatwg.org/#same-origin
+	 *
+	 * WHY a helper: History.bnd, and future Fetch/localStorage bindings,
+	 * all need same-origin checks. Centralising avoids copy-paste drift.
+	 *
+	 * KNOWN LIMITATION -- opaque origins:
+	 * Per the WHATWG URL standard, data: and blob: URLs have opaque origins:
+	 * every data: URL is a distinct origin from every other, regardless of
+	 * content.  nsurl_compare() does not implement opaque-origin semantics;
+	 * two identical data: URLs are reported as same-origin here.
+	 * This matches upstream NetSurf behaviour and is acceptable for a desktop
+	 * browser without cross-origin iframes.  Correct opaque-origin handling
+	 * requires tracking an origin tuple (scheme, host, port, opaque-flag) in
+	 * nsurl, which is an upstream change beyond the scope of this fork.
+	 */
+	return nsurl_compare(a, b, NSURL_SCHEME | NSURL_HOST | NSURL_PORT);
+}
+
+
+/* exported interface, documented in nsurl.h */
 nserror nsurl_get(const nsurl *url, nsurl_component parts,
 		char **url_s, size_t *url_l)
 {

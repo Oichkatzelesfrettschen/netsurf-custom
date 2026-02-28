@@ -68,18 +68,20 @@ jobs:
           ns-make-libs install
 
     - name: Unit Tests
-      # Fails when built with clang:
-      #  test/corestrings.c:58:F:corestrings:corestrings_test:486:
-      #  Assertion 'ires == NSERROR_NOMEM' failed: ires == 0, NSERROR_NOMEM == 2
-      # Looks like `malloc_limit()` not working.
-      if: ${{ matrix.compiler.vendor != 'llvm' }}
+      # WHY SKIP_MALLOC_LIMIT_TESTS: malloc_fig.c overrides malloc() via
+      # dlsym(RTLD_NEXT,"malloc"). Under Clang on Linux the interception
+      # fails (malloc may be inlined or the dynamic interposition is absent),
+      # causing hashmap and corestrings tests to see NSERROR_OK where they
+      # expect NSERROR_NOMEM. Setting SKIP_MALLOC_LIMIT_TESTS=1 removes only
+      # those two injection-dependent tests so the other 10 still run.
       env:
         CC: ${{ matrix.compiler.CC }}
         CXX: ${{ matrix.compiler.CXX }}
         TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
+        SKIP_MALLOC_LIMIT_TESTS: ${{ matrix.compiler.vendor == 'llvm' && '1' || '0' }}
       run: |
           source docs/env.sh
-          make test
+          make test SKIP_MALLOC_LIMIT_TESTS=${SKIP_MALLOC_LIMIT_TESTS}
 
     - name: Build NetSurf GTK
       env:
@@ -338,3 +340,53 @@ jobs:
         unset HOST
         source docs/env.sh
         make test
+
+  # ASan + UBSan unit tests (GCC only).
+  # WHY: The malloc injection tests rely on dlsym(RTLD_NEXT,"malloc") which
+  #      works reliably only with GCC on Linux. Running sanitize under GCC
+  #      catches heap errors and UB in the same test path. Clang is excluded
+  #      because SKIP_MALLOC_LIMIT_TESTS=1 would be required there, removing
+  #      the very tests most likely to expose memory errors.
+  sanitize:
+    name: 'ASan+UBSan unit tests (GCC, ubuntu-24.04)'
+    runs-on: ubuntu-24.04
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 1
+
+    - name: apt-get install packages
+      run: sudo apt-get update -qq &&
+           sudo apt-get install --no-install-recommends -y
+               bison
+               build-essential
+               check
+               flex
+               git
+               gperf
+               libcurl4-openssl-dev
+               libgtk-3-dev
+               libhtml-parser-perl
+               libjpeg-dev
+               libpng-dev
+               librsvg2-dev
+               libutf8proc-dev
+               pkg-config
+               wbritish
+
+    - name: Build and install project libs
+      env:
+        REPO_BASE_URI: https://github.com/netsurf-browser
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+      run: |
+          source docs/env.sh
+          ns-clone -d -s -b ${GITHUB_REF_NAME}
+          ns-make-tools install
+          ns-make-libs install
+
+    - name: Sanitize unit tests
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+      run: |
+          source docs/env.sh
+          make sanitize

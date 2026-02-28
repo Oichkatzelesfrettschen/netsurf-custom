@@ -25,6 +25,25 @@
 #ifndef DUKKY_H
 #define DUKKY_H
 
+/*
+ * ERROR CONVENTION FOR .bnd BINDINGS
+ *
+ * On programming error (wrong arg count, null state that should never be
+ * null, type mismatch from caller):
+ *   return duk_error(ctx, DUK_ERR_TYPE_ERROR, "descriptive message");
+ *
+ * On security violation (cross-origin access, forbidden operation):
+ *   return duk_error(ctx, DUK_ERR_ERROR, "descriptive message");
+ *
+ * On intentional silent no-op (spec-defined benign case, e.g. back() with
+ * no history, go(0) when already reloading, unref on null pointer):
+ *   return 0;  // WHY: <reason the spec permits silence here>
+ *
+ * Never return 0 silently for a condition that is a caller mistake.
+ * Document every silent return 0 with a WHY comment so reviewers can
+ * verify the silence is intentional.
+ */
+
 duk_ret_t dukky_create_object(duk_context *ctx, const char *name, int args);
 duk_bool_t dukky_push_node_stacked(duk_context *ctx);
 duk_bool_t dukky_push_node(duk_context *ctx, struct dom_node *node);

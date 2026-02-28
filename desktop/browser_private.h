@@ -74,6 +74,16 @@ struct history {
 	int width;
 	/** Height of layout. */
 	int height;
+	/** Cached result of browser_window_history_length(). */
+	int cached_length;
+	/** True when cached_length is valid.
+	 *
+	 * WHY: history.length is read by JS loops (e.g. for i<history.length).
+	 *      Without a cache, each call traverses the back and forward chains
+	 *      making a JS loop O(n^2).  We invalidate on every structural
+	 *      change (push, back, forward, go) but not on replaceState which
+	 *      only swaps a URL and does not change the chain length. */
+	bool length_valid;
 };
 
 /**

@@ -66,7 +66,10 @@ struct dom_html_br_element;
 #include "Element.bnd"
 #include "HTMLCollection.bnd"
 #include "Location.bnd"
+#include "History.bnd"
 #include "Navigator.bnd"
+#include "TextDecoder.bnd"
+#include "URL.bnd"
 #include "DOMImplementation.bnd"
 
 /* events */
@@ -82,7 +85,7 @@ init MouseWheelEvent(struct dom_mouse_wheel_event *evt::evt);
 init MouseMultiWheelEvent(struct dom_mouse_multi_wheel_event *evt::evt);
 init MouseEvent(struct dom_mouse_event *evt::evt);
 init DocumentEvent(struct dom_document_event *evt::evt);
-init CustomEvent(struct dom_custom_event *evt::evt);
+#include "CustomEvent.bnd"
 init CompositionEvent(struct dom_ui_event *evt::evt);
 init WheelEvent(struct dom_mouse_event *evt::evt);
 init FocusEvent(struct dom_ui_event *evt::evt);
