@@ -2,7 +2,6 @@ name: lacunae-gap-scan
 
 # WHY: Run the gap analysis on every push to master so regressions
 #      (new absent/stub gaps) are caught before merging.
-#      The gaps artifact provides a persistent record of progress over time.
 
 on:
   push:
@@ -15,54 +14,26 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-        with:
-          fetch-depth: 50    # enough history for 90-day churn analysis
 
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Python dependencies
-        run: |
-          pip install typer rich jinja2 gitpython networkx graphviz pydriller
-
       - name: Run lacunae scan
-        run: |
-          PYTHONPATH=tools python -m lacunae scan \
-            --skip-cppcheck \
-            --repo-root "$GITHUB_WORKSPACE"
+        run: python3 tools/lacunae.py scan
 
       - name: Check for regressions vs baseline
         run: |
           if [ -f test/lacunae-baseline.json ]; then
-            PYTHONPATH=tools python -m lacunae diff \
-              --gaps-json lacunae-gaps.json \
-              --baseline test/lacunae-baseline.json
+            python3 tools/lacunae.py diff
           else
             echo "No baseline found; skipping regression check."
           fi
 
-      - name: Generate HTML report
-        run: |
-          PYTHONPATH=tools python -m lacunae report \
-            --gaps-json lacunae-gaps.json \
-            --out-dir lacunae-report
-
-      - name: Generate dependency graph
-        run: |
-          PYTHONPATH=tools python -m lacunae graph \
-            --gaps-json lacunae-gaps.json \
-            --out-dir lacunae-report \
-            --format svg
-        # graphviz binary may not be installed; tolerate failure
-        continue-on-error: true
-
       - name: Upload gap artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: lacunae-report-${{ github.sha }}
-          path: |
-            lacunae-gaps.json
-            lacunae-report/
+          name: lacunae-gaps-${{ github.sha }}
+          path: lacunae-gaps.json
           retention-days: 30

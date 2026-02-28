@@ -478,24 +478,20 @@ compile-db:
 
 
 # ----------------------------------------------------------------------------
-# lacunae -- JS binding gap analysis tool
-# WHY: Provides reproducible, data-driven visibility into which JS API gaps
-#      to close next, without re-running the full scanner every time.
-# HOW: Run lacunae-scan first; then use lacunae-report/lacunae-gaps for output.
+# lacunae -- JS binding gap analysis tool (zero-dep single script)
+# WHY: Data-driven visibility into which JS API gaps to close next.
+# HOW: Run lacunae-scan first; then lacunae-gaps or lacunae-diff.
 # ----------------------------------------------------------------------------
-.PHONY: lacunae-scan lacunae-report lacunae-gaps lacunae-graph lacunae-baseline
+.PHONY: lacunae-scan lacunae-gaps lacunae-diff lacunae-baseline
 
 lacunae-scan:
-	PYTHONPATH=tools python -m lacunae scan
-
-lacunae-report: lacunae-scan
-	PYTHONPATH=tools python -m lacunae report
+	python3 tools/lacunae.py scan
 
 lacunae-gaps: lacunae-scan
-	PYTHONPATH=tools python -m lacunae gaps --top 20
+	python3 tools/lacunae.py gaps --top 20
 
-lacunae-graph: lacunae-scan
-	PYTHONPATH=tools python -m lacunae graph
+lacunae-diff: lacunae-scan
+	python3 tools/lacunae.py diff
 
 lacunae-baseline: lacunae-scan
 	cp lacunae-gaps.json test/lacunae-baseline.json
