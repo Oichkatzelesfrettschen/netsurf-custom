@@ -152,6 +152,82 @@ setter HTMLElement::onwaiting();
 getter HTMLElement::onwheel();
 setter HTMLElement::onwheel();
 
+getter HTMLElement::hidden()
+%{
+	dom_exception exc;
+	bool has;
+
+	exc = dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_hidden, &has);
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLElement::hidden()
+%{
+	dom_exception exc;
+	bool val = duk_to_boolean(ctx, 0);
+
+	if (val) {
+		dom_string *empty = NULL;
+		exc = dom_string_create((const uint8_t *)"", 0, &empty);
+		if (exc == DOM_NO_ERR && empty != NULL) {
+			exc = dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_hidden, empty);
+			dom_string_unref(empty);
+			(void)exc;
+		}
+	} else {
+		exc = dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_hidden);
+		(void)exc;
+	}
+	return 0;
+%}
+
+getter HTMLElement::tabIndex()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_tabindex, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_int(ctx, -1);
+		return 1;
+	}
+	duk_push_int(ctx, strtol(dom_string_data(val), NULL, 10));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::tabIndex()
+%{
+	dom_exception exc;
+	dom_string *str = NULL;
+	char buf[16];
+	int v = duk_to_int(ctx, 0);
+
+	snprintf(buf, sizeof(buf), "%d", v);
+	exc = dom_string_create((const uint8_t *)buf, strlen(buf), &str);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_element_set_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_tabindex, str);
+	dom_string_unref(str);
+	(void)exc;
+	return 0;
+%}
+
 getter HTMLElement::style()
 %{
 	/* Minimal implementation to avoid infinite-loop in Modernizr (c.f. #2413) */

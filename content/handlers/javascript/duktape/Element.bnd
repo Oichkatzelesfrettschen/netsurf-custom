@@ -423,6 +423,41 @@ getter Element::classList ()
 	return 1;
 %}
 
+getter Element::tagName()
+%{
+	dom_string *name = NULL;
+	dom_exception exc;
+
+	exc = dom_node_get_node_name(((node_private_t *)priv)->node, &name);
+	if (exc != DOM_NO_ERR || name == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(name), dom_string_length(name));
+	dom_string_unref(name);
+	return 1;
+%}
+
+getter Element::localName()
+%{
+	dom_string *name = NULL;
+	dom_exception exc;
+
+	exc = dom_node_get_local_name(((node_private_t *)priv)->node, &name);
+	if (exc != DOM_NO_ERR || name == NULL) {
+		/* Fallback: HTML elements may not have a namespace-aware
+		 * local name; use node name lowercased by libdom instead. */
+		exc = dom_node_get_node_name(((node_private_t *)priv)->node, &name);
+		if (exc != DOM_NO_ERR || name == NULL) {
+			duk_push_lstring(ctx, "", 0);
+			return 1;
+		}
+	}
+	duk_push_lstring(ctx, dom_string_data(name), dom_string_length(name));
+	dom_string_unref(name);
+	return 1;
+%}
+
 getter Element::innerHTML()
 %{
 	dom_exception exc;

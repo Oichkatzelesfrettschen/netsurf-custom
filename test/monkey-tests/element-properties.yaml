@@ -1,0 +1,77 @@
+# Smoke test for Element.tagName/localName and HTMLElement.hidden/tabIndex
+# WHY: Verify basic DOM property access works for core Element properties.
+
+window: inline
+content: |
+  <html><head><title>element properties test</title></head>
+  <body>
+  <div id="testdiv" tabindex="5">hello</div>
+  <span id="testspan" hidden>hidden</span>
+  <script>
+    var results = [];
+    var div = document.getElementById('testdiv');
+    var span = document.getElementById('testspan');
+
+    // tagName
+    if (div.tagName === 'DIV') {
+      results.push('PASS: tagName=DIV');
+    } else {
+      results.push('FAIL: tagName=' + div.tagName);
+    }
+
+    // localName
+    if (div.localName === 'DIV' || div.localName === 'div') {
+      results.push('PASS: localName ok');
+    } else {
+      results.push('FAIL: localName=' + div.localName);
+    }
+
+    // hidden getter
+    if (span.hidden === true) {
+      results.push('PASS: hidden=true');
+    } else {
+      results.push('FAIL: hidden=' + span.hidden);
+    }
+    if (div.hidden === false) {
+      results.push('PASS: not-hidden=false');
+    } else {
+      results.push('FAIL: not-hidden=' + div.hidden);
+    }
+
+    // hidden setter
+    div.hidden = true;
+    if (div.hidden === true) {
+      results.push('PASS: hidden setter works');
+    } else {
+      results.push('FAIL: hidden setter failed');
+    }
+    div.hidden = false;
+    if (div.hidden === false) {
+      results.push('PASS: hidden remove works');
+    } else {
+      results.push('FAIL: hidden remove failed');
+    }
+
+    // tabIndex getter
+    if (div.tabIndex === 5) {
+      results.push('PASS: tabIndex=5');
+    } else {
+      results.push('FAIL: tabIndex=' + div.tabIndex);
+    }
+
+    // tabIndex setter
+    div.tabIndex = 10;
+    if (div.tabIndex === 10) {
+      results.push('PASS: tabIndex setter works');
+    } else {
+      results.push('FAIL: tabIndex setter got ' + div.tabIndex);
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: tagName=DIV"
+  - type: title-not-contains
+    value: "FAIL"
