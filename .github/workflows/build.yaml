@@ -101,6 +101,21 @@ jobs:
           source docs/env.sh
           make -j"$(nproc)" TARGET=monkey
 
+    - name: Run monkey smoke tests
+      if: matrix.os == 'ubuntu-24.04' && matrix.compiler.vendor == 'gnu'
+      env:
+        CC: ${{ matrix.compiler.CC }}
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+      run: |
+          source docs/env.sh
+          MONKEY=./build/$(uname -m)-pc-linux-gnu-monkey/nsmonkey
+          for plan in test/monkey-tests/history-api.yaml \
+                      test/monkey-tests/polyfill-es6.yaml \
+                      test/monkey-tests/innerHTML-correctness.yaml; do
+            echo "=== $plan ==="
+            python3 test/monkey-see-monkey-do "$MONKEY" "$plan" || exit 1
+          done
+
     - name: Build NetSurf Framebuffer
       env:
         CC: ${{ matrix.compiler.CC }}
