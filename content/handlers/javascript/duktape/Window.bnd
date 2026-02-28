@@ -483,6 +483,24 @@ getter Window::history()
 	return 1;
 %}
 
+getter Window::performance()
+%{
+	/* WHY: Returns the Performance object for this window, creating it
+	 *      lazily. Same cached-on-window-object pattern as history. */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(Performance));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+
+		if (dukky_create_object(ctx, PROTO_NAME(PERFORMANCE), 0) != DUK_EXEC_SUCCESS) {
+			return duk_error(ctx, DUK_ERR_ERROR, "Unable to create performance object");
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(Performance));
+	}
+	return 1;
+%}
+
 getter Window::navigator()
 %{
 	duk_push_this(ctx);

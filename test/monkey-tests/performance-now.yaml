@@ -1,0 +1,56 @@
+# Smoke test for performance.now() binding
+# WHY: Verify Performance object is accessible, now() returns a number,
+#      and values are monotonically non-decreasing.
+
+window: inline
+content: |
+  <html><head><title>performance.now test</title></head>
+  <body><script>
+    var results = [];
+
+    // typeof check
+    if (typeof performance === 'object' && performance !== null) {
+      results.push('PASS: performance is object');
+    } else {
+      results.push('FAIL: performance is not an object, got ' + typeof performance);
+    }
+
+    // now() returns a number
+    var t = performance.now();
+    if (typeof t === 'number' && !isNaN(t)) {
+      results.push('PASS: now() returns number: ' + t);
+    } else {
+      results.push('FAIL: now() returned ' + typeof t + ': ' + t);
+    }
+
+    // >= 0 check
+    if (t >= 0) {
+      results.push('PASS: now() >= 0');
+    } else {
+      results.push('FAIL: now() is negative: ' + t);
+    }
+
+    // monotonic check
+    var t2 = performance.now();
+    if (t2 >= t) {
+      results.push('PASS: monotonic (t2 >= t1)');
+    } else {
+      results.push('FAIL: not monotonic: t1=' + t + ' t2=' + t2);
+    }
+
+    // timeOrigin check
+    var origin = performance.timeOrigin;
+    if (typeof origin === 'number' && origin >= 0) {
+      results.push('PASS: timeOrigin is non-negative number');
+    } else {
+      results.push('FAIL: timeOrigin = ' + origin);
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: performance is object"
+  - type: title-not-contains
+    value: "FAIL"

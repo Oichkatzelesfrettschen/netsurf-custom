@@ -1,0 +1,53 @@
+/* Performance binding for browser using duktape
+ *
+ * Copyright 2024 NetSurf contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ *
+ * WHY: Implements performance.now() and performance.timeOrigin so that
+ *      JS frameworks can measure timing without Date.now() drift.
+ *      KNOWN DEVIATION: timeOrigin is process-relative (monotonic clock
+ *      at init time), not navigation-start as the spec requires.
+ */
+
+class Performance {
+	private uint64_t time_origin_ms;
+};
+
+prologue Performance()
+%{
+#include <nsutils/time.h>
+%}
+
+init Performance()
+%{
+	nsuerror err = nsu_getmonotonic_ms(&priv->time_origin_ms);
+	if (err != NSUERROR_OK) {
+		priv->time_origin_ms = 0;
+	}
+%}
+
+fini Performance()
+%{
+%}
+
+method Performance::now()
+%{
+	uint64_t now_ms;
+	nsuerror err = nsu_getmonotonic_ms(&now_ms);
+	if (err != NSUERROR_OK) {
+		duk_push_number(ctx, 0.0);
+		return 1;
+	}
+	duk_push_number(ctx, (double)(now_ms - priv->time_origin_ms));
+	return 1;
+%}
+
+getter Performance::timeOrigin()
+%{
+	duk_push_number(ctx, (double)priv->time_origin_ms);
+	return 1;
+%}
