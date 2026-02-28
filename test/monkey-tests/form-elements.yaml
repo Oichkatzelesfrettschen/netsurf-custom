@@ -1,0 +1,76 @@
+# Smoke test for HTMLButtonElement and HTMLSelectElement properties
+# WHY: Verify disabled, name, value properties on button and select.
+
+window: inline
+content: |
+  <html><head><title>form elements test</title></head>
+  <body>
+  <button id="btn1" name="submit_btn" value="go" disabled>Click</button>
+  <select id="sel1" name="color">
+    <option value="red">Red</option>
+    <option value="blue" selected>Blue</option>
+  </select>
+  <script>
+    var results = [];
+    var btn = document.getElementById('btn1');
+    var sel = document.getElementById('sel1');
+
+    // Button disabled
+    if (btn.disabled === true) {
+      results.push('PASS: btn.disabled=true');
+    } else {
+      results.push('FAIL: btn.disabled=' + btn.disabled);
+    }
+
+    // Button name
+    if (btn.name === 'submit_btn') {
+      results.push('PASS: btn.name=submit_btn');
+    } else {
+      results.push('FAIL: btn.name=' + btn.name);
+    }
+
+    // Button value
+    if (btn.value === 'go') {
+      results.push('PASS: btn.value=go');
+    } else {
+      results.push('FAIL: btn.value=' + btn.value);
+    }
+
+    // Button disabled setter
+    btn.disabled = false;
+    if (btn.disabled === false) {
+      results.push('PASS: btn.disabled setter');
+    } else {
+      results.push('FAIL: btn.disabled setter');
+    }
+
+    // Select name
+    if (sel.name === 'color') {
+      results.push('PASS: sel.name=color');
+    } else {
+      results.push('FAIL: sel.name=' + sel.name);
+    }
+
+    // Select disabled (default false)
+    if (sel.disabled === false) {
+      results.push('PASS: sel.disabled=false');
+    } else {
+      results.push('FAIL: sel.disabled=' + sel.disabled);
+    }
+
+    // Select type
+    var t = sel.type;
+    if (t === 'select-one' || t === 'select-multiple') {
+      results.push('PASS: sel.type=' + t);
+    } else {
+      results.push('FAIL: sel.type=' + t);
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: btn.disabled=true"
+  - type: title-not-contains
+    value: "FAIL"

@@ -8,19 +8,93 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+prologue HTMLSelectElement()
+%{
+#include <dom/html/html_select_element.h>
+
+#define SELECT_NODE ((dom_html_select_element *)((node_private_t *)priv)->node)
+%}
+
 init HTMLSelectElement(struct dom_html_element *html_select_element::html_element);
 
-getter HTMLSelectElement::disabled();
-setter HTMLSelectElement::disabled();
+getter HTMLSelectElement::disabled()
+%{
+	bool val = false;
+	dom_html_select_element_get_disabled(SELECT_NODE, &val);
+	duk_push_boolean(ctx, val);
+	return 1;
+%}
 
-getter HTMLSelectElement::multiple();
-setter HTMLSelectElement::multiple();
+setter HTMLSelectElement::disabled()
+%{
+	dom_html_select_element_set_disabled(SELECT_NODE, duk_to_boolean(ctx, 0));
+	return 0;
+%}
 
-getter HTMLSelectElement::name();
-setter HTMLSelectElement::name();
+getter HTMLSelectElement::multiple()
+%{
+	bool val = false;
+	dom_html_select_element_get_multiple(SELECT_NODE, &val);
+	duk_push_boolean(ctx, val);
+	return 1;
+%}
 
-getter HTMLSelectElement::type();
+setter HTMLSelectElement::multiple()
+%{
+	dom_html_select_element_set_multiple(SELECT_NODE, duk_to_boolean(ctx, 0));
+	return 0;
+%}
 
-getter HTMLSelectElement::value();
-setter HTMLSelectElement::value();
+getter HTMLSelectElement::name()
+%{
+	dom_string *val = NULL;
+	dom_html_select_element_get_name(SELECT_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
 
+setter HTMLSelectElement::name()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_select_element_set_name(SELECT_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLSelectElement::type()
+%{
+	dom_string *val = NULL;
+	dom_html_select_element_get_type(SELECT_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "select-one", 10); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+getter HTMLSelectElement::value()
+%{
+	dom_string *val = NULL;
+	dom_html_select_element_get_value(SELECT_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLSelectElement::value()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_select_element_set_value(SELECT_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
