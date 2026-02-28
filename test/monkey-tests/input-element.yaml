@@ -1,0 +1,82 @@
+# Smoke test for HTMLInputElement property implementations
+# WHY: Verify value, type, checked, disabled, name, readOnly work.
+
+window: inline
+content: |
+  <html><head><title>input element test</title></head>
+  <body>
+  <input id="t1" type="text" name="username" value="hello">
+  <input id="t2" type="checkbox" checked disabled>
+  <input id="t3" type="password" readonly>
+  <script>
+    var results = [];
+    var t1 = document.getElementById('t1');
+    var t2 = document.getElementById('t2');
+    var t3 = document.getElementById('t3');
+
+    // value getter
+    if (t1.value === 'hello') {
+      results.push('PASS: value=hello');
+    } else {
+      results.push('FAIL: value=' + t1.value);
+    }
+
+    // value setter
+    t1.value = 'world';
+    if (t1.value === 'world') {
+      results.push('PASS: value setter works');
+    } else {
+      results.push('FAIL: value setter got ' + t1.value);
+    }
+
+    // type getter
+    if (t1.type === 'text') {
+      results.push('PASS: type=text');
+    } else {
+      results.push('FAIL: type=' + t1.type);
+    }
+
+    // name getter
+    if (t1.name === 'username') {
+      results.push('PASS: name=username');
+    } else {
+      results.push('FAIL: name=' + t1.name);
+    }
+
+    // checked getter
+    if (t2.checked === true) {
+      results.push('PASS: checked=true');
+    } else {
+      results.push('FAIL: checked=' + t2.checked);
+    }
+
+    // checked setter
+    t2.checked = false;
+    if (t2.checked === false) {
+      results.push('PASS: checked setter works');
+    } else {
+      results.push('FAIL: checked setter failed');
+    }
+
+    // disabled getter
+    if (t2.disabled === true) {
+      results.push('PASS: disabled=true');
+    } else {
+      results.push('FAIL: disabled=' + t2.disabled);
+    }
+
+    // readOnly getter
+    if (t3.readOnly === true) {
+      results.push('PASS: readOnly=true');
+    } else {
+      results.push('FAIL: readOnly=' + t3.readOnly);
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: value=hello"
+  - type: title-not-contains
+    value: "FAIL"
