@@ -110,3 +110,8 @@ git merge upstream/master
 - `docs/env.sh` -- Workspace setup (now includes pacman support)
 - `docs/js-api-notes.md` -- JS API limitations, deviations, and implementation status
 - `Makefile.config` -- Local build configuration (gitignored; copy from Makefile.config.example)
+- `tools/lacunae.py` -- JS binding gap analysis (scan/gaps/diff/spec-coverage)
+- `tools/fetch-spec-idl.sh` -- Download WebIDL specs from w3c/webref (monthly)
+- `tools/http-audit.py` -- HTTP protocol compliance audit (RFC 9110/9111)
+- `docs/spec-coverage.md` -- Auto-generated spec coverage report
+- `docs/http-compliance.md` -- Auto-generated HTTP compliance report

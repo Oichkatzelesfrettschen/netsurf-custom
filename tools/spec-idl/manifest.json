@@ -1,0 +1,8 @@
+{
+  "source": "https://raw.githubusercontent.com/w3c/webref/curated/ed/idl/",
+  "branch": "curated",
+  "fetched": "2026-03-01T00:25:51Z",
+  "specs": ["dom", "html", "url", "uievents", "cssom", "console", "xhr", "fetch", "hr-time", "storage", "geometry"],
+  "ok": 11,
+  "failed": 0
+}

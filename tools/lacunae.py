@@ -41,6 +41,14 @@ class BndDecl:
 
 
 @dataclasses.dataclass
+class IdlDecl:
+    interface_name: str
+    member_name: str
+    kind: str          # "attribute", "readonly_attribute", "method", "constructor"
+    spec_file: str
+
+
+@dataclasses.dataclass
 class GapEntry:
     id: str
     class_name: str
@@ -344,9 +352,11 @@ def _build_gap_matrix(repo_root: Path) -> list[GapEntry]:
             "notes": "Listed in UnimplementedJavascript.md",
         })
 
-    # Absent APIs
+    # Absent APIs (manually curated)
+    absent_keys: set[tuple[str, str]] = set()
     for a in ABSENT_APIS:
         key = (a["class"], a["member"])
+        absent_keys.add(key)
         if key in seen:
             continue
         seen.add(key)
@@ -356,6 +366,43 @@ def _build_gap_matrix(repo_root: Path) -> list[GapEntry]:
             "impact": a["impact"], "effort": a["effort"],
             "wpt": a["wpt"], "body_lines": 0, "notes": a["notes"],
         })
+
+    # Spec-driven discovery: if tools/spec-idl/ contains .idl files,
+    # parse them and add any (interface, member) not yet seen as "absent"
+    spec_dir = repo_root / "tools" / "spec-idl"
+    if spec_dir.exists() and list(spec_dir.glob("*.idl")):
+        idl_decls = _parse_all_idl(spec_dir)
+        for iface_name, decls in idl_decls.items():
+            if iface_name not in _RELEVANT_INTERFACES:
+                continue
+            for decl in decls:
+                if _is_event_handler(decl.member_name):
+                    continue
+                key = (iface_name, decl.member_name)
+                if key in seen:
+                    continue
+                seen.add(key)
+                # Use manual scores if in ABSENT_APIS, else category defaults
+                if key in absent_keys:
+                    aa = next(a for a in ABSENT_APIS
+                             if (a["class"], a["member"]) == key)
+                    raw.append({
+                        "class": iface_name, "member": decl.member_name,
+                        "kind": decl.kind, "bnd_file": "", "status": "absent",
+                        "impact": aa["impact"], "effort": aa["effort"],
+                        "wpt": aa["wpt"], "body_lines": 0, "notes": aa["notes"],
+                    })
+                else:
+                    cat = _CATEGORY_DEFAULTS.get(
+                        iface_name, _CATEGORY_DEFAULTS["default"])
+                    raw.append({
+                        "class": iface_name, "member": decl.member_name,
+                        "kind": decl.kind, "bnd_file": "",
+                        "status": "absent",
+                        "impact": cat["impact"], "effort": cat["effort"],
+                        "wpt": cat["wpt"], "body_lines": 0,
+                        "notes": f"Discovered from {decl.spec_file}",
+                    })
 
     # Build scored entries
     entries: list[GapEntry] = []
@@ -489,6 +536,405 @@ def _diff_gaps(current_path: Path, baseline_path: Path) -> int:
 
 
 # ---------------------------------------------------------------------------
+# WebIDL parser
+# ---------------------------------------------------------------------------
+
+# Matches: interface X { ... }; / interface X : Y { ... };
+# Also:    partial interface X { ... };
+# Also:    interface mixin X { ... };
+_IDL_IFACE_RE = re.compile(
+    r"^\s*(?:partial\s+)?interface\s+(?:mixin\s+)?(\w+)"
+    r"(?:\s*:\s*\w+)?\s*\{",
+    re.ASCII,
+)
+# Matches: namespace X { ... };
+_IDL_NS_RE = re.compile(r"^\s*namespace\s+(\w+)\s*\{", re.ASCII)
+
+# Matches: [readonly] attribute TYPE name;
+_IDL_ATTR_RE = re.compile(
+    r"^\s*(?:\[[\w=,\s\"\'()]*\]\s*)*"
+    r"(readonly\s+)?attribute\s+.+?\s+(\w+)\s*;",
+    re.ASCII,
+)
+
+# Matches: RETURNTYPE name(ARGS);  (but not "attribute ...")
+_IDL_METHOD_RE = re.compile(
+    r"^\s*(?:\[[\w=,\s\"\'()]*\]\s*)*"
+    r"(?!attribute\b)(?!readonly\b)(?!const\b)"
+    r"(?:static\s+)?(?:\w[\w<>\?,\s]*?)\s+(\w+)\s*\(",
+    re.ASCII,
+)
+
+# Matches: constructor(ARGS);
+_IDL_CTOR_RE = re.compile(r"^\s*(?:\[[\w=,\s\"\'()]*\]\s*)*constructor\s*\(", re.ASCII)
+
+# Matches: X includes Y;
+_IDL_INCLUDES_RE = re.compile(r"^\s*(\w+)\s+includes\s+(\w+)\s*;", re.ASCII)
+
+# Skip: const, dictionary, callback, typedef, enum
+_IDL_SKIP_RE = re.compile(
+    r"^\s*(?:const\s|dictionary\s|callback\s|typedef\s|enum\s)",
+    re.ASCII,
+)
+
+
+def _parse_idl_file(path: Path) -> tuple[dict[str, list[IdlDecl]], list[tuple[str, str]]]:
+    """Parse a single .idl file.
+
+    Returns:
+        (interfaces: {name: [IdlDecl, ...]}, includes: [(target, mixin), ...])
+    """
+    spec = path.name
+    text = path.read_text(encoding="utf-8", errors="replace")
+    lines = text.splitlines()
+
+    interfaces: dict[str, list[IdlDecl]] = {}
+    includes: list[tuple[str, str]] = []
+    current_iface: str | None = None
+    brace_depth = 0
+
+    for line in lines:
+        stripped = line.strip()
+
+        # Skip empty, comments, dictionaries, etc.
+        if not stripped or stripped.startswith("//"):
+            continue
+        if _IDL_SKIP_RE.match(stripped):
+            continue
+
+        # Check includes statement (outside interface bodies)
+        m = _IDL_INCLUDES_RE.match(stripped)
+        if m:
+            includes.append((m.group(1), m.group(2)))
+            continue
+
+        # Check interface/namespace opening
+        if brace_depth == 0:
+            m = _IDL_IFACE_RE.match(stripped)
+            if not m:
+                m = _IDL_NS_RE.match(stripped)
+            if m:
+                current_iface = m.group(1)
+                if current_iface not in interfaces:
+                    interfaces[current_iface] = []
+                brace_depth = stripped.count("{") - stripped.count("}")
+                continue
+
+        # Track braces
+        if brace_depth > 0:
+            brace_depth += stripped.count("{") - stripped.count("}")
+            if brace_depth <= 0:
+                current_iface = None
+                brace_depth = 0
+                continue
+
+            # Only parse members at depth 1
+            if current_iface is None:
+                continue
+
+            # Constructor
+            if _IDL_CTOR_RE.match(stripped):
+                interfaces[current_iface].append(IdlDecl(
+                    interface_name=current_iface,
+                    member_name=current_iface,
+                    kind="constructor",
+                    spec_file=spec,
+                ))
+                continue
+
+            # Attribute
+            am = _IDL_ATTR_RE.match(stripped)
+            if am:
+                readonly = bool(am.group(1))
+                name = am.group(2)
+                interfaces[current_iface].append(IdlDecl(
+                    interface_name=current_iface,
+                    member_name=name,
+                    kind="readonly_attribute" if readonly else "attribute",
+                    spec_file=spec,
+                ))
+                continue
+
+            # Method
+            mm = _IDL_METHOD_RE.match(stripped)
+            if mm:
+                name = mm.group(1)
+                # Skip special IDL keywords parsed as methods
+                if name in ("getter", "setter", "deleter", "stringifier",
+                            "iterable", "maplike", "setlike", "inherit"):
+                    continue
+                interfaces[current_iface].append(IdlDecl(
+                    interface_name=current_iface,
+                    member_name=name,
+                    kind="method",
+                    spec_file=spec,
+                ))
+
+    return interfaces, includes
+
+
+def _parse_all_idl(spec_dir: Path) -> dict[str, list[IdlDecl]]:
+    """Parse all .idl files and resolve mixin includes."""
+    all_ifaces: dict[str, list[IdlDecl]] = {}
+    all_includes: list[tuple[str, str]] = []
+
+    for p in sorted(spec_dir.glob("*.idl")):
+        ifaces, includes = _parse_idl_file(p)
+        for name, decls in ifaces.items():
+            all_ifaces.setdefault(name, []).extend(decls)
+        all_includes.extend(includes)
+
+    # Resolve includes: "HTMLElement includes GlobalEventHandlers"
+    for target, mixin in all_includes:
+        if mixin in all_ifaces and target in all_ifaces:
+            existing = {(d.member_name, d.kind) for d in all_ifaces[target]}
+            for decl in all_ifaces[mixin]:
+                if (decl.member_name, decl.kind) not in existing:
+                    all_ifaces[target].append(IdlDecl(
+                        interface_name=target,
+                        member_name=decl.member_name,
+                        kind=decl.kind,
+                        spec_file=decl.spec_file,
+                    ))
+
+    # Deduplicate within each interface (partial interfaces merge)
+    for name in all_ifaces:
+        seen: set[tuple[str, str]] = set()
+        deduped: list[IdlDecl] = []
+        for d in all_ifaces[name]:
+            key = (d.member_name, d.kind)
+            if key not in seen:
+                seen.add(key)
+                deduped.append(d)
+        all_ifaces[name] = deduped
+
+    return all_ifaces
+
+
+# ---------------------------------------------------------------------------
+# Cross-reference engine
+# ---------------------------------------------------------------------------
+
+# Interfaces we care about (ones that map to .bnd files or are in ABSENT_APIS)
+_RELEVANT_INTERFACES = {
+    "Event", "CustomEvent", "EventTarget",
+    "Node", "Element", "Document", "DocumentFragment",
+    "HTMLElement", "HTMLHtmlElement", "HTMLHeadElement", "HTMLBodyElement",
+    "HTMLDivElement", "HTMLSpanElement", "HTMLParagraphElement",
+    "HTMLAnchorElement", "HTMLImageElement", "HTMLFormElement",
+    "HTMLInputElement", "HTMLButtonElement", "HTMLSelectElement",
+    "HTMLTextAreaElement", "HTMLLabelElement", "HTMLOptionElement",
+    "HTMLScriptElement", "HTMLStyleElement", "HTMLLinkElement",
+    "HTMLTableElement", "HTMLTableRowElement", "HTMLTableCellElement",
+    "HTMLBRElement", "HTMLHRElement", "HTMLPreElement",
+    "HTMLHeadingElement", "HTMLUListElement", "HTMLOListElement",
+    "HTMLLIElement", "HTMLCanvasElement", "HTMLMediaElement",
+    "HTMLVideoElement", "HTMLAudioElement", "HTMLSourceElement",
+    "HTMLIFrameElement", "HTMLObjectElement", "HTMLMetaElement",
+    "HTMLTitleElement",
+    "Window", "History", "Location", "Navigator",
+    "Performance",
+    "URL", "URLSearchParams",
+    "XMLHttpRequest", "FormData",
+    "Request", "Response", "Headers",
+    "UIEvent", "MouseEvent", "KeyboardEvent", "WheelEvent",
+    "CSSStyleDeclaration", "CSSRule", "CSSStyleSheet",
+    "console",
+    "Storage",
+    "DOMRect", "DOMRectReadOnly",
+    "MutationObserver",
+    "AbortController", "AbortSignal",
+    "TextDecoder", "TextEncoder",
+}
+
+
+def _is_event_handler(name: str) -> bool:
+    return name.startswith("on") and len(name) > 2 and name[2:3].islower()
+
+
+def _cross_reference(
+    idl_decls: dict[str, list[IdlDecl]],
+    bnd_decls: list[BndDecl],
+    skip_events: bool = False,
+) -> list[dict]:
+    """Cross-reference spec IDL against .bnd implementations.
+
+    Returns list of dicts: {interface, member, kind, spec_file, status}
+    """
+    # Build .bnd lookup: (class_name, member_name) -> BndDecl
+    bnd_lookup: dict[tuple[str, str], BndDecl] = {}
+    for d in bnd_decls:
+        key = (d.class_name, d.member)
+        if key not in bnd_lookup or d.status == "done":
+            bnd_lookup[key] = d
+
+    # Build ABSENT_APIS lookup
+    absent_lookup: set[tuple[str, str]] = set()
+    for a in ABSENT_APIS:
+        absent_lookup.add((a["class"], a["member"]))
+
+    # Also check _KNOWN_DONE
+    results: list[dict] = []
+
+    for iface_name, decls in sorted(idl_decls.items()):
+        if iface_name not in _RELEVANT_INTERFACES:
+            continue
+
+        for decl in decls:
+            if skip_events and _is_event_handler(decl.member_name):
+                continue
+
+            # Determine status
+            status = "absent"
+
+            if (iface_name, decl.member_name) in _KNOWN_DONE:
+                status = "done"
+            elif decl.kind in ("attribute", "readonly_attribute"):
+                # Check getter
+                getter_key = (iface_name, decl.member_name)
+                getter = bnd_lookup.get(getter_key)
+                has_getter = getter is not None and getter.status == "done"
+                has_getter_stub = getter is not None and getter.status == "stub"
+
+                if decl.kind == "readonly_attribute":
+                    if has_getter:
+                        status = "done"
+                    elif has_getter_stub:
+                        status = "stub"
+                else:
+                    # Non-readonly: need getter + setter
+                    if has_getter:
+                        status = "done"
+                    elif has_getter_stub:
+                        status = "stub"
+            elif decl.kind == "method":
+                m_key = (iface_name, decl.member_name)
+                m = bnd_lookup.get(m_key)
+                if m is not None:
+                    status = m.status
+            elif decl.kind == "constructor":
+                # Check init
+                init_key = (iface_name, iface_name)
+                init = bnd_lookup.get(init_key)
+                if init is not None:
+                    status = init.status
+
+            results.append({
+                "interface": iface_name,
+                "member": decl.member_name,
+                "kind": decl.kind,
+                "spec_file": decl.spec_file,
+                "status": status,
+            })
+
+    return results
+
+
+# ---------------------------------------------------------------------------
+# spec-coverage output formatters
+# ---------------------------------------------------------------------------
+
+def _spec_coverage_table(results: list[dict], filter_spec: str | None,
+                         filter_iface: str | None) -> str:
+    # Group by (spec_file, interface)
+    groups: dict[tuple[str, str], list[dict]] = {}
+    for r in results:
+        if filter_spec and r["spec_file"] != filter_spec:
+            continue
+        if filter_iface and r["interface"] != filter_iface:
+            continue
+        key = (r["spec_file"], r["interface"])
+        groups.setdefault(key, []).append(r)
+
+    lines = []
+    lines.append(f"{'Spec':<16}  {'Interface':<28}  {'Total':>5}  {'Done':>4}  "
+                 f"{'Stub':>4}  {'Absent':>6}  {'Coverage':>8}")
+    lines.append("-" * 88)
+
+    grand = {"total": 0, "done": 0, "stub": 0, "absent": 0}
+    for (spec, iface), members in sorted(groups.items()):
+        total = len(members)
+        done = sum(1 for m in members if m["status"] == "done")
+        stub = sum(1 for m in members if m["status"] == "stub")
+        absent = sum(1 for m in members if m["status"] == "absent")
+        pct = done / total * 100 if total else 0
+        lines.append(f"{spec:<16}  {iface:<28}  {total:5d}  {done:4d}  "
+                     f"{stub:4d}  {absent:6d}  {pct:7.1f}%")
+        grand["total"] += total
+        grand["done"] += done
+        grand["stub"] += stub
+        grand["absent"] += absent
+
+    lines.append("-" * 88)
+    gt = grand["total"]
+    pct = grand["done"] / gt * 100 if gt else 0
+    lines.append(f"{'TOTAL':<16}  {'':<28}  {gt:5d}  {grand['done']:4d}  "
+                 f"{grand['stub']:4d}  {grand['absent']:6d}  {pct:7.1f}%")
+    return "\n".join(lines)
+
+
+def _spec_coverage_json(results: list[dict]) -> str:
+    by_iface: dict[str, dict] = {}
+    for r in results:
+        iface = r["interface"]
+        if iface not in by_iface:
+            by_iface[iface] = {"spec_file": r["spec_file"], "members": []}
+        by_iface[iface]["members"].append({
+            "name": r["member"],
+            "kind": r["kind"],
+            "status": r["status"],
+        })
+
+    payload = {
+        "generated": datetime.datetime.now(datetime.timezone.utc).isoformat(timespec="seconds"),
+        "interfaces": by_iface,
+        "summary": {
+            "total": len(results),
+            "done": sum(1 for r in results if r["status"] == "done"),
+            "stub": sum(1 for r in results if r["status"] == "stub"),
+            "absent": sum(1 for r in results if r["status"] == "absent"),
+        },
+    }
+    return json.dumps(payload, indent=2)
+
+
+def _spec_coverage_markdown(results: list[dict]) -> str:
+    lines = ["# NetSurf Spec Coverage Report", ""]
+    lines.append("Generated: " + datetime.datetime.now(
+        datetime.timezone.utc).strftime("%Y-%m-%d %H:%M UTC"))
+    lines.append("")
+
+    total = len(results)
+    done = sum(1 for r in results if r["status"] == "done")
+    pct = done / total * 100 if total else 0
+    lines.append(f"**Overall: {done}/{total} ({pct:.1f}%)**")
+    lines.append("")
+
+    # Group by interface
+    groups: dict[str, list[dict]] = {}
+    for r in results:
+        groups.setdefault(r["interface"], []).append(r)
+
+    lines.append("| Spec | Interface | Total | Done | Stub | Absent | Coverage |")
+    lines.append("|------|-----------|------:|-----:|-----:|-------:|---------:|")
+
+    for iface in sorted(groups.keys()):
+        members = groups[iface]
+        t = len(members)
+        d = sum(1 for m in members if m["status"] == "done")
+        s = sum(1 for m in members if m["status"] == "stub")
+        a = sum(1 for m in members if m["status"] == "absent")
+        p = d / t * 100 if t else 0
+        spec = members[0]["spec_file"]
+        lines.append(f"| {spec} | {iface} | {t} | {d} | {s} | {a} | {p:.1f}% |")
+
+    lines.append("")
+    lines.append("---")
+    lines.append("*Generated by `python3 tools/lacunae.py spec-coverage`*")
+    return "\n".join(lines)
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -540,6 +986,36 @@ def _cmd_gaps(args: argparse.Namespace) -> int:
     return 0
 
 
+def _cmd_spec_coverage(args: argparse.Namespace) -> int:
+    repo = Path(args.repo_root) if args.repo_root else _find_repo_root()
+    spec_dir = Path(args.spec_dir) if args.spec_dir else repo / "tools" / "spec-idl"
+
+    if not spec_dir.exists() or not list(spec_dir.glob("*.idl")):
+        print(f"ERROR: No .idl files in {spec_dir}. Run fetch-spec-idl.sh first.",
+              file=sys.stderr)
+        return 1
+
+    bnd_dir = repo / "content" / "handlers" / "javascript" / "duktape"
+    bnd_decls = _parse_all_bnd(bnd_dir, repo)
+    idl_decls = _parse_all_idl(spec_dir)
+    results = _cross_reference(idl_decls, bnd_decls, skip_events=args.skip_events)
+
+    fmt = args.format
+    if fmt == "json":
+        out = repo / "spec-coverage.json"
+        out.write_text(_spec_coverage_json(results) + "\n", encoding="utf-8")
+        print(f"Written: {out}")
+    elif fmt == "markdown":
+        out = repo / "docs" / "spec-coverage.md"
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(_spec_coverage_markdown(results) + "\n", encoding="utf-8")
+        print(f"Written: {out}")
+    else:
+        print(_spec_coverage_table(results, args.filter_spec, args.filter_interface))
+
+    return 0
+
+
 def _cmd_diff(args: argparse.Namespace) -> int:
     repo = _find_repo_root()
     current = Path(args.gaps_json) if args.gaps_json else repo / "lacunae-gaps.json"
@@ -574,12 +1050,23 @@ def main() -> int:
     sd.add_argument("--gaps-json", default=None, help="Path to current gaps JSON")
     sd.add_argument("--baseline", default=None, help="Path to baseline JSON")
 
+    ss = sub.add_parser("spec-coverage", help="Cross-reference spec IDL vs .bnd implementations")
+    ss.add_argument("--repo-root", default=None, help="Repo root (default: auto-detect)")
+    ss.add_argument("--spec-dir", default=None, help="Directory with .idl files")
+    ss.add_argument("--filter-spec", default=None, help="Only show one spec file (e.g. html.idl)")
+    ss.add_argument("--filter-interface", default=None, help="Only show one interface")
+    ss.add_argument("--format", default="table", choices=["table", "json", "markdown"],
+                    help="Output format (default: table)")
+    ss.add_argument("--skip-events", action="store_true",
+                    help="Exclude onXxx event handler attributes")
+
     args = p.parse_args()
     if args.command is None:
         p.print_help()
         return 1
 
-    cmds = {"scan": _cmd_scan, "gaps": _cmd_gaps, "diff": _cmd_diff}
+    cmds = {"scan": _cmd_scan, "gaps": _cmd_gaps, "diff": _cmd_diff,
+            "spec-coverage": _cmd_spec_coverage}
     return cmds[args.command](args)
 
 
