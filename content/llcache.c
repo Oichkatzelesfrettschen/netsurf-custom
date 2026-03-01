@@ -2583,7 +2583,10 @@ llcache_fetch_process_data(llcache_object *object,
 
 	/* Resize source buffer if it's too small */
 	if (object->source_len + len >= object->source_alloc) {
-		const size_t new_len = object->source_len + len + 64 * 1024;
+		/* WHY: Reduced from 64 KB to 4 KB slack to lower RSS on
+		 * embedded targets. Trade-off: more frequent reallocs for
+		 * large fetches, but significant memory savings. */
+		const size_t new_len = object->source_len + len + 4 * 1024;
 		uint8_t *temp = realloc(object->source_data, new_len);
 		if (temp == NULL)
 			return NSERROR_NOMEM;

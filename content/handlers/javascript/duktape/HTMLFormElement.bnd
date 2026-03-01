@@ -8,19 +8,156 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+prologue HTMLFormElement()
+%{
+#include <dom/html/html_form_element.h>
+#include "utils/corestrings.h"
+
+#define FORM_NODE ((dom_html_form_element *)((node_private_t *)priv)->node)
+%}
+
 init HTMLFormElement(struct dom_html_element *html_form_element::html_element);
 
-getter HTMLFormElement::acceptCharset();
-setter HTMLFormElement::acceptCharset();
+/* -- String properties (get/set dom_string) -- */
 
-getter HTMLFormElement::action();
-setter HTMLFormElement::action();
+getter HTMLFormElement::acceptCharset()
+%{
+	dom_string *val = NULL;
+	dom_html_form_element_get_accept_charset(FORM_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
 
-getter HTMLFormElement::enctype();
-setter HTMLFormElement::enctype();
+setter HTMLFormElement::acceptCharset()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_form_element_set_accept_charset(FORM_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
 
-getter HTMLFormElement::method();
-setter HTMLFormElement::method();
+getter HTMLFormElement::action()
+%{
+	dom_string *val = NULL;
+	dom_html_form_element_get_action(FORM_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
 
-getter HTMLFormElement::target();
-setter HTMLFormElement::target();
+setter HTMLFormElement::action()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_form_element_set_action(FORM_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLFormElement::enctype()
+%{
+	dom_string *val = NULL;
+	dom_html_form_element_get_enctype(FORM_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLFormElement::enctype()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_form_element_set_enctype(FORM_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLFormElement::method()
+%{
+	dom_string *val = NULL;
+	dom_html_form_element_get_method(FORM_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "get", 3); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLFormElement::method()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_form_element_set_method(FORM_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLFormElement::name()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(((node_private_t *)priv)->node,
+		corestring_dom_name, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLFormElement::name()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(((node_private_t *)priv)->node,
+			corestring_dom_name, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLFormElement::target()
+%{
+	dom_string *val = NULL;
+	dom_html_form_element_get_target(FORM_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLFormElement::target()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_form_element_set_target(FORM_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLFormElement::length()
+%{
+	uint32_t len = 0;
+	dom_html_form_element_get_length(FORM_NODE, &len);
+	duk_push_uint(ctx, len);
+	return 1;
+%}

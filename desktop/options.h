@@ -132,6 +132,9 @@ NSOPTION_BOOL(author_level_css, true)
 /** Maximum time (in seconds) to wait for a script to run */
 NSOPTION_INTEGER(script_timeout, 10)
 
+/** Maximum JS heap size in bytes (0 = unlimited, default 32 MB) */
+NSOPTION_INTEGER(js_heap_limit, 33554432)
+
 /** How many days to retain URL data for */
 NSOPTION_INTEGER(expire_url, 28)
 

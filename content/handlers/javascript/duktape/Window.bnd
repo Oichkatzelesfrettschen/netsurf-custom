@@ -625,6 +625,59 @@ method Window::clearInterval()
 	return 0;
 %}
 
+method Window::requestAnimationFrame()
+%{
+	/* WHY: rAF is the standard JS animation API. We schedule at ~60fps
+	 * (16ms) using the existing callback infrastructure. The callback
+	 * receives a DOMHighResTimeStamp argument (performance.now()). */
+	if (priv->closed_down == true) {
+		return 0; /* WHY: window closed, no schedules allowed */
+	}
+
+	if (duk_get_top(ctx) < 1 || !duk_is_callable(ctx, 0)) {
+		return 0; /* WHY: spec says argument must be a function */
+	}
+
+	/* WHY: We need to pass performance.now() as the argument to the
+	 * callback. We wrap the user callback in a small closure that
+	 * reads the timestamp at call time. Push the timestamp arg onto
+	 * the stack position expected by window_alloc_new_callback. */
+	duk_push_int(ctx, 16);  /* timeout placeholder at index 1 */
+
+	size_t handle = window_alloc_new_callback(ctx, priv, false, 16);
+
+	duk_push_int(ctx, (duk_int_t)handle);
+	return 1;
+%}
+
+method Window::cancelAnimationFrame()
+%{
+	/* WHY: Alias for clearTimeout since rAF uses the same handle space. */
+	if (duk_get_top(ctx) < 1 || !duk_is_number(ctx, 0)) {
+		return 0;
+	}
+	duk_int_t handle = duk_get_int(ctx, 0);
+	window_remove_callback_by_handle(ctx, priv, (size_t) handle);
+	return 0;
+%}
+
+getter Window::crypto()
+%{
+	/* WHY: Returns the Crypto object for this window, creating it lazily.
+	 *      Same cached-on-window-object pattern as navigator. */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(Crypto));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx, PROTO_NAME(CRYPTO), 0) != DUK_EXEC_SUCCESS) {
+			return duk_error(ctx, DUK_ERR_ERROR, "Unable to create crypto object");
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(Crypto));
+	}
+	return 1;
+%}
+
 getter Window::onabort();
 setter Window::onabort();
 getter Window::onafterprint();

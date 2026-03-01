@@ -1,0 +1,67 @@
+# Smoke test for HTMLImageElement.src/alt/width/height
+# WHY: Image property access used by lazy-loading libraries.
+
+window: inline
+content: |
+  <html><head><title>image element test</title></head>
+  <body>
+  <img id="img1" src="resource:favicon.png" alt="Test Image" width="32" height="32" name="icon" border="0" align="left">
+  <script>
+    var results = [];
+    var img = document.getElementById('img1');
+
+    // alt getter
+    if (img.alt === 'Test Image') {
+      results.push('PASS: img-alt');
+    } else {
+      results.push('FAIL: img-alt=' + img.alt);
+    }
+
+    // src getter (may be resolved to absolute)
+    if (typeof img.src === 'string' && img.src.length > 0) {
+      results.push('PASS: img-src');
+    } else {
+      results.push('FAIL: img-src=' + img.src);
+    }
+
+    // width getter
+    var w = img.width;
+    if (w === 32 || w === '32') {
+      results.push('PASS: img-width=32');
+    } else {
+      results.push('FAIL: img-width=' + w);
+    }
+
+    // height getter
+    var h = img.height;
+    if (h === 32 || h === '32') {
+      results.push('PASS: img-height=32');
+    } else {
+      results.push('FAIL: img-height=' + h);
+    }
+
+    // name getter
+    if (img.name === 'icon') {
+      results.push('PASS: img-name');
+    } else {
+      results.push('FAIL: img-name=' + img.name);
+    }
+
+    // alt setter
+    img.alt = 'Changed';
+    if (img.alt === 'Changed') {
+      results.push('PASS: img-alt-setter');
+    } else {
+      results.push('FAIL: img-alt-setter=' + img.alt);
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: img-alt"
+  - type: title-contains
+    value: "PASS: img-src"
+  - type: title-not-contains
+    value: "FAIL"

@@ -21,6 +21,43 @@ prologue History()
 #include "netsurf/browser_window.h"
 #include "desktop/browser_history.h"
 #include "utils/nsurl.h"
+#include "utils/corestrings.h"
+
+/* WHY: After back/forward/go, dispatch a popstate event on window so
+ * SPA routers (React Router, Vue Router, etc.) can respond. The state
+ * property remains null (documented limitation until we persist state). */
+static void history_dispatch_popstate(duk_context *ctx)
+{
+	dom_event *evt = NULL;
+	dom_exception exc;
+	bool not_cancelled;
+
+	exc = dom_event_create(&evt);
+	if (exc != DOM_NO_ERR || evt == NULL) return;
+
+	exc = dom_event_init(evt, corestring_dom_popstate, true, true);
+	if (exc != DOM_NO_ERR) { dom_event_unref(evt); return; }
+
+	/* Get the document from the global window object */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, "document");
+	if (!duk_is_undefined(ctx, -1)) {
+		/* Get the document's private node and dispatch on it */
+		duk_get_prop_string(ctx, -1, dukky_magic_string_private);
+		if (!duk_is_undefined(ctx, -1)) {
+			node_private_t *doc_priv = duk_get_pointer(ctx, -1);
+			if (doc_priv != NULL && doc_priv->node != NULL) {
+				exc = dom_event_target_dispatch_event(
+					(dom_event_target *)doc_priv->node,
+					evt, &not_cancelled);
+				(void)exc;
+			}
+		}
+		duk_pop(ctx);
+	}
+	duk_pop_2(ctx);
+	dom_event_unref(evt);
+}
 %}
 
 init History(struct browser_window *bw)
@@ -42,7 +79,10 @@ getter History::length()
 method History::back()
 %{
 	if (priv->win != NULL) {
-		browser_window_history_back(priv->win, false);
+		nserror err = browser_window_history_back(priv->win, false);
+		if (err == NSERROR_OK) {
+			history_dispatch_popstate(ctx);
+		}
 	}
 	return 0;
 %}
@@ -50,7 +90,10 @@ method History::back()
 method History::forward()
 %{
 	if (priv->win != NULL) {
-		browser_window_history_forward(priv->win, false);
+		nserror err = browser_window_history_forward(priv->win, false);
+		if (err == NSERROR_OK) {
+			history_dispatch_popstate(ctx);
+		}
 	}
 	return 0;
 %}
@@ -72,19 +115,29 @@ method History::go()
 		browser_window_reload(priv->win, false);
 	} else if (delta > 0) {
 		int i;
+		bool moved = false;
 		for (i = 0; i < delta; i++) {
 			if (!browser_window_history_forward_available(priv->win)) {
 				break;
 			}
 			browser_window_history_forward(priv->win, false);
+			moved = true;
+		}
+		if (moved) {
+			history_dispatch_popstate(ctx);
 		}
 	} else {
 		int i;
+		bool moved = false;
 		for (i = 0; i > delta; i--) {
 			if (!browser_window_history_back_available(priv->win)) {
 				break;
 			}
 			browser_window_history_back(priv->win, false);
+			moved = true;
+		}
+		if (moved) {
+			history_dispatch_popstate(ctx);
 		}
 	}
 	return 0;

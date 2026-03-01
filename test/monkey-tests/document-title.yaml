@@ -1,0 +1,43 @@
+# Smoke test for Document.title getter/setter
+# WHY: SPAs use document.title to update the page title.
+
+window: inline
+content: |
+  <html><head><title>Original Title</title></head>
+  <body>
+  <script>
+    var results = [];
+
+    // document.title getter reads the <title> element
+    if (document.title === 'Original Title') {
+      results.push('PASS: title-getter');
+    } else {
+      results.push('FAIL: title-getter=' + document.title);
+    }
+
+    // document.title setter updates the <title> element
+    document.title = 'Updated Title';
+    if (document.title === 'Updated Title') {
+      results.push('PASS: title-setter');
+    } else {
+      results.push('FAIL: title-setter=' + document.title);
+    }
+
+    // Verify the <title> element text changed
+    var titleElem = document.getElementsByTagName('title')[0];
+    if (titleElem && titleElem.textContent === 'Updated Title') {
+      results.push('PASS: title-elem-text');
+    } else {
+      results.push('FAIL: title-elem-text');
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: title-getter"
+  - type: title-contains
+    value: "PASS: title-setter"
+  - type: title-not-contains
+    value: "FAIL"

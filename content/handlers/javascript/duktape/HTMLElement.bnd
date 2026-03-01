@@ -11,19 +11,176 @@
 prologue HTMLElement()
 %{
 #include <utils/corestrings.h>
+#include <dom/html/html_element.h>
+
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
+#define HTML_ELEMENT_NODE ((dom_html_element *)((node_private_t *)priv)->node)
 %}
 
 init HTMLElement(struct dom_html_element *html_element::element);
 
-getter HTMLElement::dir();
-setter HTMLElement::dir();
+/* -- dir / lang / title: string properties via dom_html_element API -- */
 
-getter HTMLElement::lang();
-setter HTMLElement::lang();
+getter HTMLElement::dir()
+%{
+	dom_string *val = NULL;
+	dom_html_element_get_dir(HTML_ELEMENT_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
 
-getter HTMLElement::title();
-setter HTMLElement::title();
+setter HTMLElement::dir()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_element_set_dir(HTML_ELEMENT_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLElement::lang()
+%{
+	dom_string *val = NULL;
+	dom_html_element_get_lang(HTML_ELEMENT_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::lang()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_element_set_lang(HTML_ELEMENT_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLElement::title()
+%{
+	dom_string *val = NULL;
+	dom_html_element_get_title(HTML_ELEMENT_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::title()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_element_set_title(HTML_ELEMENT_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+/* -- innerText: returns textContent (CSS-aware version deferred to R8) -- */
+
+getter HTMLElement::innerText()
+%{
+	/* WHY: Full CSS-aware innerText requires box tree traversal (R8-B).
+	 * For now, return textContent which is correct for most use cases. */
+	dom_string *val = NULL;
+	dom_node_get_text_content(((node_private_t *)priv)->node, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::innerText()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_node_set_text_content(((node_private_t *)priv)->node, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+/* -- click(): synthesize and dispatch a click event -- */
+
+method HTMLElement::click()
+%{
+	dom_event *evt = NULL;
+	dom_exception exc;
+	bool not_cancelled;
+
+	exc = dom_event_create(&evt);
+	if (exc != DOM_NO_ERR || evt == NULL)
+		return 0; /* WHY: spec says click() is void, no throw on failure */
+
+	exc = dom_event_init(evt, corestring_dom_click, true, true);
+	if (exc != DOM_NO_ERR) {
+		dom_event_unref(evt);
+		return 0; /* WHY: void method, no throw */
+	}
+
+	exc = dom_event_target_dispatch_event(
+		(dom_event_target *)((node_private_t *)priv)->node,
+		evt, &not_cancelled);
+	(void)exc;
+	dom_event_unref(evt);
+	return 0;
+%}
+
+/* -- focus() / blur(): update focus state -- */
+
+method HTMLElement::focus()
+%{
+	/* WHY: Full focus management requires integration with the GUI
+	 * toolkit's focus model. Stub dispatches a focus event. */
+	dom_event *evt = NULL;
+	dom_exception exc;
+	bool not_cancelled;
+
+	exc = dom_event_create(&evt);
+	if (exc != DOM_NO_ERR || evt == NULL) return 0;
+	exc = dom_event_init(evt, corestring_dom_focus, false, false);
+	if (exc != DOM_NO_ERR) { dom_event_unref(evt); return 0; }
+	exc = dom_event_target_dispatch_event(
+		(dom_event_target *)((node_private_t *)priv)->node,
+		evt, &not_cancelled);
+	(void)exc;
+	dom_event_unref(evt);
+	return 0;
+%}
+
+method HTMLElement::blur()
+%{
+	/* WHY: Same limitation as focus(). Dispatches blur event. */
+	dom_event *evt = NULL;
+	dom_exception exc;
+	bool not_cancelled;
+
+	exc = dom_event_create(&evt);
+	if (exc != DOM_NO_ERR || evt == NULL) return 0;
+	exc = dom_event_init(evt, corestring_dom_blur, false, false);
+	if (exc != DOM_NO_ERR) { dom_event_unref(evt); return 0; }
+	exc = dom_event_target_dispatch_event(
+		(dom_event_target *)((node_private_t *)priv)->node,
+		evt, &not_cancelled);
+	(void)exc;
+	dom_event_unref(evt);
+	return 0;
+%}
+
+/* -- Event handler stubs -- */
 
 getter HTMLElement::onchange();
 setter HTMLElement::onchange();

@@ -77,6 +77,22 @@ void dukky_push_generics(duk_context *ctx, const char *generic);
 void dukky_log_stack_frame(duk_context *ctx, const char * reason);
 
 /**
+ * Perform querySelector or querySelectorAll on a DOM subtree.
+ *
+ * Parses a CSS selector string (subset: tag, #id, .class, [attr],
+ * [attr=val], descendant and child combinators) and walks the subtree
+ * rooted at \a root to find matching elements.
+ *
+ * \param ctx   Duktape context (selector string at stack index 0)
+ * \param root  DOM node whose subtree to search
+ * \param all   If true, return an array of all matches (querySelectorAll);
+ *              if false, return the first match or null (querySelector)
+ * \return 1 (result pushed) or 0 (null/undefined)
+ */
+duk_ret_t dukky_queryselector(duk_context *ctx, struct dom_node *root,
+			      bool all);
+
+/**
  * Serialize the inner HTML of a DOM node and push it as a JS string.
  *
  * Walks the children of \a node and serialises them as HTML5, following

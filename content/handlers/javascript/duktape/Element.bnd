@@ -615,3 +615,13 @@ getter Element::attributes()
 	}
 	return 1;
 %}
+
+method Element::querySelector()
+%{
+	return dukky_queryselector(ctx, ((node_private_t *)priv)->node, false);
+%}
+
+method Element::querySelectorAll()
+%{
+	return dukky_queryselector(ctx, ((node_private_t *)priv)->node, true);
+%}

@@ -360,6 +360,18 @@ method Document::getElementsByTagName()
 	return 1; /* The Proxy(NodeList) wrapper */
 %}
 
+method Document::querySelector()
+%{
+	/* WHY: Most impactful missing API -- jQuery, React, Vue, Angular all
+	 * use querySelector as the primary DOM query mechanism. */
+	return dukky_queryselector(ctx, ((node_private_t *)priv)->node, false);
+%}
+
+method Document::querySelectorAll()
+%{
+	return dukky_queryselector(ctx, ((node_private_t *)priv)->node, true);
+%}
+
 getter Document::cookie()
 %{
 	char *cookie_str;
@@ -452,6 +464,72 @@ getter Document::implementation ()
 		duk_put_prop_string(ctx, -3, MAGIC(DOMImplementation));
 	}
 	return 1;
+%}
+
+getter Document::title()
+%{
+	struct dom_nodelist *nodes = NULL;
+	struct dom_node *title_node = NULL;
+	dom_string *val = NULL;
+	dom_exception exc;
+
+	exc = dom_document_get_elements_by_tag_name(priv->parent.node,
+						    corestring_dom_TITLE,
+						    &nodes);
+	if (exc != DOM_NO_ERR || nodes == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	exc = dom_nodelist_item(nodes, 0, &title_node);
+	dom_nodelist_unref(nodes);
+	if (exc != DOM_NO_ERR || title_node == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	exc = dom_node_get_text_content(title_node, &val);
+	dom_node_unref(title_node);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter Document::title()
+%{
+	struct dom_nodelist *nodes = NULL;
+	struct dom_node *title_node = NULL;
+	dom_string *val = NULL;
+	dom_exception exc;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	exc = dom_string_create((const uint8_t *)s, slen, &val);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_document_get_elements_by_tag_name(priv->parent.node,
+						    corestring_dom_TITLE,
+						    &nodes);
+	if (exc != DOM_NO_ERR || nodes == NULL) {
+		dom_string_unref(val);
+		return 0;
+	}
+
+	exc = dom_nodelist_item(nodes, 0, &title_node);
+	dom_nodelist_unref(nodes);
+	if (exc != DOM_NO_ERR || title_node == NULL) {
+		dom_string_unref(val);
+		return 0;
+	}
+
+	dom_node_set_text_content(title_node, val);
+	dom_node_unref(title_node);
+	dom_string_unref(val);
+	return 0;
 %}
 
 getter Document::onabort();

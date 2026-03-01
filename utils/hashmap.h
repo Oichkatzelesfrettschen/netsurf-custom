@@ -108,6 +108,12 @@ typedef struct {
 	 * A function which when called will destroy a value object
 	 */
 	hashmap_value_destroy_t value_destroy;
+
+	/**
+	 * Number of hash buckets (0 = use default of 4091).
+	 * Smaller values reduce RSS for maps with few entries.
+	 */
+	uint32_t bucket_count;
 } hashmap_parameters_t;
 
 

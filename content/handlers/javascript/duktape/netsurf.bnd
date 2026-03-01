@@ -69,6 +69,7 @@ struct dom_html_br_element;
 #include "History.bnd"
 #include "Performance.bnd"
 #include "Navigator.bnd"
+#include "Crypto.bnd"
 #include "TextDecoder.bnd"
 #include "URL.bnd"
 #include "DOMImplementation.bnd"

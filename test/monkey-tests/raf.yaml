@@ -1,0 +1,60 @@
+# Smoke test for requestAnimationFrame / cancelAnimationFrame
+# WHY: Every JS animation library depends on rAF.
+
+window: inline
+content: |
+  <html><head><title>rAF test</title></head>
+  <body>
+  <script>
+    var results = [];
+
+    // requestAnimationFrame exists
+    if (typeof window.requestAnimationFrame === 'function') {
+      results.push('PASS: rAF-exists');
+    } else {
+      results.push('FAIL: rAF-exists=' + typeof window.requestAnimationFrame);
+    }
+
+    // cancelAnimationFrame exists
+    if (typeof window.cancelAnimationFrame === 'function') {
+      results.push('PASS: cAF-exists');
+    } else {
+      results.push('FAIL: cAF-exists=' + typeof window.cancelAnimationFrame);
+    }
+
+    // rAF returns a numeric handle
+    var handle = requestAnimationFrame(function(ts) {
+      // Callback receives a DOMHighResTimeStamp argument
+      if (typeof ts === 'number' && ts > 0) {
+        results.push('PASS: rAF-timestamp');
+      } else {
+        results.push('FAIL: rAF-timestamp=' + ts);
+      }
+      document.title = results.join('; ');
+    });
+
+    if (typeof handle === 'number' && handle > 0) {
+      results.push('PASS: rAF-handle');
+    } else {
+      results.push('FAIL: rAF-handle=' + handle);
+    }
+
+    // cancelAnimationFrame should not throw
+    var h2 = requestAnimationFrame(function() {
+      results.push('FAIL: cancelled-rAF-fired');
+      document.title = results.join('; ');
+    });
+    cancelAnimationFrame(h2);
+    results.push('PASS: cAF-no-throw');
+
+    // Set partial title in case callback fires before timeout
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: rAF-exists"
+  - type: title-contains
+    value: "PASS: cAF-no-throw"
+  - type: title-not-contains
+    value: "FAIL"

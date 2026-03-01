@@ -83,7 +83,9 @@
 /** ensure there is a minimal amount of memory for source objetcs and
  * decoded bitmaps.
  */
-#define MINIMUM_MEMORY_CACHE_SIZE (2 * 1024 * 1024)
+/* WHY: Reduced from 2 MB to 512 KB to support embedded targets with
+ * limited RAM. Configurable via memory_cache_size option. */
+#define MINIMUM_MEMORY_CACHE_SIZE (512 * 1024)
 
 /** default minimum object time before object is pushed to backing store. (s) */
 #define LLCACHE_STORE_MIN_LIFETIME (60 * 30)

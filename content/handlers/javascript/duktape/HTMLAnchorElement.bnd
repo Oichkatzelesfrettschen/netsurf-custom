@@ -8,32 +8,199 @@
  *         http://www.opensource.org/licenses/mit-license
  */
 
+prologue HTMLAnchorElement()
+%{
+#include <dom/html/html_anchor_element.h>
+
+#define ANCHOR_NODE ((dom_html_anchor_element *)((node_private_t *)priv)->node)
+%}
+
 init HTMLAnchorElement(struct dom_html_element *html_anchor_element::html_element);
 
-getter HTMLAnchorElement::charset();
-setter HTMLAnchorElement::charset();
+/* -- String properties (get/set dom_string) -- */
+
+getter HTMLAnchorElement::href()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::href()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_href(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::target()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_target(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::target()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_target(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::rel()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_rel(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::rel()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_rel(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::hreflang()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_hreflang(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::hreflang()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_hreflang(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::type()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_type(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::type()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_type(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::charset()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_charset(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::charset()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_charset(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::name()
+%{
+	dom_string *val = NULL;
+	dom_html_anchor_element_get_name(ANCHOR_NODE, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::name()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_html_anchor_element_set_name(ANCHOR_NODE, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::text()
+%{
+	/* WHY: anchor.text is an alias for textContent per HTML spec */
+	dom_string *val = NULL;
+	dom_node_get_text_content(((node_private_t *)priv)->node, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::text()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_node_set_text_content(((node_private_t *)priv)->node, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
 
 getter HTMLAnchorElement::coords();
 setter HTMLAnchorElement::coords();
-
-getter HTMLAnchorElement::hreflang();
-setter HTMLAnchorElement::hreflang();
-
-getter HTMLAnchorElement::name();
-setter HTMLAnchorElement::name();
-
-getter HTMLAnchorElement::rel();
-setter HTMLAnchorElement::rel();
 
 getter HTMLAnchorElement::rev();
 setter HTMLAnchorElement::rev();
 
 getter HTMLAnchorElement::shape();
 setter HTMLAnchorElement::shape();
-
-getter HTMLAnchorElement::target();
-setter HTMLAnchorElement::target();
-
-
-
-

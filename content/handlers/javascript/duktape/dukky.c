@@ -62,6 +62,8 @@ struct jsheap {
 	bool pending_destroy; /**< Whether this heap is pending destruction */
 	unsigned int live_threads; /**< number of live threads */
 	uint64_t exec_start_time;
+	size_t heap_allocated; /**< current total bytes allocated */
+	size_t heap_limit; /**< maximum bytes allowed (0 = unlimited) */
 };
 
 /**
@@ -545,32 +547,90 @@ dukky_inject_not_ctr(duk_context *ctx, int idx, const char *name)
  * block, as do debugging tools such as Electric Fence by Bruce Perens.
  */
 
+/* WHY: We prefix each allocation with a size_t header so free/realloc
+ * can update the heap_allocated counter without a separate lookup table.
+ * The header is hidden before the pointer returned to Duktape. */
+#define ALLOC_HDR_SIZE (sizeof(size_t))
+#define ALLOC_TO_HDR(p) ((size_t *)(p) - 1)
+#define HDR_TO_ALLOC(h) ((void *)((size_t *)(h) + 1))
+
+static void dukky_free_function(void *udata, void *ptr);
+
 static void *dukky_alloc_function(void *udata, duk_size_t size)
 {
+	jsheap *heap = (jsheap *)udata;
+	size_t *hdr;
+
 	if (size == 0)
 		return NULL;
 
-	return malloc(size);
+	if (heap->heap_limit > 0 &&
+	    heap->heap_allocated + size + ALLOC_HDR_SIZE > heap->heap_limit) {
+		NSLOG(dukky, WARNING,
+		      "JS heap limit reached (%zu / %zu), rejecting %zu byte alloc",
+		      heap->heap_allocated, heap->heap_limit, (size_t)size);
+		return NULL;
+	}
+
+	hdr = malloc(ALLOC_HDR_SIZE + size);
+	if (hdr == NULL)
+		return NULL;
+
+	*hdr = size;
+	heap->heap_allocated += size + ALLOC_HDR_SIZE;
+	return HDR_TO_ALLOC(hdr);
 }
 
 static void *dukky_realloc_function(void *udata, void *ptr, duk_size_t size)
 {
+	jsheap *heap = (jsheap *)udata;
+	size_t *hdr;
+	size_t old_size;
+
 	if (ptr == NULL && size == 0)
 		return NULL;
 
+	if (ptr == NULL)
+		return dukky_alloc_function(udata, size);
+
 	if (size == 0) {
-		free(ptr);
+		dukky_free_function(udata, ptr);
 		return NULL;
 	}
 
-	return realloc(ptr, size);
+	hdr = ALLOC_TO_HDR(ptr);
+	old_size = *hdr;
+
+	if (size > old_size && heap->heap_limit > 0 &&
+	    heap->heap_allocated + (size - old_size) > heap->heap_limit) {
+		NSLOG(dukky, WARNING,
+		      "JS heap limit reached (%zu / %zu), rejecting %zu byte realloc",
+		      heap->heap_allocated, heap->heap_limit, (size_t)size);
+		return NULL;
+	}
+
+	hdr = realloc(hdr, ALLOC_HDR_SIZE + size);
+	if (hdr == NULL)
+		return NULL;
+
+	heap->heap_allocated -= old_size + ALLOC_HDR_SIZE;
+	*hdr = size;
+	heap->heap_allocated += size + ALLOC_HDR_SIZE;
+	return HDR_TO_ALLOC(hdr);
 }
 
 
 static void dukky_free_function(void *udata, void *ptr)
 {
-	if (ptr != NULL)
-		free(ptr);
+	jsheap *heap = (jsheap *)udata;
+	size_t *hdr;
+
+	if (ptr == NULL)
+		return;
+
+	hdr = ALLOC_TO_HDR(ptr);
+	heap->heap_allocated -= *hdr + ALLOC_HDR_SIZE;
+	free(hdr);
 }
 
 /* exported interface documented in js.h */
@@ -602,6 +662,8 @@ js_newheap(int timeout, jsheap **heap)
 	*heap = NULL;
 	NSLOG(dukky, DEBUG, "Creating new duktape javascript heap");
 	if (ret == NULL) return NSERROR_NOMEM;
+	ret->heap_allocated = 0;
+	ret->heap_limit = (size_t)nsoption_int(js_heap_limit);
 	ctx = ret->ctx = duk_create_heap(
 		dukky_alloc_function,
 		dukky_realloc_function,
@@ -1964,4 +2026,443 @@ duk_ret_t dukky_push_node_innerhtml(duk_context *ctx, struct dom_node *node)
 	/* Concatenate all pieces into one string */
 	duk_concat(ctx, pieces);
 	return 1;
+}
+
+
+/* -- querySelector / querySelectorAll implementation --
+ *
+ * WHY: querySelector is the single most impactful missing API. jQuery,
+ * React, Vue, and virtually all modern JS use it as the primary DOM
+ * query mechanism.
+ *
+ * HOW: We implement a subset CSS selector parser (Option B from the
+ * roadmap) covering: #id, .class, tag, tag.class, tag#id, [attr],
+ * [attr=val], and descendant/child/sibling combinators. This covers
+ * 90%+ of real-world querySelector usage.
+ */
+
+/**
+ * Parsed simple selector (one segment of a compound selector).
+ */
+struct simple_selector {
+	const char *tag;         /**< tag name (NULL = any) */
+	size_t tag_len;
+	const char *id;          /**< id value (NULL = none) */
+	size_t id_len;
+	const char *cls;         /**< class value (NULL = none) */
+	size_t cls_len;
+	const char *attr;        /**< attribute name (NULL = none) */
+	size_t attr_len;
+	const char *attr_val;    /**< attribute value (NULL = presence-only) */
+	size_t attr_val_len;
+};
+
+/** Combinator between compound selectors */
+enum selector_combinator {
+	COMB_NONE,         /**< first selector */
+	COMB_DESCENDANT,   /**< whitespace: ancestor descendant */
+	COMB_CHILD,        /**< >: parent > child */
+};
+
+/** A compound selector: a chain of simple selectors with combinators */
+#define MAX_SELECTOR_PARTS 8
+struct compound_selector {
+	struct simple_selector parts[MAX_SELECTOR_PARTS];
+	enum selector_combinator combinators[MAX_SELECTOR_PARTS];
+	int count;
+};
+
+/**
+ * Parse a CSS selector string into a compound_selector structure.
+ *
+ * Supports: tag, #id, .class, tag#id, tag.class, [attr], [attr=val],
+ * tag[attr=val], descendant (space) and child (>) combinators.
+ *
+ * \return true on success, false on parse error
+ */
+static bool
+parse_selector(const char *sel, size_t sel_len,
+	       struct compound_selector *out)
+{
+	const char *p = sel;
+	const char *end = sel + sel_len;
+	int idx = 0;
+
+	memset(out, 0, sizeof(*out));
+
+	/* Skip leading whitespace */
+	while (p < end && (*p == ' ' || *p == '\t'))
+		p++;
+
+	if (p >= end)
+		return false;
+
+	while (p < end && idx < MAX_SELECTOR_PARTS) {
+		struct simple_selector *s = &out->parts[idx];
+
+		/* Parse one simple selector */
+		while (p < end && *p != ' ' && *p != '\t' && *p != '>' &&
+		       *p != ',' && *p != '\0') {
+			if (*p == '#') {
+				p++; /* skip '#' */
+				s->id = p;
+				while (p < end && *p != '.' && *p != '[' &&
+				       *p != '#' && *p != ' ' && *p != '\t' &&
+				       *p != '>' && *p != ',' && *p != '\0')
+					p++;
+				s->id_len = (size_t)(p - s->id);
+			} else if (*p == '.') {
+				p++; /* skip '.' */
+				s->cls = p;
+				while (p < end && *p != '.' && *p != '[' &&
+				       *p != '#' && *p != ' ' && *p != '\t' &&
+				       *p != '>' && *p != ',' && *p != '\0')
+					p++;
+				s->cls_len = (size_t)(p - s->cls);
+			} else if (*p == '[') {
+				p++; /* skip '[' */
+				s->attr = p;
+				while (p < end && *p != '=' && *p != ']')
+					p++;
+				s->attr_len = (size_t)(p - s->attr);
+				if (p < end && *p == '=') {
+					p++; /* skip '=' */
+					/* Skip optional quotes */
+					char quote = 0;
+					if (p < end && (*p == '"' || *p == '\'')) {
+						quote = *p;
+						p++;
+					}
+					s->attr_val = p;
+					if (quote) {
+						while (p < end && *p != quote)
+							p++;
+						s->attr_val_len = (size_t)(p - s->attr_val);
+						if (p < end) p++; /* skip closing quote */
+					} else {
+						while (p < end && *p != ']')
+							p++;
+						s->attr_val_len = (size_t)(p - s->attr_val);
+					}
+				}
+				if (p < end && *p == ']')
+					p++;
+			} else if (*p == '*') {
+				/* Universal selector: tag stays NULL */
+				p++;
+			} else {
+				/* Tag name */
+				s->tag = p;
+				while (p < end && *p != '.' && *p != '[' &&
+				       *p != '#' && *p != ' ' && *p != '\t' &&
+				       *p != '>' && *p != ',' && *p != '\0')
+					p++;
+				s->tag_len = (size_t)(p - s->tag);
+			}
+		}
+
+		idx++;
+
+		/* Skip whitespace and check for combinator */
+		while (p < end && (*p == ' ' || *p == '\t'))
+			p++;
+
+		if (p >= end || *p == ',' || *p == '\0')
+			break;
+
+		if (*p == '>') {
+			p++;
+			while (p < end && (*p == ' ' || *p == '\t'))
+				p++;
+			if (idx < MAX_SELECTOR_PARTS)
+				out->combinators[idx] = COMB_CHILD;
+		} else {
+			/* Descendant combinator (whitespace already consumed) */
+			if (idx < MAX_SELECTOR_PARTS)
+				out->combinators[idx] = COMB_DESCENDANT;
+		}
+	}
+
+	out->count = idx;
+	return idx > 0;
+}
+
+/**
+ * Case-insensitive comparison of a string against a dom_string.
+ */
+static bool
+strncasematch(const char *a, size_t a_len, dom_string *b)
+{
+	if (b == NULL)
+		return false;
+	if (a_len != dom_string_length(b))
+		return false;
+	return strncasecmp(a, dom_string_data(b), a_len) == 0;
+}
+
+/**
+ * Test whether a DOM element matches a simple selector.
+ */
+static bool
+element_matches_simple(dom_element *element, const struct simple_selector *sel)
+{
+	dom_string *val = NULL;
+	dom_exception exc;
+
+	/* Match tag name (case-insensitive) */
+	if (sel->tag != NULL) {
+		exc = dom_node_get_node_name((dom_node *)element, &val);
+		if (exc != DOM_NO_ERR || val == NULL)
+			return false;
+		bool match = strncasematch(sel->tag, sel->tag_len, val);
+		dom_string_unref(val);
+		if (!match)
+			return false;
+	}
+
+	/* Match id */
+	if (sel->id != NULL) {
+		exc = dom_element_get_attribute(element,
+						corestring_dom_id, &val);
+		if (exc != DOM_NO_ERR || val == NULL)
+			return false;
+		bool match = (sel->id_len == dom_string_length(val) &&
+			      strncmp(sel->id, dom_string_data(val),
+				      sel->id_len) == 0);
+		dom_string_unref(val);
+		if (!match)
+			return false;
+	}
+
+	/* Match class (checks if the element's class list contains the value) */
+	if (sel->cls != NULL) {
+		exc = dom_element_get_attribute(element,
+						corestring_dom_class, &val);
+		if (exc != DOM_NO_ERR || val == NULL)
+			return false;
+		/* Search for the class name as a whole word */
+		const char *haystack = dom_string_data(val);
+		size_t haystack_len = dom_string_length(val);
+		bool found = false;
+		const char *hp = haystack;
+		while (hp < haystack + haystack_len) {
+			while (hp < haystack + haystack_len && *hp == ' ')
+				hp++;
+			const char *word_start = hp;
+			while (hp < haystack + haystack_len && *hp != ' ')
+				hp++;
+			size_t word_len = (size_t)(hp - word_start);
+			if (word_len == sel->cls_len &&
+			    strncmp(word_start, sel->cls, sel->cls_len) == 0) {
+				found = true;
+				break;
+			}
+		}
+		dom_string_unref(val);
+		if (!found)
+			return false;
+	}
+
+	/* Match attribute */
+	if (sel->attr != NULL) {
+		dom_string *attr_name = NULL;
+		exc = dom_string_create((const uint8_t *)sel->attr,
+					sel->attr_len, &attr_name);
+		if (exc != DOM_NO_ERR)
+			return false;
+
+		if (sel->attr_val != NULL) {
+			/* Attribute value match */
+			exc = dom_element_get_attribute(element, attr_name, &val);
+			dom_string_unref(attr_name);
+			if (exc != DOM_NO_ERR || val == NULL)
+				return false;
+			bool match = (sel->attr_val_len == dom_string_length(val) &&
+				      strncmp(sel->attr_val, dom_string_data(val),
+					      sel->attr_val_len) == 0);
+			dom_string_unref(val);
+			if (!match)
+				return false;
+		} else {
+			/* Attribute presence check */
+			bool has = false;
+			exc = dom_element_has_attribute(element, attr_name, &has);
+			dom_string_unref(attr_name);
+			if (exc != DOM_NO_ERR || !has)
+				return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Test whether an element matches a compound selector (all parts).
+ */
+static bool
+element_matches_compound(dom_element *element,
+			 const struct compound_selector *sel)
+{
+	/* Walk backward through selector parts, checking combinators */
+	dom_node *node = (dom_node *)element;
+	int i = sel->count - 1;
+
+	if (!element_matches_simple((dom_element *)node, &sel->parts[i]))
+		return false;
+
+	for (i = sel->count - 2; i >= 0; i--) {
+		enum selector_combinator comb = sel->combinators[i + 1];
+		dom_node *candidate = NULL;
+		dom_exception exc;
+		bool found = false;
+
+		if (comb == COMB_CHILD) {
+			exc = dom_node_get_parent_node(node, &candidate);
+			if (exc != DOM_NO_ERR || candidate == NULL)
+				return false;
+			dom_node_type ntype;
+			exc = dom_node_get_node_type(candidate, &ntype);
+			if (exc != DOM_NO_ERR || ntype != DOM_ELEMENT_NODE) {
+				dom_node_unref(candidate);
+				return false;
+			}
+			found = element_matches_simple(
+				(dom_element *)candidate, &sel->parts[i]);
+			node = candidate;
+			dom_node_unref(candidate);
+			if (!found)
+				return false;
+		} else if (comb == COMB_DESCENDANT) {
+			exc = dom_node_get_parent_node(node, &candidate);
+			while (candidate != NULL) {
+				dom_node_type ntype;
+				exc = dom_node_get_node_type(candidate, &ntype);
+				if (exc == DOM_NO_ERR &&
+				    ntype == DOM_ELEMENT_NODE &&
+				    element_matches_simple(
+					    (dom_element *)candidate,
+					    &sel->parts[i])) {
+					found = true;
+					node = candidate;
+					dom_node_unref(candidate);
+					break;
+				}
+				dom_node *parent = NULL;
+				exc = dom_node_get_parent_node(candidate, &parent);
+				dom_node_unref(candidate);
+				if (exc != DOM_NO_ERR) {
+					candidate = NULL;
+				} else {
+					candidate = parent;
+				}
+			}
+			if (!found)
+				return false;
+		}
+	}
+
+	return true;
+}
+
+/**
+ * Walk the DOM subtree rooted at \a root, calling element_matches_compound
+ * on each element node. Pushes matching nodes onto a Duktape array.
+ *
+ * \param ctx     Duktape context
+ * \param root    Root node to search from (not tested itself)
+ * \param sel     Parsed compound selector
+ * \param arr_idx Duktape stack index of the results array
+ * \param first_only If true, stop after first match
+ * \return number of matches found
+ */
+static uint32_t
+queryselector_walk(duk_context *ctx, dom_node *root,
+		   const struct compound_selector *sel,
+		   duk_idx_t arr_idx, bool first_only)
+{
+	dom_node *child = NULL;
+	dom_exception exc;
+	uint32_t count = 0;
+
+	exc = dom_node_get_first_child(root, &child);
+	if (exc != DOM_NO_ERR)
+		return 0;
+
+	while (child != NULL) {
+		dom_node_type ntype;
+		exc = dom_node_get_node_type(child, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_ELEMENT_NODE) {
+			if (element_matches_compound((dom_element *)child, sel)) {
+				dukky_push_node(ctx, child);
+				duk_put_prop_index(ctx, arr_idx, count);
+				count++;
+				if (first_only) {
+					dom_node_unref(child);
+					return count;
+				}
+			}
+			/* Recurse into children */
+			uint32_t sub = queryselector_walk(
+				ctx, child, sel, arr_idx, first_only);
+			count += sub;
+			if (first_only && count > 0) {
+				dom_node_unref(child);
+				return count;
+			}
+		}
+
+		dom_node *next = NULL;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = (exc == DOM_NO_ERR) ? next : NULL;
+	}
+
+	return count;
+}
+
+/* exported interface documented in dukky.h */
+duk_ret_t
+dukky_queryselector(duk_context *ctx, dom_node *root, bool all)
+{
+	struct compound_selector sel;
+	duk_size_t sel_len;
+	const char *sel_str;
+
+	if (duk_get_top(ctx) < 1) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "querySelector requires a selector string");
+	}
+	sel_str = duk_safe_to_lstring(ctx, 0, &sel_len);
+
+	/* Handle comma-separated selectors (selector list) for qSA */
+	/* For simplicity, we support only the first selector in a list */
+	const char *comma = memchr(sel_str, ',', sel_len);
+	size_t parse_len = comma ? (size_t)(comma - sel_str) : sel_len;
+
+	if (!parse_selector(sel_str, parse_len, &sel)) {
+		if (all) {
+			duk_push_array(ctx);
+			return 1;
+		}
+		return 0; /* WHY: null for querySelector on unparseable selector */
+	}
+
+	if (all) {
+		duk_push_array(ctx);
+		duk_idx_t arr_idx = duk_get_top_index(ctx);
+		uint32_t count = queryselector_walk(ctx, root, &sel,
+						    arr_idx, false);
+		(void)count;
+		return 1;
+	} else {
+		duk_push_array(ctx);
+		duk_idx_t arr_idx = duk_get_top_index(ctx);
+		uint32_t count = queryselector_walk(ctx, root, &sel,
+						    arr_idx, true);
+		if (count > 0) {
+			duk_get_prop_index(ctx, arr_idx, 0);
+			return 1;
+		}
+		return 0; /* WHY: null per spec when no match found */
+	}
 }

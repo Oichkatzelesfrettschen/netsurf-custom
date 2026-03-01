@@ -1,0 +1,105 @@
+# Smoke test for querySelector / querySelectorAll
+# WHY: Most impactful missing API -- jQuery, React, Vue all depend on it.
+
+window: inline
+content: |
+  <html><head><title>querySelector test</title></head>
+  <body>
+  <div id="main" class="container">
+    <p class="intro">Hello</p>
+    <p class="body-text">World</p>
+    <span data-role="label">Label</span>
+    <div class="nested">
+      <a href="#" class="link">Link</a>
+    </div>
+  </div>
+  <script>
+    var results = [];
+
+    // querySelector by ID
+    var main = document.querySelector('#main');
+    if (main && main.id === 'main') {
+      results.push('PASS: qs-id');
+    } else {
+      results.push('FAIL: qs-id=' + (main ? main.id : 'null'));
+    }
+
+    // querySelector by class
+    var intro = document.querySelector('.intro');
+    if (intro && intro.textContent === 'Hello') {
+      results.push('PASS: qs-class');
+    } else {
+      results.push('FAIL: qs-class=' + (intro ? intro.textContent : 'null'));
+    }
+
+    // querySelector by tag
+    var span = document.querySelector('span');
+    if (span && span.textContent === 'Label') {
+      results.push('PASS: qs-tag');
+    } else {
+      results.push('FAIL: qs-tag=' + (span ? span.textContent : 'null'));
+    }
+
+    // querySelector by attribute
+    var label = document.querySelector('[data-role]');
+    if (label && label.textContent === 'Label') {
+      results.push('PASS: qs-attr');
+    } else {
+      results.push('FAIL: qs-attr=' + (label ? label.textContent : 'null'));
+    }
+
+    // querySelector by attribute=value
+    var labelExact = document.querySelector('[data-role="label"]');
+    if (labelExact && labelExact.textContent === 'Label') {
+      results.push('PASS: qs-attr-val');
+    } else {
+      results.push('FAIL: qs-attr-val');
+    }
+
+    // querySelector compound: tag.class
+    var pIntro = document.querySelector('p.intro');
+    if (pIntro && pIntro.textContent === 'Hello') {
+      results.push('PASS: qs-compound');
+    } else {
+      results.push('FAIL: qs-compound');
+    }
+
+    // querySelectorAll returns multiple
+    var allP = document.querySelectorAll('p');
+    if (allP && allP.length === 2) {
+      results.push('PASS: qsa-count=2');
+    } else {
+      results.push('FAIL: qsa-count=' + (allP ? allP.length : 'null'));
+    }
+
+    // querySelector returns null for no match
+    var none = document.querySelector('.nonexistent');
+    if (none === null) {
+      results.push('PASS: qs-null');
+    } else {
+      results.push('FAIL: qs-null=' + none);
+    }
+
+    // querySelectorAll on element (scoped)
+    var nested = document.getElementById('main');
+    if (nested) {
+      var links = nested.querySelectorAll('a');
+      if (links && links.length === 1) {
+        results.push('PASS: elem-qsa');
+      } else {
+        results.push('FAIL: elem-qsa=' + (links ? links.length : 'null'));
+      }
+    } else {
+      results.push('FAIL: elem-qsa-no-main');
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: qs-id"
+  - type: title-contains
+    value: "PASS: qsa-count=2"
+  - type: title-not-contains
+    value: "FAIL"

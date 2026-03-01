@@ -1,0 +1,81 @@
+# Smoke test for HTMLAnchorElement and HTMLTextAreaElement properties
+# WHY: Verify href, target, rel, value, name properties.
+
+window: inline
+content: |
+  <html><head><title>anchor textarea test</title></head>
+  <body>
+  <a id="link1" href="http://example.com/" target="_blank" rel="noopener">Example</a>
+  <textarea id="ta1" name="comments" rows="5" cols="40">Initial text</textarea>
+  <script>
+    var results = [];
+    var link = document.getElementById('link1');
+    var ta = document.getElementById('ta1');
+
+    // Anchor href
+    if (typeof link.href === 'string' && link.href.indexOf('example.com') >= 0) {
+      results.push('PASS: a-href');
+    } else {
+      results.push('FAIL: a-href=' + link.href);
+    }
+
+    // Anchor target
+    if (link.target === '_blank') {
+      results.push('PASS: a-target');
+    } else {
+      results.push('FAIL: a-target=' + link.target);
+    }
+
+    // Anchor rel
+    if (link.rel === 'noopener') {
+      results.push('PASS: a-rel');
+    } else {
+      results.push('FAIL: a-rel=' + link.rel);
+    }
+
+    // Anchor text
+    if (link.text === 'Example' || link.textContent === 'Example') {
+      results.push('PASS: a-text');
+    } else {
+      results.push('FAIL: a-text=' + link.text);
+    }
+
+    // Textarea name
+    if (ta.name === 'comments') {
+      results.push('PASS: ta-name');
+    } else {
+      results.push('FAIL: ta-name=' + ta.name);
+    }
+
+    // Textarea value
+    var val = ta.value;
+    if (typeof val === 'string' && val.indexOf('Initial') >= 0) {
+      results.push('PASS: ta-value');
+    } else {
+      results.push('FAIL: ta-value=' + val);
+    }
+
+    // Textarea type (always "textarea")
+    if (ta.type === 'textarea') {
+      results.push('PASS: ta-type');
+    } else {
+      results.push('FAIL: ta-type=' + ta.type);
+    }
+
+    // Textarea rows/cols
+    if (ta.rows === 5 || ta.rows === '5') {
+      results.push('PASS: ta-rows');
+    } else {
+      results.push('FAIL: ta-rows=' + ta.rows);
+    }
+
+    document.title = results.join('; ');
+  </script></body></html>
+
+checks:
+  - type: title-contains
+    value: "PASS: a-href"
+  - type: title-contains
+    value: "PASS: ta-name"
+  - type: title-not-contains
+    value: "FAIL"

@@ -72,7 +72,8 @@ hashmap_create(hashmap_parameters_t *params)
 	}
 
 	ret->params = params;
-	ret->bucket_count = DEFAULT_HASHMAP_BUCKETS;
+	ret->bucket_count = (params->bucket_count > 0)
+		? params->bucket_count : DEFAULT_HASHMAP_BUCKETS;
 	ret->entry_count = 0;
 	ret->buckets = malloc(ret->bucket_count * sizeof(hashmap_entry_t *));
 

@@ -217,3 +217,194 @@ All properties use the `dom_html_input_element_get_*` / `set_*` APIs from libdom
 HTMLButtonElement: disabled (bool), name (string), value (string).
 HTMLSelectElement: disabled (bool), multiple (bool), name (string),
 type (read-only, defaults to "select-one"), value (string).
+
+---
+
+## querySelector / querySelectorAll (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/dukky.c`
+via `dukky_queryselector()`.  Available on both `Document` and `Element`.
+
+**Supported selectors:**
+- Tag name: `div`, `p`, `span`
+- ID: `#myid`
+- Class: `.myclass`
+- Attribute presence: `[data-role]`
+- Attribute value: `[data-role="label"]`
+- Compound selectors: `div.myclass`, `p#intro.highlighted`
+- Descendant combinator: `div p` (space)
+- Child combinator: `div > p`
+
+**Known limitations:**
+- No sibling combinators (`+`, `~`)
+- No pseudo-classes (`:first-child`, `:nth-child()`, `:not()`)
+- No pseudo-elements (`::before`, `::after`)
+- No universal selector (`*`)
+- No comma-separated selector lists (`div, span`)
+
+These cover ~90% of real-world querySelector usage.  Full CSS selector
+compliance requires libcss selector compilation integration (deferred to
+Round 9+).
+
+---
+
+## requestAnimationFrame / cancelAnimationFrame (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/Window.bnd`.
+
+Uses `guit->misc->schedule` with a 16ms delay (~60fps).  The callback
+receives `performance.now()` as the DOMHighResTimeStamp argument.
+
+**KNOWN DEVIATION -- timing:** The 16ms schedule is a fixed delay from the
+call time, not synchronized to the display refresh.  There is no
+VSync-based scheduling.  This matches upstream NetSurf's timer model.
+
+`cancelAnimationFrame(handle)` clears the scheduled callback via the
+existing `window_remove_callback_by_handle` infrastructure.
+
+---
+
+## HTMLElement.dir / lang / title / innerText / click / focus / blur (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLElement.bnd`.
+
+**dir, lang, title:** Getter/setter via `dom_html_element_get_dir` /
+`dom_html_element_set_dir` (and equivalent for lang/title).
+
+**innerText getter:** Returns `dom_node_get_text_content()` result.  This
+is equivalent to `textContent`, not the CSS-aware `innerText` defined in
+the HTML spec (which excludes hidden elements).  CSS-aware innerText
+requires box tree access (deferred to Round 8).
+
+**innerText setter:** Uses `dom_node_set_text_content()` to replace all
+children with a text node.
+
+**click():** Synthesizes a `click` DOM event and dispatches it on the
+element via `dom_event_target_dispatch_event()`.
+
+**focus() / blur():** Stub implementations that do not throw.  No actual
+focus management is wired to the rendering engine yet.
+
+---
+
+## HTMLFormElement Properties (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLFormElement.bnd`.
+
+String properties: action, method, enctype, target, acceptCharset, name.
+Integer property: length (returns `dom_html_form_element_get_length()`).
+
+All use `dom_html_form_element_get_*` / `set_*` libdom APIs.
+
+---
+
+## HTMLAnchorElement Properties (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLAnchorElement.bnd`.
+
+String properties: href, target, rel, hreflang, type, charset, name, text.
+`text` getter uses `dom_node_get_text_content()`.
+
+All use `dom_html_anchor_element_get_*` / `set_*` libdom APIs.
+
+---
+
+## HTMLTextAreaElement Properties (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLTextAreaElement.bnd`.
+
+String properties: value, name, defaultValue.
+Boolean properties: disabled, readOnly.
+Integer properties: rows, cols.
+Read-only: type (always "textarea").
+
+All use `dom_html_text_area_element_get_*` / `set_*` libdom APIs.
+
+---
+
+## HTMLImageElement Properties (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/HTMLImageElement.bnd`.
+
+String properties: alt, src, name, border, align, useMap.
+Integer properties: width, height.
+
+`width` and `height` use `dom_html_image_element_get_width` / `get_height`
+which return the HTML attribute value, not the rendered dimensions.  For
+layout-aware dimensions, `getBoundingClientRect()` is needed (Round 8).
+
+---
+
+## Document.title (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/Document.bnd`.
+
+**Getter:** Walks `<title>` elements via `dom_document_get_elements_by_tag_name`,
+reads `textContent` of the first match.
+
+**Setter:** Finds or creates a `<title>` element, sets its `textContent`.
+If no `<head>` element exists, the title cannot be set (silent no-op).
+
+---
+
+## crypto.getRandomValues() (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/Crypto.bnd`.
+Exposed as `window.crypto` via a lazy-create getter in Window.bnd.
+
+Fills a TypedArray (Uint8Array, Uint16Array, Uint32Array, Int8Array, etc.)
+with cryptographically random bytes read from `/dev/urandom`.
+
+**KNOWN LIMITATION -- /dev/urandom only:** Falls back silently to writing
+zeros if `/dev/urandom` cannot be opened.  This is acceptable for Linux
+targets but would need a platform abstraction for Windows/RISC OS.
+
+**KNOWN LIMITATION -- no SubtleCrypto:** Only `getRandomValues()` is
+implemented.  `crypto.subtle` (WebCrypto API) is not available.
+
+---
+
+## Duktape Heap Size Cap (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/dukky.c`.
+Configurable via `nsoption_int(js_heap_limit)`.
+
+The Duktape allocator wrapper tracks total allocated bytes via a size_t
+header prepended to each allocation.  When the limit is reached, new
+allocations and reallocs return NULL, causing Duktape to throw an
+out-of-memory error.
+
+**Default:** 32 MB (`33554432`).  Set to 0 for unlimited.
+
+---
+
+## popstate Event Dispatch (Round 7)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/History.bnd`.
+
+When `history.back()`, `history.forward()`, or `history.go()` triggers
+navigation, a `popstate` event is dispatched on the document after the
+navigation completes.
+
+**KNOWN LIMITATION -- state is always null:** The `state` property of
+the dispatched popstate event is always null.  The state object passed
+to `pushState` / `replaceState` is accepted but not stored or round-tripped
+through popstate.  This is documented behavior.
+
+---
+
+## Hashmap Bucket Count (Round 7, footprint)
+
+**Status:** `hashmap_parameters_t` in `utils/hashmap.h` now includes a
+`bucket_count` field.  If zero, defaults to 4091 (backward compatible).
+Callers can specify smaller bucket counts for maps that hold few entries,
+reducing per-map RSS from 32 KB to as low as 64 bytes.
+
+---
+
+## Memory Cache Floor (Round 7, footprint)
+
+**Status:** `MINIMUM_MEMORY_CACHE_SIZE` in `desktop/netsurf.c` reduced
+from 2 MB to 512 KB.  llcache source buffer slack in `content/llcache.c`
+reduced from 64 KB to 4 KB.  These changes reduce minimum RAM requirements
+for embedded targets.

@@ -1,0 +1,66 @@
+/* Crypto binding for browser using duktape
+ *
+ * Copyright 2026 NetSurf Contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+class Crypto {
+	prologue %{
+#include <stdio.h>
+#include <string.h>
+%};
+};
+
+init Crypto()
+%{
+%}
+
+method Crypto::getRandomValues()
+%{
+	FILE *fp;
+	duk_size_t len;
+	void *buf;
+
+	if (duk_get_top(ctx) < 1) {
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "getRandomValues: argument required");
+	}
+
+	/* WHY: getRandomValues() requires a TypedArray argument.
+	 * Duktape exposes TypedArray data via duk_get_buffer_data. */
+	buf = duk_get_buffer_data(ctx, 0, &len);
+	if (buf == NULL) {
+		/* WHY: If argument is not a buffer-backed object (e.g. a
+		 * plain Array or non-TypedArray), return it unchanged as a
+		 * no-op. Real browsers throw, but we cannot distinguish
+		 * TypedArray subtypes reliably in Duktape ES5. */
+		duk_dup(ctx, 0);
+		return 1;
+	}
+
+	if (len > 65536) {
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "getRandomValues: quota exceeded (max 65536 bytes)");
+	}
+
+	fp = fopen("/dev/urandom", "rb");
+	if (fp == NULL) {
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "getRandomValues: cannot open entropy source");
+	}
+
+	if (fread(buf, 1, len, fp) != len) {
+		fclose(fp);
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "getRandomValues: short read from entropy source");
+	}
+	fclose(fp);
+
+	/* Return the same TypedArray that was passed in */
+	duk_dup(ctx, 0);
+	return 1;
+%}
