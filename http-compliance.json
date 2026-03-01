@@ -1,0 +1,229 @@
+{
+  "generated": "2026-03-01T04:25:34+00:00",
+  "rfc9110": {
+    "methods": {
+      "GET": "supported",
+      "HEAD": "not_implemented",
+      "POST": "supported",
+      "PUT": "not_implemented",
+      "DELETE": "not_implemented",
+      "CONNECT": "not_implemented",
+      "OPTIONS": "not_implemented",
+      "TRACE": "not_implemented",
+      "PATCH": "not_implemented"
+    },
+    "headers": {
+      "Cache-Control": {
+        "status": "parsed",
+        "rfc": "9111",
+        "file": "utils/http/cache-control.c"
+      },
+      "Content-Type": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "utils/http/content-type.c"
+      },
+      "Content-Disposition": {
+        "status": "parsed",
+        "rfc": "6266",
+        "file": "utils/http/content-disposition.c"
+      },
+      "WWW-Authenticate": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "utils/http/www-authenticate.c"
+      },
+      "Strict-Transport-Security": {
+        "status": "parsed",
+        "rfc": "6797",
+        "file": "utils/http/strict-transport-security.c"
+      },
+      "ETag": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/llcache.c"
+      },
+      "Last-Modified": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/llcache.c"
+      },
+      "If-None-Match": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/llcache.c"
+      },
+      "If-Modified-Since": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/llcache.c"
+      },
+      "Content-Length": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "Content-Encoding": {
+        "status": "file_exists_no_match",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "Location": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "Set-Cookie": {
+        "status": "parsed",
+        "rfc": "6265",
+        "file": "content/fetchers/curl.c"
+      },
+      "Cookie": {
+        "status": "parsed",
+        "rfc": "6265",
+        "file": "content/fetchers/curl.c"
+      },
+      "Referer": {
+        "status": "file_exists_no_match",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "User-Agent": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "Accept": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "Accept-Language": {
+        "status": "parsed",
+        "rfc": "9110",
+        "file": "content/fetchers/curl.c"
+      },
+      "Content-Security-Policy": {
+        "status": "not_implemented",
+        "rfc": "CSP3",
+        "file": null
+      },
+      "X-Content-Type-Options": {
+        "status": "not_implemented",
+        "rfc": "fetch",
+        "file": null
+      },
+      "X-Frame-Options": {
+        "status": "not_implemented",
+        "rfc": "7034",
+        "file": null
+      },
+      "Referrer-Policy": {
+        "status": "not_implemented",
+        "rfc": "referrer-policy",
+        "file": null
+      },
+      "Permissions-Policy": {
+        "status": "not_implemented",
+        "rfc": "permissions-policy",
+        "file": null
+      },
+      "Access-Control-Allow-Origin": {
+        "status": "not_implemented",
+        "rfc": "fetch",
+        "file": null
+      },
+      "Access-Control-Allow-Methods": {
+        "status": "not_implemented",
+        "rfc": "fetch",
+        "file": null
+      },
+      "Access-Control-Allow-Headers": {
+        "status": "not_implemented",
+        "rfc": "fetch",
+        "file": null
+      },
+      "Access-Control-Max-Age": {
+        "status": "not_implemented",
+        "rfc": "fetch",
+        "file": null
+      }
+    },
+    "status_codes": {
+      "100": "defined",
+      "101": "defined",
+      "200": "defined",
+      "201": "defined",
+      "202": "defined",
+      "203": "defined",
+      "204": "defined",
+      "205": "defined",
+      "206": "defined",
+      "300": "defined",
+      "301": "defined",
+      "302": "defined",
+      "303": "defined",
+      "304": "defined",
+      "305": "defined",
+      "307": "defined",
+      "308": "defined",
+      "400": "defined",
+      "401": "defined",
+      "402": "defined",
+      "403": "defined",
+      "404": "defined",
+      "405": "defined",
+      "406": "defined",
+      "407": "defined",
+      "408": "defined",
+      "409": "defined",
+      "410": "defined",
+      "411": "defined",
+      "412": "defined",
+      "413": "defined",
+      "414": "defined",
+      "415": "defined",
+      "416": "defined",
+      "417": "defined",
+      "418": "defined",
+      "421": "defined",
+      "422": "defined",
+      "426": "defined",
+      "500": "defined",
+      "501": "defined",
+      "502": "defined",
+      "503": "defined",
+      "504": "defined",
+      "505": "defined"
+    }
+  },
+  "rfc9111": {
+    "caching": {
+      "max-age": "implemented",
+      "no-cache": "implemented",
+      "no-store": "implemented",
+      "must-revalidate": "implemented",
+      "ETag / If-None-Match": "implemented",
+      "Last-Modified / If-Modified-Since": "implemented",
+      "Expires": "implemented",
+      "Age": "implemented",
+      "s-maxage": "implemented",
+      "private": "implemented",
+      "public": "implemented",
+      "304 Not Modified": "implemented"
+    }
+  },
+  "security": {
+    "HSTS (RFC 6797)": "implemented",
+    "CORS": "not_implemented",
+    "CSP (Content-Security-Policy)": "not_implemented",
+    "X-Content-Type-Options": "not_implemented",
+    "X-Frame-Options": "not_implemented",
+    "Referrer-Policy": "not_implemented"
+  },
+  "protocol_versions": {
+    "HTTP/1.1": "supported",
+    "HTTP/2": "not_supported",
+    "HTTP/3": "not_supported"
+  }
+}

@@ -145,6 +145,7 @@ typedef struct {
 	int age;		/**< Age: response header */
 	int max_age;		/**< Max-Age Cache-control parameter */
 	llcache_validate no_cache;	/**< No-Cache Cache-control parameter */
+	bool must_revalidate;	/**< must-revalidate Cache-control parameter */
 	char *etag;		/**< Etag: response header */
 	time_t last_modified;	/**< Last-Modified: response header */
 } llcache_cache_control;
@@ -601,6 +602,10 @@ llcache_fetch_parse_cache_control(llcache_object *object, char *value)
 
 	if (http_cache_control_has_max_age(cc)) {
 		object->cache.max_age = http_cache_control_max_age(cc);
+	}
+
+	if (http_cache_control_must_revalidate(cc)) {
+		object->cache.must_revalidate = true;
 	}
 
 	http_cache_control_destroy(cc);

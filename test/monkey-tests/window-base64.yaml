@@ -1,0 +1,45 @@
+title: window.atob/btoa/devicePixelRatio/scrollTo/focus/blur
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      try{ok("btoa('hello')", btoa("hello")==="aGVsbG8=");}catch(e){ok("btoa",false);}
+      try{ok("atob('aGVsbG8=')", atob("aGVsbG8=")==="hello");}catch(e){ok("atob",false);}
+      try{ok("btoa empty", btoa("")==="");}catch(e){ok("btoa empty",false);}
+      try{ok("atob empty", atob("")==="");}catch(e){ok("atob empty",false);}
+      try{ok("roundtrip", atob(btoa("test123"))==="test123");}catch(e){ok("roundtrip",false);}
+      ok("devicePixelRatio is number", typeof window.devicePixelRatio==="number");
+      ok("outerWidth is number", typeof window.outerWidth==="number");
+      ok("outerHeight is number", typeof window.outerHeight==="number");
+      ok("screenX is number", typeof window.screenX==="number");
+      ok("screenY is number", typeof window.screenY==="number");
+      try{window.scrollTo(0,0);ok("scrollTo no throw",true);}catch(e){ok("scrollTo",false);}
+      try{window.scrollBy(0,0);ok("scrollBy no throw",true);}catch(e){ok("scrollBy",false);}
+      try{window.scroll(0,0);ok("scroll no throw",true);}catch(e){ok("scroll",false);}
+      try{window.focus();ok("focus no throw",true);}catch(e){ok("focus",false);}
+      try{window.blur();ok("blur no throw",true);}catch(e){ok("blur",false);}
+      console.log(f===0?"ALL PASS":"FAILURES: "+f);
+      console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

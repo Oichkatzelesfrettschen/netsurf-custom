@@ -15,127 +15,97 @@ steps:
     status: complete
 - action: clear-log
   window: win1
-# WHY: We use js-exec to inject test code inline rather than navigating to a
-#      file:// URL, which would require absolute paths and break on CI.
-#      The test logs "DONE" when complete so wait-log can gate on it.
-#      Edge cases verify correct polyfill semantics beyond simple smoke tests.
 - action: js-exec
   window: win1
   cmd: >-
     (function(){
-      var f=0;
-      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
-
-      // --- Map basic ---
-      try{
-        var m=new Map();
-        m.set("a",1);
-        ok("Map.set/get",m.get("a")===1);
-        ok("Map.size",m.size===1);
-      }catch(e){console.log("FAIL: Map basic: "+e);f++;}
-
-      // --- Map get after delete returns undefined ---
-      try{
-        var m=new Map();
-        m.set("x",42);
-        m.delete("x");
-        ok("Map.get after delete is undefined", m.get("x")===undefined);
-      }catch(e){console.log("FAIL: Map delete: "+e);f++;}
-
-      // --- Map iteration order preserved (FIFO) ---
-      try{
-        var m=new Map();
-        m.set("first",1);m.set("second",2);m.set("third",3);
-        var keys=[];
-        m.forEach(function(v,k){keys.push(k);});
-        ok("Map iteration order", keys[0]==="first"&&keys[1]==="second"&&keys[2]==="third");
-      }catch(e){console.log("FAIL: Map iteration order: "+e);f++;}
-
-      // --- Set basic ---
-      try{
-        var s=new Set([1,2,2]);
-        ok("Set uniqueness",s.size===2);
-        ok("Set.has",s.has(1));
-      }catch(e){console.log("FAIL: Set basic: "+e);f++;}
-
-      // --- Set has() after clear() returns false ---
-      try{
-        var s=new Set([1,2,3]);
-        s.clear();
-        ok("Set.has after clear is false", s.has(1)===false);
-        ok("Set.size after clear is 0", s.size===0);
-      }catch(e){console.log("FAIL: Set clear: "+e);f++;}
-
-      // --- WeakMap basic ---
-      try{
-        var wm=new WeakMap();
-        var k={};
-        wm.set(k,9);
-        ok("WeakMap.get",wm.get(k)===9);
-      }catch(e){console.log("FAIL: WeakMap basic: "+e);f++;}
-
-      // --- WeakMap set/get with distinct object keys ---
-      try{
-        var wm=new WeakMap();
-        var k1={}, k2={};
-        wm.set(k1,"v1");
-        wm.set(k2,"v2");
-        ok("WeakMap distinct object keys", wm.get(k1)==="v1"&&wm.get(k2)==="v2");
-      }catch(e){console.log("FAIL: WeakMap object keys: "+e);f++;}
-
-      // --- WeakSet basic ---
-      try{
-        var ws=new WeakSet();
-        var o={};
-        ws.add(o);
-        ok("WeakSet.has",ws.has(o));
-      }catch(e){console.log("FAIL: WeakSet basic: "+e);f++;}
-
-      // --- Promise.resolve ---
-      try{
-        var done1=false;
-        Promise.resolve(42).then(function(v){
-          ok("Promise.resolve value",v===42);
-          done1=true;
-        });
-      }catch(e){console.log("FAIL: Promise.resolve: "+e);f++;}
-
-      // --- Promise.all([]) resolves immediately with [] ---
-      try{
-        Promise.all([]).then(function(results){
-          ok("Promise.all([]) resolves",Array.isArray(results)&&results.length===0);
-        });
-      }catch(e){console.log("FAIL: Promise.all([]): "+e);f++;}
-
-      // --- Promise.race resolves with faster ---
-      try{
-        var p1=new Promise(function(res){setTimeout(function(){res("slow");},50);});
-        var p2=new Promise(function(res){res("fast");});
-        Promise.race([p1,p2]).then(function(v){
-          ok("Promise.race fastest wins",v==="fast");
-        });
-      }catch(e){console.log("FAIL: Promise.race: "+e);f++;}
-
-      // --- Promise rejection caught by .catch() ---
-      try{
-        Promise.reject(new Error("boom")).catch(function(e){
-          ok("Promise.catch fires on rejection",e.message==="boom");
-        });
-      }catch(e){console.log("FAIL: Promise.catch: "+e);f++;}
-
-      // --- Promise.finally called on resolved ---
-      try{
-        var finallyCalled=false;
-        Promise.resolve("ok").finally(function(){finallyCalled=true;}).then(function(v){
-          ok("Promise.finally called on resolve",finallyCalled);
-          ok("Promise.finally passes value through",v==="ok");
-          console.log(f===0?"ALL PASS":"FAILURES: "+f);
-          console.log("DONE");
-        });
-      }catch(e){
-        console.log("FAIL: Promise.finally: "+e);
-        console.log("DONE");
-      }
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    try{
+    var m=new Map();
+    m.set("a",1);
+    ok("Map.set/get",m.get("a")===1);
+    ok("Map.size",m.size===1);
+    }catch(e){console.log("FAIL: Map basic: "+e);f++;}
+    try{
+    var m2=new Map();
+    m2.set("x",42);
+    m2.delete("x");
+    ok("Map.get after delete is undefined", m2.get("x")===undefined);
+    }catch(e){console.log("FAIL: Map delete: "+e);f++;}
+    try{
+    var m3=new Map();
+    m3.set("first",1);m3.set("second",2);m3.set("third",3);
+    var keys=[];
+    m3.forEach(function(v,k){keys.push(k);});
+    ok("Map iteration order", keys[0]==="first"&&keys[1]==="second"&&keys[2]==="third");
+    }catch(e){console.log("FAIL: Map iteration order: "+e);f++;}
+    try{
+    var s=new Set([1,2,2]);
+    ok("Set uniqueness",s.size===2);
+    ok("Set.has",s.has(1));
+    }catch(e){console.log("FAIL: Set basic: "+e);f++;}
+    try{
+    var s2=new Set([1,2,3]);
+    s2.clear();
+    ok("Set.has after clear is false", s2.has(1)===false);
+    ok("Set.size after clear is 0", s2.size===0);
+    }catch(e){console.log("FAIL: Set clear: "+e);f++;}
+    try{
+    var wm=new WeakMap();
+    var k={};
+    wm.set(k,9);
+    ok("WeakMap.get",wm.get(k)===9);
+    }catch(e){console.log("FAIL: WeakMap basic: "+e);f++;}
+    try{
+    var wm2=new WeakMap();
+    var k1={}, k2={};
+    wm2.set(k1,"v1");
+    wm2.set(k2,"v2");
+    ok("WeakMap distinct object keys", wm2.get(k1)==="v1"&&wm2.get(k2)==="v2");
+    }catch(e){console.log("FAIL: WeakMap object keys: "+e);f++;}
+    try{
+    var ws=new WeakSet();
+    var o={};
+    ws.add(o);
+    ok("WeakSet.has",ws.has(o));
+    }catch(e){console.log("FAIL: WeakSet basic: "+e);f++;}
+    try{
+    var done1=false;
+    Promise.resolve(42).then(function(v){
+    ok("Promise.resolve value",v===42);
+    done1=true;
+    });
+    }catch(e){console.log("FAIL: Promise.resolve: "+e);f++;}
+    try{
+    Promise.all([]).then(function(results){
+    ok("Promise.all([]) resolves",Array.isArray(results)&&results.length===0);
+    });
+    }catch(e){console.log("FAIL: Promise.all([]): "+e);f++;}
+    try{
+    var p1=new Promise(function(res){setTimeout(function(){res("slow");},50);});
+    var p2=new Promise(function(res){res("fast");});
+    Promise.race([p1,p2]).then(function(v){
+    ok("Promise.race fastest wins",v==="fast");
+    });
+    }catch(e){console.log("FAIL: Promise.race: "+e);f++;}
+    try{
+    Promise.reject(new Error("boom")).catch(function(e){
+    ok("Promise.catch fires on rejection",e.message==="boom");
+    });
+    }catch(e){console.log("FAIL: Promise.catch: "+e);f++;}
+    try{
+    var finallyCalled=false;
+    Promise.resolve("ok").finally(function(){finallyCalled=true;}).then(function(v){
+    ok("Promise.finally called on resolve",finallyCalled);
+    ok("Promise.finally passes value through",v==="ok");
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    });
+    }catch(e){
+    console.log("FAIL: Promise.finally: "+e);
+    console.log("DONE");
+    }
     })()
 - action: wait-log
   window: win1

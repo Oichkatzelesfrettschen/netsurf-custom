@@ -762,11 +762,16 @@ def _cross_reference(
     Returns list of dicts: {interface, member, kind, spec_file, status}
     """
     # Build .bnd lookup: (class_name, member_name) -> BndDecl
+    # Index both original and lowercase class names to handle namespace case
+    # mismatches (e.g. IDL "namespace console" vs .bnd class "Console").
     bnd_lookup: dict[tuple[str, str], BndDecl] = {}
     for d in bnd_decls:
         key = (d.class_name, d.member)
         if key not in bnd_lookup or d.status == "done":
             bnd_lookup[key] = d
+        lkey = (d.class_name.lower(), d.member)
+        if lkey not in bnd_lookup or d.status == "done":
+            bnd_lookup[lkey] = d
 
     # Build ABSENT_APIS lookup
     absent_lookup: set[tuple[str, str]] = set()

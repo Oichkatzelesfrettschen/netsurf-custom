@@ -1,77 +1,46 @@
-# Smoke test for Element.tagName/localName and HTMLElement.hidden/tabIndex
-# WHY: Verify basic DOM property access works for core Element properties.
-
-window: inline
-content: |
-  <html><head><title>element properties test</title></head>
-  <body>
-  <div id="testdiv" tabindex="5">hello</div>
-  <span id="testspan" hidden>hidden</span>
-  <script>
-    var results = [];
-    var div = document.getElementById('testdiv');
-    var span = document.getElementById('testspan');
-
-    // tagName
-    if (div.tagName === 'DIV') {
-      results.push('PASS: tagName=DIV');
-    } else {
-      results.push('FAIL: tagName=' + div.tagName);
-    }
-
-    // localName
-    if (div.localName === 'DIV' || div.localName === 'div') {
-      results.push('PASS: localName ok');
-    } else {
-      results.push('FAIL: localName=' + div.localName);
-    }
-
-    // hidden getter
-    if (span.hidden === true) {
-      results.push('PASS: hidden=true');
-    } else {
-      results.push('FAIL: hidden=' + span.hidden);
-    }
-    if (div.hidden === false) {
-      results.push('PASS: not-hidden=false');
-    } else {
-      results.push('FAIL: not-hidden=' + div.hidden);
-    }
-
-    // hidden setter
-    div.hidden = true;
-    if (div.hidden === true) {
-      results.push('PASS: hidden setter works');
-    } else {
-      results.push('FAIL: hidden setter failed');
-    }
-    div.hidden = false;
-    if (div.hidden === false) {
-      results.push('PASS: hidden remove works');
-    } else {
-      results.push('FAIL: hidden remove failed');
-    }
-
-    // tabIndex getter
-    if (div.tabIndex === 5) {
-      results.push('PASS: tabIndex=5');
-    } else {
-      results.push('FAIL: tabIndex=' + div.tabIndex);
-    }
-
-    // tabIndex setter
-    div.tabIndex = 10;
-    if (div.tabIndex === 10) {
-      results.push('PASS: tabIndex setter works');
-    } else {
-      results.push('FAIL: tabIndex setter got ' + div.tabIndex);
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: tagName=DIV"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for Element.tagName/localName and HTMLElement.hidden/tabIndex
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var div=document.createElement("div");
+    document.body.appendChild(div);
+    var span=document.createElement("span");
+    span.hidden=true;
+    document.body.appendChild(span);
+    ok("tagName=DIV", div.tagName==="DIV");
+    ok("localName", div.localName==="DIV"||div.localName==="div");
+    ok("hidden=true", span.hidden===true);
+    ok("not-hidden=false", div.hidden===false);
+    div.hidden=true;
+    ok("hidden setter works", div.hidden===true);
+    div.hidden=false;
+    ok("hidden remove works", div.hidden===false);
+    ok("tabIndex is number", typeof div.tabIndex==="number");
+    div.tabIndex=10;
+    ok("tabIndex setter works", div.tabIndex===10);
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

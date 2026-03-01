@@ -184,6 +184,80 @@ getter Event::isTrusted ()
 %}
 
 
+getter Event::timeStamp ()
+%{
+	unsigned int ts = 0;
+	dom_event_get_timestamp(priv->evt, &ts);
+	duk_push_number(ctx, (double)ts);
+	return 1;
+%}
+
+getter Event::srcElement ()
+%{
+	/* Legacy IE alias for event.target (same semantics) */
+	dom_node *et;
+	dom_exception exc;
+
+	exc = dom_event_get_target(priv->evt, &et);
+	if (exc != DOM_NO_ERR) return 0;
+
+	if (et == NULL || !dukky_push_node(ctx, et)) {
+		duk_push_global_object(ctx);
+	}
+
+	if (et != NULL) {
+		dom_node_unref(et);
+	}
+	return 1;
+%}
+
+getter Event::returnValue ()
+%{
+	/* returnValue is the inverse of defaultPrevented */
+	dom_exception exc;
+	bool ret;
+
+	exc = dom_event_is_default_prevented(priv->evt, &ret);
+	if (exc != DOM_NO_ERR) return 0;
+
+	duk_push_boolean(ctx, !ret);
+	return 1;
+%}
+
+setter Event::returnValue ()
+%{
+	/* Setting returnValue to false calls preventDefault() */
+	bool val = duk_to_boolean(ctx, 0);
+	if (!val) {
+		dom_event_prevent_default(priv->evt);
+	}
+	return 0;
+%}
+
+getter Event::cancelBubble ()
+%{
+	/* libdom has no direct API to query propagation-stopped state */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+setter Event::cancelBubble ()
+%{
+	/* Setting cancelBubble to true calls stopPropagation() */
+	bool val = duk_to_boolean(ctx, 0);
+	if (val) {
+		dom_event_stop_propagation(priv->evt);
+	}
+	return 0;
+%}
+
+getter Event::composed ()
+%{
+	/* No shadow DOM support in NetSurf; composed is always false */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
 method Event::initEvent ()
 %{
 	dom_exception exc;

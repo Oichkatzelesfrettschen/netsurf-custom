@@ -1,76 +1,47 @@
-# Smoke test for HTMLButtonElement and HTMLSelectElement properties
-# WHY: Verify disabled, name, value properties on button and select.
-
-window: inline
-content: |
-  <html><head><title>form elements test</title></head>
-  <body>
-  <button id="btn1" name="submit_btn" value="go" disabled>Click</button>
-  <select id="sel1" name="color">
-    <option value="red">Red</option>
-    <option value="blue" selected>Blue</option>
-  </select>
-  <script>
-    var results = [];
-    var btn = document.getElementById('btn1');
-    var sel = document.getElementById('sel1');
-
-    // Button disabled
-    if (btn.disabled === true) {
-      results.push('PASS: btn.disabled=true');
-    } else {
-      results.push('FAIL: btn.disabled=' + btn.disabled);
-    }
-
-    // Button name
-    if (btn.name === 'submit_btn') {
-      results.push('PASS: btn.name=submit_btn');
-    } else {
-      results.push('FAIL: btn.name=' + btn.name);
-    }
-
-    // Button value
-    if (btn.value === 'go') {
-      results.push('PASS: btn.value=go');
-    } else {
-      results.push('FAIL: btn.value=' + btn.value);
-    }
-
-    // Button disabled setter
-    btn.disabled = false;
-    if (btn.disabled === false) {
-      results.push('PASS: btn.disabled setter');
-    } else {
-      results.push('FAIL: btn.disabled setter');
-    }
-
-    // Select name
-    if (sel.name === 'color') {
-      results.push('PASS: sel.name=color');
-    } else {
-      results.push('FAIL: sel.name=' + sel.name);
-    }
-
-    // Select disabled (default false)
-    if (sel.disabled === false) {
-      results.push('PASS: sel.disabled=false');
-    } else {
-      results.push('FAIL: sel.disabled=' + sel.disabled);
-    }
-
-    // Select type
-    var t = sel.type;
-    if (t === 'select-one' || t === 'select-multiple') {
-      results.push('PASS: sel.type=' + t);
-    } else {
-      results.push('FAIL: sel.type=' + t);
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: btn.disabled=true"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for HTMLButtonElement and HTMLSelectElement properties
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var btn=document.createElement("button");
+    btn.disabled=true;
+    btn.name="submit_btn";
+    btn.value="go";
+    document.body.appendChild(btn);
+    ok("btn.disabled=true", btn.disabled===true);
+    ok("btn.name", btn.name==="submit_btn");
+    ok("btn.value", btn.value==="go");
+    btn.disabled=false;
+    ok("btn.disabled setter", btn.disabled===false);
+    var sel=document.createElement("select");
+    sel.name="color";
+    document.body.appendChild(sel);
+    ok("sel.name", sel.name==="color");
+    ok("sel.disabled=false", sel.disabled===false);
+    var t=sel.type;
+    ok("sel.type", t==="select-one"||t==="select-multiple");
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

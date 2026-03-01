@@ -1,43 +1,25 @@
-# Smoke test for Document.title getter/setter
-# WHY: SPAs use document.title to update the page title.
-
-window: inline
-content: |
-  <html><head><title>Original Title</title></head>
-  <body>
-  <script>
-    var results = [];
-
-    // document.title getter reads the <title> element
-    if (document.title === 'Original Title') {
-      results.push('PASS: title-getter');
-    } else {
-      results.push('FAIL: title-getter=' + document.title);
-    }
-
-    // document.title setter updates the <title> element
-    document.title = 'Updated Title';
-    if (document.title === 'Updated Title') {
-      results.push('PASS: title-setter');
-    } else {
-      results.push('FAIL: title-setter=' + document.title);
-    }
-
-    // Verify the <title> element text changed
-    var titleElem = document.getElementsByTagName('title')[0];
-    if (titleElem && titleElem.textContent === 'Updated Title') {
-      results.push('PASS: title-elem-text');
-    } else {
-      results.push('FAIL: title-elem-text');
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: title-getter"
-  - type: title-contains
-    value: "PASS: title-setter"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for Document.title getter/setter
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){ if (document.title === 'Original Title') { console.log('PASS: title-getter'); } else { console.log('FAIL: title-getter=' + document.title); } document.title = 'Updated Title'; if (document.title === 'Updated Title') { console.log('PASS: title-setter'); } else { console.log('FAIL: title-setter=' + document.title); } var titleElem = document.getElementsByTagName('title')[0]; if (titleElem && titleElem.textContent === 'Updated Title') { console.log('PASS: title-elem-text'); } else { console.log('FAIL: title-elem-text'); } console.log("DONE"); })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

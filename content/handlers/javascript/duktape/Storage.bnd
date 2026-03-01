@@ -1,0 +1,237 @@
+/* Storage binding for browser using duktape and libdom
+ *
+ * In-memory per-origin Web Storage API implementation (localStorage
+ * and sessionStorage). Data does not persist across browser restarts.
+ *
+ * Backing store: Duktape objects in the heap stash, keyed by origin.
+ *   heap_stash["__storage_local__"][origin] = { key: val, ... }
+ *   heap_stash["__storage_session__"][origin] = { key: val, ... }
+ *
+ * The localStorage/sessionStorage distinction is stored as a boolean
+ * MAGIC property on the JS object, set by the Window getter.
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+class Storage {
+      prologue %{
+#include "utils/nsurl.h"
+#include "netsurf/browser_window.h"
+#include "content/hlcache.h"
+#include "html/private.h"
+
+#define STORAGE_LOCAL_KEY  "__storage_local__"
+#define STORAGE_SESSION_KEY "__storage_session__"
+#define STORAGE_IS_SESSION MAGIC(StorageIsSession)
+
+/* Check if this Storage object is for sessionStorage */
+static bool
+storage_is_session(duk_context *ctx)
+{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, STORAGE_IS_SESSION);
+	bool result = duk_to_boolean(ctx, -1);
+	duk_pop_2(ctx);
+	return result;
+}
+
+/* Push the backing object for this Storage onto the stack.
+ * Creates the stash structure on first access.
+ * Returns the stack index of the backing object, or -1 on error. */
+static duk_idx_t
+storage_push_backing(duk_context *ctx, bool is_session)
+{
+	const char *stash_key = is_session ? STORAGE_SESSION_KEY
+					   : STORAGE_LOCAL_KEY;
+
+	/* Get origin from window */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop_2(ctx);
+
+	if (priv_win == NULL || priv_win->htmlc == NULL) {
+		return -1;
+	}
+
+	nsurl *url = llcache_handle_get_url(priv_win->htmlc->base.llcache);
+	if (url == NULL) {
+		return -1;
+	}
+	const char *origin = nsurl_access(url);
+
+	/* heap_stash[stash_key][origin] */
+	duk_push_heap_stash(ctx);
+	if (!duk_has_prop_string(ctx, -1, stash_key)) {
+		duk_push_object(ctx);
+		duk_put_prop_string(ctx, -2, stash_key);
+	}
+	duk_get_prop_string(ctx, -1, stash_key);
+	duk_remove(ctx, -2); /* remove heap_stash */
+
+	/* stash_key_obj is now on top; get or create origin bucket */
+	if (!duk_has_prop_string(ctx, -1, origin)) {
+		duk_push_object(ctx);
+		duk_put_prop_string(ctx, -2, origin);
+	}
+	duk_get_prop_string(ctx, -1, origin);
+	duk_remove(ctx, -2); /* remove stash_key_obj */
+
+	return duk_get_top_index(ctx);
+}
+
+%};
+};
+
+init Storage()
+%{
+%}
+
+getter Storage::length()
+%{
+	bool is_session = storage_is_session(ctx);
+	duk_idx_t idx = storage_push_backing(ctx, is_session);
+	if (idx < 0) {
+		duk_push_uint(ctx, 0);
+		return 1;
+	}
+
+	/* Count own enumerable properties */
+	duk_enum(ctx, idx, DUK_ENUM_OWN_PROPERTIES_ONLY);
+	duk_uint_t count = 0;
+	while (duk_next(ctx, -1, 0)) {
+		count++;
+		duk_pop(ctx); /* key */
+	}
+	duk_pop(ctx); /* enum */
+	duk_pop(ctx); /* backing */
+
+	duk_push_uint(ctx, count);
+	return 1;
+%}
+
+method Storage::key()
+%{
+	if (duk_get_top(ctx) < 1) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	duk_uint_t target = duk_to_uint32(ctx, 0);
+	bool is_session = storage_is_session(ctx);
+
+	duk_idx_t idx = storage_push_backing(ctx, is_session);
+	if (idx < 0) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	duk_enum(ctx, idx, DUK_ENUM_OWN_PROPERTIES_ONLY);
+	duk_uint_t i = 0;
+	while (duk_next(ctx, -1, 0)) {
+		if (i == target) {
+			/* key is on top; clean up enum and backing */
+			duk_remove(ctx, -2); /* enum */
+			duk_remove(ctx, idx); /* backing */
+			return 1;
+		}
+		duk_pop(ctx); /* key */
+		i++;
+	}
+	duk_pop(ctx); /* enum */
+	duk_pop(ctx); /* backing */
+
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Storage::getItem()
+%{
+	if (duk_get_top(ctx) < 1) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	duk_size_t key_len;
+	const char *key = duk_safe_to_lstring(ctx, 0, &key_len);
+	bool is_session = storage_is_session(ctx);
+
+	duk_idx_t idx = storage_push_backing(ctx, is_session);
+	if (idx < 0) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	duk_get_prop_lstring(ctx, idx, key, key_len);
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		duk_pop(ctx); /* backing */
+		duk_push_null(ctx);
+	} else {
+		duk_remove(ctx, idx); /* remove backing, keep value */
+	}
+	return 1;
+%}
+
+method Storage::setItem()
+%{
+	if (duk_get_top(ctx) < 2) return 0;
+
+	duk_size_t key_len, val_len;
+	const char *key = duk_safe_to_lstring(ctx, 0, &key_len);
+	const char *val = duk_safe_to_lstring(ctx, 1, &val_len);
+	bool is_session = storage_is_session(ctx);
+
+	duk_idx_t idx = storage_push_backing(ctx, is_session);
+	if (idx < 0) return 0;
+
+	duk_push_lstring(ctx, val, val_len);
+	duk_put_prop_lstring(ctx, idx, key, key_len);
+	duk_pop(ctx); /* backing */
+	return 0;
+%}
+
+method Storage::removeItem()
+%{
+	if (duk_get_top(ctx) < 1) return 0;
+
+	duk_size_t key_len;
+	const char *key = duk_safe_to_lstring(ctx, 0, &key_len);
+	bool is_session = storage_is_session(ctx);
+
+	duk_idx_t idx = storage_push_backing(ctx, is_session);
+	if (idx < 0) return 0;
+
+	duk_del_prop_lstring(ctx, idx, key, key_len);
+	duk_pop(ctx); /* backing */
+	return 0;
+%}
+
+method Storage::clear()
+%{
+	bool is_session = storage_is_session(ctx);
+	duk_idx_t idx = storage_push_backing(ctx, is_session);
+	if (idx < 0) return 0;
+
+	/* Delete all own properties */
+	duk_enum(ctx, idx, DUK_ENUM_OWN_PROPERTIES_ONLY);
+	/* Collect keys first (cannot modify during enumeration) */
+	duk_push_array(ctx);
+	duk_uint_t count = 0;
+	while (duk_next(ctx, -2, 0)) {
+		duk_put_prop_index(ctx, -2, count++);
+	}
+	duk_pop(ctx); /* enum */
+
+	/* Delete each key */
+	for (duk_uint_t i = 0; i < count; i++) {
+		duk_get_prop_index(ctx, -1, i);
+		duk_del_prop(ctx, idx);
+	}
+	duk_pop(ctx); /* key array */
+	duk_pop(ctx); /* backing */
+	return 0;
+%}

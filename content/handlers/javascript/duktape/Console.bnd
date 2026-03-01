@@ -16,6 +16,7 @@ class Console {
 #include "netsurf/browser_window.h"
 
 #define CONSOLE_TIMERS MAGIC(ConsoleTimers)
+#define CONSOLE_COUNTERS MAGIC(ConsoleCounters)
 
 static void
 write_log_entry(duk_context *ctx, unsigned int group, browser_window_console_flags flags)
@@ -67,6 +68,8 @@ init Console ()
 	priv->group = 0;
 	duk_push_object(ctx);
 	duk_put_prop_string(ctx, 0, CONSOLE_TIMERS);
+	duk_push_object(ctx);
+	duk_put_prop_string(ctx, 0, CONSOLE_COUNTERS);
 %}
 
 method Console::group ()
@@ -194,6 +197,98 @@ method Console::trace ()
 	duk_safe_to_string(ctx, -1);
 	duk_insert(ctx, 0);
 	duk_set_top(ctx, 1);
+	write_log_entry(ctx, priv->group, BW_CS_FLAG_LEVEL_INFO);
+	return 0;
+%}
+
+method Console::assert()
+%{
+	/* If first argument is truthy, do nothing */
+	if (duk_get_top(ctx) >= 1 && duk_to_boolean(ctx, 0)) {
+		return 0;
+	}
+
+	/* Remove the condition argument; build "Assertion failed: ..." message */
+	if (duk_get_top(ctx) >= 1) {
+		duk_remove(ctx, 0);
+	}
+
+	if (duk_get_top(ctx) == 0) {
+		duk_push_string(ctx, "Assertion failed");
+	} else {
+		/* Stringify remaining args, prepend "Assertion failed:" */
+		for (int i = 0; i < duk_get_top(ctx); ++i) {
+			(void)duk_safe_to_string(ctx, i);
+		}
+		duk_push_string(ctx, "Assertion failed:");
+		duk_insert(ctx, 0);
+	}
+
+	write_log_entry(ctx, priv->group, BW_CS_FLAG_LEVEL_ERROR);
+	return 0;
+%}
+
+method Console::count()
+%{
+	const char *label = "default";
+	duk_size_t label_len = 7;
+
+	if (duk_get_top(ctx) >= 1 && duk_is_string(ctx, 0)) {
+		label = duk_get_lstring(ctx, 0, &label_len);
+	}
+
+	/* Get the counters object */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, CONSOLE_COUNTERS);
+	/* stack: ..., this, counters */
+
+	duk_push_lstring(ctx, label, label_len);
+	duk_dup(ctx, -1);
+	duk_get_prop(ctx, -3);
+	/* stack: ..., this, counters, label, val */
+
+	duk_uint_t count = 1;
+	if (duk_is_number(ctx, -1)) {
+		count = duk_to_uint32(ctx, -1) + 1;
+	}
+	duk_pop(ctx);
+
+	/* Store updated count */
+	duk_push_uint(ctx, count);
+	duk_put_prop(ctx, -3);
+	/* stack: ..., this, counters */
+	duk_pop_2(ctx);
+
+	/* Log "label: N" */
+	duk_set_top(ctx, 0);
+	duk_push_sprintf(ctx, "%s: %u", label, (unsigned int)count);
+	write_log_entry(ctx, priv->group, BW_CS_FLAG_LEVEL_INFO);
+	return 0;
+%}
+
+method Console::countReset()
+%{
+	const char *label = "default";
+	duk_size_t label_len = 7;
+
+	if (duk_get_top(ctx) >= 1 && duk_is_string(ctx, 0)) {
+		label = duk_get_lstring(ctx, 0, &label_len);
+	}
+
+	/* Get the counters object and reset the label */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, CONSOLE_COUNTERS);
+	duk_push_lstring(ctx, label, label_len);
+	duk_del_prop(ctx, -2);
+	duk_pop_2(ctx);
+
+	return 0;
+%}
+
+method Console::table()
+%{
+	/* No table formatting in headless console; delegate to write_log_entry
+	 * which stringifies all arguments (same behaviour as console.dir). */
 	write_log_entry(ctx, priv->group, BW_CS_FLAG_LEVEL_INFO);
 	return 0;
 %}

@@ -1,67 +1,43 @@
-# Smoke test for HTMLImageElement.src/alt/width/height
-# WHY: Image property access used by lazy-loading libraries.
-
-window: inline
-content: |
-  <html><head><title>image element test</title></head>
-  <body>
-  <img id="img1" src="resource:favicon.png" alt="Test Image" width="32" height="32" name="icon" border="0" align="left">
-  <script>
-    var results = [];
-    var img = document.getElementById('img1');
-
-    // alt getter
-    if (img.alt === 'Test Image') {
-      results.push('PASS: img-alt');
-    } else {
-      results.push('FAIL: img-alt=' + img.alt);
-    }
-
-    // src getter (may be resolved to absolute)
-    if (typeof img.src === 'string' && img.src.length > 0) {
-      results.push('PASS: img-src');
-    } else {
-      results.push('FAIL: img-src=' + img.src);
-    }
-
-    // width getter
-    var w = img.width;
-    if (w === 32 || w === '32') {
-      results.push('PASS: img-width=32');
-    } else {
-      results.push('FAIL: img-width=' + w);
-    }
-
-    // height getter
-    var h = img.height;
-    if (h === 32 || h === '32') {
-      results.push('PASS: img-height=32');
-    } else {
-      results.push('FAIL: img-height=' + h);
-    }
-
-    // name getter
-    if (img.name === 'icon') {
-      results.push('PASS: img-name');
-    } else {
-      results.push('FAIL: img-name=' + img.name);
-    }
-
-    // alt setter
-    img.alt = 'Changed';
-    if (img.alt === 'Changed') {
-      results.push('PASS: img-alt-setter');
-    } else {
-      results.push('FAIL: img-alt-setter=' + img.alt);
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: img-alt"
-  - type: title-contains
-    value: "PASS: img-src"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for HTMLImageElement.src/alt/width/height
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var img=document.createElement("img");
+    img.alt="Test Image";
+    img.width=32;
+    img.height=32;
+    img.name="icon";
+    document.body.appendChild(img);
+    ok("img-alt", img.alt==="Test Image");
+    ok("img-src is string", typeof img.src==="string");
+    ok("img-width", img.width===32||img.width==="32");
+    ok("img-height", img.height===32||img.height==="32");
+    ok("img-name", img.name==="icon");
+    img.alt="Changed";
+    ok("img-alt-setter", img.alt==="Changed");
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

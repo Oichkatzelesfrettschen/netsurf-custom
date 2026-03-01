@@ -656,7 +656,7 @@ monkey_window_handle_exec(int argc, char **argv)
 		/* Now execute the JS */
 
 		moutf(MOUT_WINDOW, "JS WIN %d RET %s", atoi(argv[2]),
-		      browser_window_exec(gw->bw, cmd, total - 1) ? "TRUE" : "FALSE");
+		      browser_window_exec(gw->bw, cmd, strlen(cmd)) ? "TRUE" : "FALSE");
 
 		free(cmd);
 	}

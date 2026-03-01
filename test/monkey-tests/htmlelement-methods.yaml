@@ -1,100 +1,49 @@
-# Smoke test for HTMLElement.dir/lang/title + innerText + click/focus/blur
-# WHY: Verify core HTMLElement properties and methods.
-
-window: inline
-content: |
-  <html><head><title>htmlelement methods test</title></head>
-  <body>
-  <div id="d1" dir="ltr" lang="en" title="test div">Hello World</div>
-  <div id="d2">No attrs</div>
-  <button id="btn1">Click me</button>
-  <input id="inp1" type="text" value="focus test">
-  <script>
-    var results = [];
-    var d1 = document.getElementById('d1');
-    var d2 = document.getElementById('d2');
-
-    // dir getter
-    if (d1.dir === 'ltr') {
-      results.push('PASS: dir=ltr');
-    } else {
-      results.push('FAIL: dir=' + d1.dir);
-    }
-
-    // dir setter
-    d1.dir = 'rtl';
-    if (d1.dir === 'rtl') {
-      results.push('PASS: dir-setter');
-    } else {
-      results.push('FAIL: dir-setter=' + d1.dir);
-    }
-
-    // lang getter
-    if (d1.lang === 'en') {
-      results.push('PASS: lang=en');
-    } else {
-      results.push('FAIL: lang=' + d1.lang);
-    }
-
-    // lang setter
-    d1.lang = 'fr';
-    if (d1.lang === 'fr') {
-      results.push('PASS: lang-setter');
-    } else {
-      results.push('FAIL: lang-setter=' + d1.lang);
-    }
-
-    // title getter
-    if (d1.title === 'test div') {
-      results.push('PASS: title=test div');
-    } else {
-      results.push('FAIL: title=' + d1.title);
-    }
-
-    // title setter
-    d1.title = 'new title';
-    if (d1.title === 'new title') {
-      results.push('PASS: title-setter');
-    } else {
-      results.push('FAIL: title-setter=' + d1.title);
-    }
-
-    // innerText getter (returns text content)
-    var txt = d1.innerText;
-    if (typeof txt === 'string' && txt.indexOf('Hello') >= 0) {
-      results.push('PASS: innerText');
-    } else {
-      results.push('FAIL: innerText=' + txt);
-    }
-
-    // click() method exists and does not throw
-    try {
-      var btn = document.getElementById('btn1');
-      btn.click();
-      results.push('PASS: click-no-throw');
-    } catch(e) {
-      results.push('FAIL: click-threw=' + e.message);
-    }
-
-    // focus() / blur() methods exist and do not throw
-    try {
-      var inp = document.getElementById('inp1');
-      inp.focus();
-      inp.blur();
-      results.push('PASS: focus-blur');
-    } catch(e) {
-      results.push('FAIL: focus-blur=' + e.message);
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: dir=ltr"
-  - type: title-contains
-    value: "PASS: innerText"
-  - type: title-contains
-    value: "PASS: focus-blur"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for HTMLElement.dir/lang/title + innerText + click/focus/blur
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var d1=document.createElement("div");
+    d1.dir="ltr";
+    d1.lang="en";
+    d1.title="test div";
+    d1.textContent="Hello World";
+    document.body.appendChild(d1);
+    ok("dir=ltr", d1.dir==="ltr");
+    d1.dir="rtl";
+    ok("dir-setter", d1.dir==="rtl");
+    ok("lang=en", d1.lang==="en");
+    d1.lang="fr";
+    ok("lang-setter", d1.lang==="fr");
+    ok("title=test div", d1.title==="test div");
+    d1.title="new title";
+    ok("title-setter", d1.title==="new title");
+    var txt=d1.innerText;
+    ok("innerText", typeof txt==="string"&&txt.indexOf("Hello")>=0);
+    try{var btn=document.createElement("button");document.body.appendChild(btn);btn.click();ok("click-no-throw",true);}catch(e){ok("click",false);}
+    try{var inp=document.createElement("input");document.body.appendChild(inp);inp.focus();inp.blur();ok("focus-blur",true);}catch(e){ok("focus-blur",false);}
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

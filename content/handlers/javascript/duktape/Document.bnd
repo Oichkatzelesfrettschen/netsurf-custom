@@ -16,6 +16,8 @@ prologue Document()
 #include "content/hlcache.h"
 #include "html/private.h"
 #include "content/urldb.h"
+#include <dom/html/html_document.h>
+#include <dom/html/html_collection.h>
 
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
 %}
@@ -530,6 +532,203 @@ setter Document::title()
 	dom_node_unref(title_node);
 	dom_string_unref(val);
 	return 0;
+%}
+
+getter Document::forms()
+%{
+	dom_html_collection *col = NULL;
+	dom_exception exc;
+
+	exc = dom_html_document_get_forms(
+		(dom_html_document *)((node_private_t *)priv)->node, &col);
+	if (exc != DOM_NO_ERR || col == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, col);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(col);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		NSLOG(dukky, DEBUG, "Unable to construct forms collection");
+		return 0;
+	}
+	return 1;
+%}
+
+getter Document::images()
+%{
+	dom_html_collection *col = NULL;
+	dom_exception exc;
+
+	exc = dom_html_document_get_images(
+		(dom_html_document *)((node_private_t *)priv)->node, &col);
+	if (exc != DOM_NO_ERR || col == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, col);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(col);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		NSLOG(dukky, DEBUG, "Unable to construct images collection");
+		return 0;
+	}
+	return 1;
+%}
+
+getter Document::links()
+%{
+	dom_html_collection *col = NULL;
+	dom_exception exc;
+
+	exc = dom_html_document_get_links(
+		(dom_html_document *)((node_private_t *)priv)->node, &col);
+	if (exc != DOM_NO_ERR || col == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, col);
+	dukky_create_object(ctx, PROTO_NAME(HTMLCOLLECTION), 1);
+	dom_html_collection_unref(col);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		NSLOG(dukky, DEBUG, "Unable to construct links collection");
+		return 0;
+	}
+	return 1;
+%}
+
+getter Document::characterSet()
+%{
+	/* NetSurf converts all content to UTF-8 internally */
+	duk_push_lstring(ctx, "UTF-8", 5);
+	return 1;
+%}
+
+getter Document::charset()
+%{
+	/* Legacy alias for characterSet */
+	duk_push_lstring(ctx, "UTF-8", 5);
+	return 1;
+%}
+
+getter Document::readyState()
+%{
+	/* JS only runs after parsing completes in NetSurf's model */
+	duk_push_lstring(ctx, "complete", 8);
+	return 1;
+%}
+
+getter Document::compatMode()
+%{
+	/* Return "BackCompat" for quirks mode, "CSS1Compat" otherwise.
+	 * NetSurf stores quirks mode in the html_content structure. */
+	struct html_content *htmlc = NULL;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if (err == DOM_NO_ERR && htmlc != NULL && htmlc->quirks == DOM_DOCUMENT_QUIRKS_MODE_FULL) {
+		duk_push_lstring(ctx, "BackCompat", 10);
+	} else {
+		duk_push_lstring(ctx, "CSS1Compat", 10);
+	}
+	return 1;
+%}
+
+getter Document::contentType()
+%{
+	duk_push_lstring(ctx, "text/html", 9);
+	return 1;
+%}
+
+getter Document::documentURI()
+%{
+	struct html_content *htmlc = NULL;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if (err == DOM_NO_ERR && htmlc != NULL) {
+		nsurl *url = llcache_handle_get_url(htmlc->base.llcache);
+		if (url != NULL) {
+			duk_push_string(ctx, nsurl_access(url));
+			return 1;
+		}
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Document::URL()
+%{
+	/* Alias for documentURI */
+	struct html_content *htmlc = NULL;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if (err == DOM_NO_ERR && htmlc != NULL) {
+		nsurl *url = llcache_handle_get_url(htmlc->base.llcache);
+		if (url != NULL) {
+			duk_push_string(ctx, nsurl_access(url));
+			return 1;
+		}
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Document::hidden()
+%{
+	/* NetSurf has no tab visibility model */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+getter Document::visibilityState()
+%{
+	duk_push_lstring(ctx, "visible", 7);
+	return 1;
+%}
+
+method Document::createComment()
+%{
+	dom_node *newnode;
+	dom_exception err;
+	duk_size_t text_len;
+	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
+	dom_string *text_str;
+
+	err = dom_string_create((const uint8_t*)text, text_len, &text_str);
+	if (err != DOM_NO_ERR) return 0;
+
+	err = dom_document_create_comment(priv->parent.node,
+					  text_str,
+					  &newnode);
+	if (err != DOM_NO_ERR) {
+		dom_string_unref(text_str);
+		return 0;
+	}
+
+	dom_string_unref(text_str);
+
+	dukky_push_node(ctx, newnode);
+
+	dom_node_unref(newnode);
+
+	return 1;
+%}
+
+getter Document::defaultView()
+%{
+	duk_push_global_object(ctx);
+	return 1;
 %}
 
 getter Document::onabort();

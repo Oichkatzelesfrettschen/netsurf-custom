@@ -110,4 +110,18 @@ duk_ret_t dukky_queryselector(duk_context *ctx, struct dom_node *root,
  */
 duk_ret_t dukky_push_node_innerhtml(duk_context *ctx, struct dom_node *node);
 
+/**
+ * Test whether an element matches a CSS selector string.
+ *
+ * Parses the selector and tests the element against it. Used by
+ * Element.matches() and Element.closest().
+ *
+ * \param element  DOM element to test
+ * \param sel_str  CSS selector string
+ * \param sel_len  Length of selector string
+ * \return true if the element matches, false otherwise
+ */
+bool dukky_element_matches_selector(struct dom_element *element,
+				    const char *sel_str, size_t sel_len);
+
 #endif

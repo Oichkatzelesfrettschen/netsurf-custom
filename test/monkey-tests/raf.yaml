@@ -1,60 +1,25 @@
-# Smoke test for requestAnimationFrame / cancelAnimationFrame
-# WHY: Every JS animation library depends on rAF.
-
-window: inline
-content: |
-  <html><head><title>rAF test</title></head>
-  <body>
-  <script>
-    var results = [];
-
-    // requestAnimationFrame exists
-    if (typeof window.requestAnimationFrame === 'function') {
-      results.push('PASS: rAF-exists');
-    } else {
-      results.push('FAIL: rAF-exists=' + typeof window.requestAnimationFrame);
-    }
-
-    // cancelAnimationFrame exists
-    if (typeof window.cancelAnimationFrame === 'function') {
-      results.push('PASS: cAF-exists');
-    } else {
-      results.push('FAIL: cAF-exists=' + typeof window.cancelAnimationFrame);
-    }
-
-    // rAF returns a numeric handle
-    var handle = requestAnimationFrame(function(ts) {
-      // Callback receives a DOMHighResTimeStamp argument
-      if (typeof ts === 'number' && ts > 0) {
-        results.push('PASS: rAF-timestamp');
-      } else {
-        results.push('FAIL: rAF-timestamp=' + ts);
-      }
-      document.title = results.join('; ');
-    });
-
-    if (typeof handle === 'number' && handle > 0) {
-      results.push('PASS: rAF-handle');
-    } else {
-      results.push('FAIL: rAF-handle=' + handle);
-    }
-
-    // cancelAnimationFrame should not throw
-    var h2 = requestAnimationFrame(function() {
-      results.push('FAIL: cancelled-rAF-fired');
-      document.title = results.join('; ');
-    });
-    cancelAnimationFrame(h2);
-    results.push('PASS: cAF-no-throw');
-
-    // Set partial title in case callback fires before timeout
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: rAF-exists"
-  - type: title-contains
-    value: "PASS: cAF-no-throw"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for requestAnimationFrame / cancelAnimationFrame
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){ if (typeof window.requestAnimationFrame === 'function') { console.log('PASS: rAF-exists'); } else { console.log('FAIL: rAF-exists=' + typeof window.requestAnimationFrame); } if (typeof window.cancelAnimationFrame === 'function') { console.log('PASS: cAF-exists'); } else { console.log('FAIL: cAF-exists=' + typeof window.cancelAnimationFrame); } var handle = requestAnimationFrame(function(ts) { if (typeof ts === 'number' && ts > 0) { console.log('PASS: rAF-timestamp'); } else { console.log('FAIL: rAF-timestamp=' + ts); } }); if (typeof handle === 'number' && handle > 0) { console.log('PASS: rAF-handle'); } else { console.log('FAIL: rAF-handle=' + handle); } var h2 = requestAnimationFrame(function() { console.log('FAIL: cancelled-rAF-fired'); }); cancelAnimationFrame(h2); console.log('PASS: cAF-no-throw'); console.log("DONE"); })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

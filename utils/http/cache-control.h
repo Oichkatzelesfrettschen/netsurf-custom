@@ -74,4 +74,36 @@ bool http_cache_control_no_cache(http_cache_control *cc);
  */
 bool http_cache_control_no_store(http_cache_control *cc);
 
+/**
+ * Get the value of a cache control's must-revalidate flag
+ *
+ * \param cc Object to inspect
+ * \return Whether stale responses must be revalidated (RFC 9111 s5.2.2.2)
+ */
+bool http_cache_control_must_revalidate(http_cache_control *cc);
+
+/**
+ * Get the value of a cache control's private flag
+ *
+ * \param cc Object to inspect
+ * \return Whether the response is intended for a single user (RFC 9111 s5.2.2.7)
+ */
+bool http_cache_control_private(http_cache_control *cc);
+
+/**
+ * Determine if a valid s-maxage directive is present
+ *
+ * \param cc Object to inspect
+ * \return Whether s-maxage is valid
+ */
+bool http_cache_control_has_s_maxage(http_cache_control *cc);
+
+/**
+ * Get the value of a cache control's s-maxage
+ *
+ * \param cc Object to inspect
+ * \return Shared max age, in delta-seconds
+ */
+uint32_t http_cache_control_s_maxage(http_cache_control *cc);
+
 #endif

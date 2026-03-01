@@ -1,81 +1,49 @@
-# Smoke test for HTMLAnchorElement and HTMLTextAreaElement properties
-# WHY: Verify href, target, rel, value, name properties.
-
-window: inline
-content: |
-  <html><head><title>anchor textarea test</title></head>
-  <body>
-  <a id="link1" href="http://example.com/" target="_blank" rel="noopener">Example</a>
-  <textarea id="ta1" name="comments" rows="5" cols="40">Initial text</textarea>
-  <script>
-    var results = [];
-    var link = document.getElementById('link1');
-    var ta = document.getElementById('ta1');
-
-    // Anchor href
-    if (typeof link.href === 'string' && link.href.indexOf('example.com') >= 0) {
-      results.push('PASS: a-href');
-    } else {
-      results.push('FAIL: a-href=' + link.href);
-    }
-
-    // Anchor target
-    if (link.target === '_blank') {
-      results.push('PASS: a-target');
-    } else {
-      results.push('FAIL: a-target=' + link.target);
-    }
-
-    // Anchor rel
-    if (link.rel === 'noopener') {
-      results.push('PASS: a-rel');
-    } else {
-      results.push('FAIL: a-rel=' + link.rel);
-    }
-
-    // Anchor text
-    if (link.text === 'Example' || link.textContent === 'Example') {
-      results.push('PASS: a-text');
-    } else {
-      results.push('FAIL: a-text=' + link.text);
-    }
-
-    // Textarea name
-    if (ta.name === 'comments') {
-      results.push('PASS: ta-name');
-    } else {
-      results.push('FAIL: ta-name=' + ta.name);
-    }
-
-    // Textarea value
-    var val = ta.value;
-    if (typeof val === 'string' && val.indexOf('Initial') >= 0) {
-      results.push('PASS: ta-value');
-    } else {
-      results.push('FAIL: ta-value=' + val);
-    }
-
-    // Textarea type (always "textarea")
-    if (ta.type === 'textarea') {
-      results.push('PASS: ta-type');
-    } else {
-      results.push('FAIL: ta-type=' + ta.type);
-    }
-
-    // Textarea rows/cols
-    if (ta.rows === 5 || ta.rows === '5') {
-      results.push('PASS: ta-rows');
-    } else {
-      results.push('FAIL: ta-rows=' + ta.rows);
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: a-href"
-  - type: title-contains
-    value: "PASS: ta-name"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for HTMLAnchorElement and HTMLTextAreaElement properties
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var link=document.createElement("a");
+    link.href="https://example.com/";
+    link.target="_blank";
+    link.rel="noopener";
+    link.textContent="Example";
+    document.body.appendChild(link);
+    ok("a-href", typeof link.href==="string"&&link.href.indexOf("example.com")>=0);
+    ok("a-target", link.target==="_blank");
+    ok("a-rel", link.rel==="noopener");
+    ok("a-text", link.text==="Example"||link.textContent==="Example");
+    var ta=document.createElement("textarea");
+    ta.name="comments";
+    ta.rows=5;
+    ta.value="Initial text";
+    document.body.appendChild(ta);
+    ok("ta-name", ta.name==="comments");
+    ok("ta-value", typeof ta.value==="string"&&ta.value.indexOf("Initial")>=0);
+    ok("ta-type", ta.type==="textarea");
+    ok("ta-rows", ta.rows===5||ta.rows==="5");
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

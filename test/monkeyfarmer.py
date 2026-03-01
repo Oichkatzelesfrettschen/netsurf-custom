@@ -22,11 +22,15 @@ access to the monkey behaviours and ultimately to write useful tests in an
 expressive but not overcomplicated DSLish way.  Tests are, ultimately, still
 Python code.
 
+Migration note: asyncore was removed in Python 3.12. This module now uses
+selectors.DefaultSelector (stdlib since Python 3.4) which provides the same
+synchronous select-loop model without the deprecated module.
+
 """
 
 # pylint: disable=locally-disabled, missing-docstring
 
-import asyncore
+import selectors
 import os
 import socket
 import subprocess
@@ -34,21 +38,19 @@ import time
 import errno
 import sys
 
-class StderrEcho(asyncore.dispatcher):
+
+class StderrEcho:
     def __init__(self, sockend):
-        asyncore.dispatcher.__init__(self, sock=sockend)
+        self.sock = sockend
+        self.sock.setblocking(False)
         self.incoming = b""
 
-    def handle_connect(self):
-        pass
-
-    def handle_close(self):
-        # the pipe to the monkey process has closed
-        self.close()
+    def fileno(self):
+        return self.sock.fileno()
 
     def handle_read(self):
         try:
-            got = self.recv(8192)
+            got = self.sock.recv(8192)
             if not got:
                 return
         except socket.error as error:
@@ -70,19 +72,29 @@ class StderrEcho(asyncore.dispatcher):
 
                 sys.stderr.write("{}\n".format(line))
 
+    def close(self):
+        try:
+            self.sock.close()
+        except Exception:
+            pass
 
-class MonkeyFarmer(asyncore.dispatcher):
+
+class MonkeyFarmer:
 
     # pylint: disable=locally-disabled, too-many-instance-attributes
 
     def __init__(self, monkey_cmd, monkey_env, online, quiet=False, *, wrapper=None):
         (mine, monkeys) = socket.socketpair()
 
-        asyncore.dispatcher.__init__(self, sock=mine)
+        mine.setblocking(False)
 
         (mine2, monkeyserr) = socket.socketpair()
 
         self._errwrapper = StderrEcho(mine2)
+        self._sock = mine
+        self._selector = selectors.DefaultSelector()
+        self._selector.register(mine, selectors.EVENT_READ)
+        self._selector.register(mine2, selectors.EVENT_READ)
 
         if wrapper is not None:
             new_cmd = list(wrapper)
@@ -110,16 +122,9 @@ class MonkeyFarmer(asyncore.dispatcher):
         self.discussion = []
         self.maybe_slower = wrapper is not None
 
-    def handle_connect(self):
-        pass
-
-    def handle_close(self):
-        # the pipe to the monkey process has closed
-        self.close()
-
-    def handle_read(self):
+    def _handle_read(self):
         try:
-            got = self.recv(8192)
+            got = self._sock.recv(8192)
             if not got:
                 self.deadmonkey = True
                 #  ensure the child process is finished and report the exit
@@ -144,12 +149,38 @@ class MonkeyFarmer(asyncore.dispatcher):
             self.incoming = lines.pop()
             self.lines.extend(lines)
 
-    def writable(self):
-        return len(self.buffer) > 0
-
-    def handle_write(self):
-        sent = self.send(self.buffer)
+    def _handle_write(self):
+        sent = self._sock.send(self.buffer)
         self.buffer = self.buffer[sent:]
+
+    def _update_write_interest(self):
+        if len(self.buffer) > 0:
+            try:
+                self._selector.modify(self._sock,
+                                      selectors.EVENT_READ | selectors.EVENT_WRITE)
+            except KeyError:
+                pass
+        else:
+            try:
+                self._selector.modify(self._sock, selectors.EVENT_READ)
+            except KeyError:
+                pass
+
+    def close(self):
+        try:
+            self._selector.unregister(self._sock)
+        except (KeyError, ValueError):
+            pass
+        try:
+            self._selector.unregister(self._errwrapper.sock)
+        except (KeyError, ValueError):
+            pass
+        try:
+            self._sock.close()
+        except Exception:
+            pass
+        self._errwrapper.close()
+        self._selector.close()
 
     def tell_monkey(self, *args):
         cmd = (" ".join(args))
@@ -158,6 +189,7 @@ class MonkeyFarmer(asyncore.dispatcher):
         self.discussion.append((">", cmd))
         cmd = cmd + "\n"
         self.buffer += cmd.encode('utf-8')
+        self._update_write_interest()
 
     def monkey_says(self, line):
         try:
@@ -194,9 +226,20 @@ class MonkeyFarmer(asyncore.dispatcher):
                 now = time.time()
             if len(self.scheduled) > 0:
                 next_event = self.scheduled[0][0]
-                asyncore.loop(timeout=next_event - now, count=1)
+                timeout = max(0, next_event - now)
             else:
-                asyncore.loop(count=1)
+                timeout = 30.0
+            self._update_write_interest()
+            events = self._selector.select(timeout=timeout)
+            for key, mask in events:
+                if key.fileobj is self._sock:
+                    if mask & selectors.EVENT_READ:
+                        self._handle_read()
+                    if mask & selectors.EVENT_WRITE:
+                        self._handle_write()
+                elif key.fileobj is self._errwrapper.sock:
+                    if mask & selectors.EVENT_READ:
+                        self._errwrapper.handle_read()
             while len(self.lines) > 0:
                 self.monkey_says(self.lines.pop(0))
                 if once or self.deadmonkey:
@@ -442,6 +485,8 @@ class BrowserWindow:
         self.browser.farmer.tell_monkey("WINDOW CLICK WIN %s X %s Y %s BUTTON %s KIND %s" % (self.winid, x, y, button, kind))
 
     def js_exec(self, src):
+        # Monkey protocol is line-based (fgets); collapse newlines to spaces
+        src = src.replace('\n', ' ').replace('\r', '')
         self.browser.farmer.tell_monkey("WINDOW EXEC WIN %s %s" % (self.winid, src))
 
     def handle(self, action, *args):

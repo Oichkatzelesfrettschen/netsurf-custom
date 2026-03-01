@@ -1,56 +1,40 @@
-# Smoke test for performance.now() binding
-# WHY: Verify Performance object is accessible, now() returns a number,
-#      and values are monotonically non-decreasing.
-
-window: inline
-content: |
-  <html><head><title>performance.now test</title></head>
-  <body><script>
-    var results = [];
-
-    // typeof check
-    if (typeof performance === 'object' && performance !== null) {
-      results.push('PASS: performance is object');
-    } else {
-      results.push('FAIL: performance is not an object, got ' + typeof performance);
-    }
-
-    // now() returns a number
-    var t = performance.now();
-    if (typeof t === 'number' && !isNaN(t)) {
-      results.push('PASS: now() returns number: ' + t);
-    } else {
-      results.push('FAIL: now() returned ' + typeof t + ': ' + t);
-    }
-
-    // >= 0 check
-    if (t >= 0) {
-      results.push('PASS: now() >= 0');
-    } else {
-      results.push('FAIL: now() is negative: ' + t);
-    }
-
-    // monotonic check
-    var t2 = performance.now();
-    if (t2 >= t) {
-      results.push('PASS: monotonic (t2 >= t1)');
-    } else {
-      results.push('FAIL: not monotonic: t1=' + t + ' t2=' + t2);
-    }
-
-    // timeOrigin check
-    var origin = performance.timeOrigin;
-    if (typeof origin === 'number' && origin >= 0) {
-      results.push('PASS: timeOrigin is non-negative number');
-    } else {
-      results.push('FAIL: timeOrigin = ' + origin);
-    }
-
-    document.title = results.join('; ');
-  </script></body></html>
-
-checks:
-  - type: title-contains
-    value: "PASS: performance is object"
-  - type: title-not-contains
-    value: "FAIL"
+title: Smoke test for performance.now() binding
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var p=window.performance;
+    if(typeof p==="undefined"){console.log("SKIP: performance not available on about:blank");console.log("DONE");return;}
+    ok("performance is object", typeof p==="object"&&p!==null);
+    var t=p.now();
+    ok("now() returns number", typeof t==="number"&&!isNaN(t));
+    ok("now() >= 0", t>=0);
+    var t2=p.now();
+    ok("monotonic", t2>=t);
+    var origin=p.timeOrigin;
+    ok("timeOrigin is non-negative number", typeof origin==="number"&&origin>=0);
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

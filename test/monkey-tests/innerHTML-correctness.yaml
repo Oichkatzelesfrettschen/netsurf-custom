@@ -15,59 +15,36 @@ steps:
     status: complete
 - action: clear-log
   window: win1
-# WHY: innerHTML serialization must be HTML5-correct. Void elements must NOT
-#      have closing tags. Attribute values with special characters (" < > &)
-#      must be escaped. Round-trips must preserve content exactly.
-#      These tests catch regressions in dukky_push_node_innerhtml() and the
-#      innerHTML setter fragment-parser path.
 - action: js-exec
   window: win1
   cmd: >-
     (function(){
-      var f=0;
-      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
-
-      var div=document.createElement("div");
-      document.body.appendChild(div);
-
-      // --- void element: br has no closing tag ---
-      div.innerHTML="<br>";
-      ok("br no closing tag", div.innerHTML==="<br>");
-
-      // --- void element: img has no closing tag ---
-      div.innerHTML='<img src="x">';
-      ok("img no closing tag", !div.innerHTML.match(/<\/img>/));
-
-      // --- round-trip: bold text preserved ---
-      div.innerHTML="<b>hello</b>";
-      ok("b round-trip", div.innerHTML==="<b>hello</b>");
-
-      // --- round-trip: nested elements ---
-      div.innerHTML="<p><span>text</span></p>";
-      ok("nested round-trip", div.innerHTML==="<p><span>text</span></p>");
-
-      // --- attribute value with double-quote is escaped ---
-      div.innerHTML="";
-      var span=document.createElement("span");
-      span.setAttribute("title",'a"b');
-      div.appendChild(span);
-      ok("attr double-quote escaped", div.innerHTML.indexOf('a&quot;b')>=0||
-                                      div.innerHTML.indexOf("a\"b")<0);
-
-      // --- attribute value with < is escaped ---
-      var span2=document.createElement("span");
-      span2.setAttribute("title","a<b");
-      div.innerHTML="";
-      div.appendChild(span2);
-      ok("attr less-than escaped", div.innerHTML.indexOf("a<b")<0||
-                                   div.innerHTML.indexOf("a&lt;b")>=0);
-
-      // --- text content with & is escaped ---
-      div.innerHTML="<p>a&amp;b</p>";
-      ok("text ampersand round-trip", div.innerHTML==="<p>a&amp;b</p>");
-
-      console.log(f===0?"ALL PASS":"FAILURES: "+f);
-      console.log("DONE");
+    var f=0;
+    function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+    var div=document.createElement("div");
+    document.body.appendChild(div);
+    div.innerHTML="<br>";
+    ok("br no closing tag", div.innerHTML==="<br>");
+    div.innerHTML='<img src="x">';
+    ok("img no closing tag", !div.innerHTML.match(/<\/img>/));
+    div.innerHTML="<b>hello</b>";
+    ok("b round-trip", div.innerHTML==="<b>hello</b>");
+    div.innerHTML="<p><span>text</span></p>";
+    ok("nested round-trip", div.innerHTML==="<p><span>text</span></p>");
+    div.innerHTML="";
+    var span=document.createElement("span");
+    span.setAttribute("title",'a"b');
+    div.appendChild(span);
+    ok("attr double-quote escaped", div.innerHTML.indexOf('a&quot;b')>=0||div.innerHTML.indexOf("a\"b")<0);
+    var span2=document.createElement("span");
+    span2.setAttribute("title","a<b");
+    div.innerHTML="";
+    div.appendChild(span2);
+    ok("attr less-than escaped", div.innerHTML.indexOf("a<b")<0||div.innerHTML.indexOf("a&lt;b")>=0);
+    div.innerHTML="<p>a&amp;b</p>";
+    ok("text ampersand round-trip", div.innerHTML==="<p>a&amp;b</p>");
+    console.log(f===0?"ALL PASS":"FAILURES: "+f);
+    console.log("DONE");
     })()
 - action: wait-log
   window: win1

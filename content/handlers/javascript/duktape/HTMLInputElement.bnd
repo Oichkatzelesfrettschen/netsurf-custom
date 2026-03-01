@@ -10,6 +10,7 @@
 
 prologue HTMLInputElement()
 %{
+#include <utils/corestrings.h>
 #include <dom/html/html_input_element.h>
 
 #define INPUT_NODE ((dom_html_input_element *)((node_private_t *)priv)->node)
@@ -293,6 +294,205 @@ getter HTMLInputElement::type()
 	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
 	dom_string_unref(val);
 	return 1;
+%}
+
+/* -- Boolean attribute via generic DOM (no native libdom API) -- */
+
+getter HTMLInputElement::required()
+%{
+	dom_exception exc;
+	bool has;
+
+	exc = dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_required, &has);
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLInputElement::required()
+%{
+	dom_exception exc;
+	bool val = duk_to_boolean(ctx, 0);
+
+	if (val) {
+		dom_string *empty = NULL;
+		exc = dom_string_create((const uint8_t *)"", 0, &empty);
+		if (exc == DOM_NO_ERR && empty != NULL) {
+			exc = dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_required, empty);
+			dom_string_unref(empty);
+			(void)exc;
+		}
+	} else {
+		exc = dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_required);
+		(void)exc;
+	}
+	return 0;
+%}
+
+/* -- String attributes via generic DOM -- */
+
+getter HTMLInputElement::placeholder()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_placeholder, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::placeholder()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_placeholder, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::pattern()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_pattern, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::pattern()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_pattern, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::min()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_min, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::min()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_min, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::max()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_max, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::max()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_max, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::step()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_step, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::step()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_step, str);
+		dom_string_unref(str);
+	}
+	return 0;
 %}
 
 /* -- Deferred: valueAsNumber, valueHigh, valueLow (non-standard or complex) -- */

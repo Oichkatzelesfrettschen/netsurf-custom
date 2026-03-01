@@ -33,6 +33,10 @@ struct http_cache_control {
 	bool max_age_valid;		/**< Whether max-age is valid */
 	bool no_cache;			/**< Whether caching is forbidden */
 	bool no_store;			/**< Whether persistent caching is forbidden */
+	bool must_revalidate;		/**< Whether stale responses must be revalidated */
+	bool is_private;		/**< Whether response is private (RFC 9111) */
+	uint32_t s_maxage;		/**< Shared max age (delta seconds) */
+	bool s_maxage_valid;		/**< Whether s-maxage is valid */
 };
 
 /**
@@ -238,6 +242,10 @@ nserror http_parse_cache_control(const char *header_value,
 	bool max_age_valid = false;
 	bool no_cache = false;
 	bool no_store = false;
+	bool must_revalidate = false;
+	bool is_private = false;
+	uint32_t s_maxage = 0;
+	bool s_maxage_valid = false;
 	nserror error;
 
 	/* 1#cache-directive */
@@ -295,6 +303,31 @@ nserror http_parse_cache_control(const char *header_value,
 		lwc_string_unref(value_str);
 	}
 
+	/* Find must-revalidate */
+	error = http_directive_list_find_item(directives,
+			corestring_lwc_must_revalidate, &value_str);
+	if (error == NSERROR_OK) {
+		must_revalidate = true;
+		lwc_string_unref(value_str);
+	}
+
+	/* Find private */
+	error = http_directive_list_find_item(directives,
+			corestring_lwc_cc_private, &value_str);
+	if (error == NSERROR_OK) {
+		is_private = true;
+		lwc_string_unref(value_str);
+	}
+
+	/* Find s-maxage */
+	error = http_directive_list_find_item(directives,
+			corestring_lwc_s_maxage, &value_str);
+	if (error == NSERROR_OK && value_str != NULL) {
+		error = parse_max_age(value_str, &s_maxage);
+		s_maxage_valid = (error == NSERROR_OK);
+		lwc_string_unref(value_str);
+	}
+
 	http_directive_list_destroy(directives);
 
 	cc = malloc(sizeof(*cc));
@@ -306,6 +339,10 @@ nserror http_parse_cache_control(const char *header_value,
 	cc->max_age_valid = max_age_valid;
 	cc->no_cache = no_cache;
 	cc->no_store = no_store;
+	cc->must_revalidate = must_revalidate;
+	cc->is_private = is_private;
+	cc->s_maxage = s_maxage;
+	cc->s_maxage_valid = s_maxage_valid;
 
 	*result = cc;
 
@@ -340,4 +377,28 @@ bool http_cache_control_no_cache(http_cache_control *cc)
 bool http_cache_control_no_store(http_cache_control *cc)
 {
 	return cc->no_store;
+}
+
+/* See cache-control.h for documentation */
+bool http_cache_control_must_revalidate(http_cache_control *cc)
+{
+	return cc->must_revalidate;
+}
+
+/* See cache-control.h for documentation */
+bool http_cache_control_private(http_cache_control *cc)
+{
+	return cc->is_private;
+}
+
+/* See cache-control.h for documentation */
+bool http_cache_control_has_s_maxage(http_cache_control *cc)
+{
+	return cc->s_maxage_valid;
+}
+
+/* See cache-control.h for documentation */
+uint32_t http_cache_control_s_maxage(http_cache_control *cc)
+{
+	return cc->s_maxage;
 }

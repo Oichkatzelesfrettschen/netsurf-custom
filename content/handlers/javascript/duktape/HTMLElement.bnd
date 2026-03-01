@@ -385,6 +385,228 @@ setter HTMLElement::tabIndex()
 	return 0;
 %}
 
+/* -- draggable: boolean attribute -- */
+
+getter HTMLElement::draggable()
+%{
+	dom_exception exc;
+	bool has;
+
+	exc = dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_draggable, &has);
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLElement::draggable()
+%{
+	dom_exception exc;
+	bool val = duk_to_boolean(ctx, 0);
+
+	if (val) {
+		dom_string *empty = NULL;
+		exc = dom_string_create((const uint8_t *)"true", 4, &empty);
+		if (exc == DOM_NO_ERR && empty != NULL) {
+			exc = dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_draggable, empty);
+			dom_string_unref(empty);
+			(void)exc;
+		}
+	} else {
+		exc = dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_draggable);
+		(void)exc;
+	}
+	return 0;
+%}
+
+/* -- spellcheck: boolean attribute -- */
+
+getter HTMLElement::spellcheck()
+%{
+	dom_exception exc;
+	bool has;
+
+	exc = dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_spellcheck, &has);
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLElement::spellcheck()
+%{
+	dom_exception exc;
+	bool val = duk_to_boolean(ctx, 0);
+
+	if (val) {
+		dom_string *empty = NULL;
+		exc = dom_string_create((const uint8_t *)"true", 4, &empty);
+		if (exc == DOM_NO_ERR && empty != NULL) {
+			exc = dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_spellcheck, empty);
+			dom_string_unref(empty);
+			(void)exc;
+		}
+	} else {
+		exc = dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_spellcheck);
+		(void)exc;
+	}
+	return 0;
+%}
+
+/* -- contentEditable: string attribute, returns "inherit" if absent -- */
+
+getter HTMLElement::contentEditable()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_contenteditable, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "inherit", 7);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::contentEditable()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_contenteditable, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLElement::isContentEditable()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_contenteditable, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	/* "true" or "" means editable */
+	bool editable = (dom_string_length(val) == 0 ||
+		(dom_string_length(val) == 4 &&
+		 strncasecmp(dom_string_data(val), "true", 4) == 0));
+	dom_string_unref(val);
+	duk_push_boolean(ctx, editable);
+	return 1;
+%}
+
+/* -- translate: boolean attribute -- */
+
+getter HTMLElement::translate()
+%{
+	dom_exception exc;
+	bool has;
+
+	exc = dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_translate, &has);
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLElement::translate()
+%{
+	dom_exception exc;
+	bool val = duk_to_boolean(ctx, 0);
+
+	if (val) {
+		dom_string *empty = NULL;
+		exc = dom_string_create((const uint8_t *)"", 0, &empty);
+		if (exc == DOM_NO_ERR && empty != NULL) {
+			exc = dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_translate, empty);
+			dom_string_unref(empty);
+			(void)exc;
+		}
+	} else {
+		exc = dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_translate);
+		(void)exc;
+	}
+	return 0;
+%}
+
+/* -- inert: boolean attribute -- */
+
+getter HTMLElement::inert()
+%{
+	dom_exception exc;
+	bool has;
+
+	exc = dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_inert, &has);
+	if (exc != DOM_NO_ERR) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLElement::inert()
+%{
+	dom_exception exc;
+	bool val = duk_to_boolean(ctx, 0);
+
+	if (val) {
+		dom_string *empty = NULL;
+		exc = dom_string_create((const uint8_t *)"", 0, &empty);
+		if (exc == DOM_NO_ERR && empty != NULL) {
+			exc = dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_inert, empty);
+			dom_string_unref(empty);
+			(void)exc;
+		}
+	} else {
+		exc = dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_inert);
+		(void)exc;
+	}
+	return 0;
+%}
+
 getter HTMLElement::style()
 %{
 	/* Minimal implementation to avoid infinite-loop in Modernizr (c.f. #2413) */

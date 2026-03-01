@@ -1,6 +1,6 @@
 # NetSurf HTTP Compliance Report
 
-Generated: 2026-03-01T00:32:21+00:00
+Generated: 2026-03-01T04:25:34+00:00
 
 ## HTTP Methods (RFC 9110 Section 9) -- 2/9
 
@@ -98,20 +98,20 @@ Generated: 2026-03-01T00:32:21+00:00
 | 504 | defined |
 | 505 | defined |
 
-## Caching (RFC 9111) -- 9/12 implemented
+## Caching (RFC 9111) -- 12/12 implemented
 
 | Feature | Status |
 |---------|--------|
 | max-age | implemented |
 | no-cache | implemented |
 | no-store | implemented |
-| must-revalidate | not_implemented |
+| must-revalidate | implemented |
 | ETag / If-None-Match | implemented |
 | Last-Modified / If-Modified-Since | implemented |
 | Expires | implemented |
 | Age | implemented |
-| s-maxage | not_implemented |
-| private | not_implemented |
+| s-maxage | implemented |
+| private | implemented |
 | public | implemented |
 | 304 Not Modified | implemented |
 

@@ -1,0 +1,5461 @@
+{
+  "generated": "2026-03-01T00:37:13+00:00",
+  "interfaces": {
+    "AbortController": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "AbortController",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "signal",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "abort",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "AbortSignal": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "abort",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "timeout",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "_any",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "aborted",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "reason",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "throwIfAborted",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "CSSRule": {
+      "spec_file": "cssom.idl",
+      "members": [
+        {
+          "name": "cssText",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "parentRule",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "parentStyleSheet",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "CSSStyleDeclaration": {
+      "spec_file": "cssom.idl",
+      "members": [
+        {
+          "name": "cssText",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "length",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "item",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getPropertyValue",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getPropertyPriority",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setProperty",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "removeProperty",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "parentRule",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "CSSStyleSheet": {
+      "spec_file": "cssom.idl",
+      "members": [
+        {
+          "name": "CSSStyleSheet",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "ownerRule",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "cssRules",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "insertRule",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "deleteRule",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "replace",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "replaceSync",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "rules",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "addRule",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "removeRule",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "CustomEvent": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "CustomEvent",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "detail",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "initCustomEvent",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "DOMRect": {
+      "spec_file": "geometry.idl",
+      "members": [
+        {
+          "name": "DOMRect",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "fromRect",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "DOMRectReadOnly": {
+      "spec_file": "geometry.idl",
+      "members": [
+        {
+          "name": "DOMRectReadOnly",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "fromRect",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "x",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "y",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "width",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "height",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "top",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "right",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "bottom",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "left",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "toJSON",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Document": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "Document",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "implementation",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "URL",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "documentURI",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "compatMode",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "characterSet",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "charset",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "inputEncoding",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "contentType",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "doctype",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "documentElement",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "getElementsByTagName",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "getElementsByTagNameNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getElementsByClassName",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createElement",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "createElementNS",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "createDocumentFragment",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "createTextNode",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "createCDATASection",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createComment",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createProcessingInstruction",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "importNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "adoptNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createAttribute",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createAttributeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createEvent",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "createRange",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createNodeIterator",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createTreeWalker",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "parseHTMLUnsafe",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "location",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "domain",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "referrer",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "cookie",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "lastModified",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "readyState",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "object",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "title",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "dir",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "body",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "head",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "images",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "embeds",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "plugins",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "links",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "forms",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "scripts",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getElementsByName",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "currentScript",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "close",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "write",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "writeln",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "defaultView",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hasFocus",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "designMode",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "execCommand",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "queryCommandEnabled",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "queryCommandIndeterm",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "queryCommandState",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "queryCommandSupported",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "queryCommandValue",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "hidden",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "visibilityState",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fgColor",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "linkColor",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "vlinkColor",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "alinkColor",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "bgColor",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "anchors",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "applets",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "captureEvents",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "releaseEvents",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "all",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getElementById",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "styleSheets",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "adoptedStyleSheets",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "customElementRegistry",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "activeElement",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "children",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "firstElementChild",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "lastElementChild",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "childElementCount",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "prepend",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "replaceChildren",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "moveBefore",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "querySelector",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "querySelectorAll",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "createExpression",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createNSResolver",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "evaluate",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "DocumentFragment": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "DocumentFragment",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "getElementById",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "children",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "firstElementChild",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "lastElementChild",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "childElementCount",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "prepend",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "replaceChildren",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "moveBefore",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "querySelector",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "querySelectorAll",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Element": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "namespaceURI",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "prefix",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "localName",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "tagName",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "id",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "className",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "classList",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "slot",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hasAttributes",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "attributes",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "getAttributeNames",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getAttribute",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "getAttributeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setAttribute",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "setAttributeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "removeAttribute",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "removeAttributeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "toggleAttribute",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "hasAttribute",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "hasAttributeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getAttributeNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getAttributeNodeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setAttributeNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setAttributeNodeNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "removeAttributeNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "attachShadow",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "shadowRoot",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "customElementRegistry",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "closest",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "matches",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "webkitMatchesSelector",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getElementsByTagName",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "getElementsByTagNameNS",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getElementsByClassName",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "insertAdjacentElement",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "insertAdjacentText",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setHTMLUnsafe",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getHTML",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "innerHTML",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "outerHTML",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "insertAdjacentHTML",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "children",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "firstElementChild",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "lastElementChild",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "childElementCount",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "prepend",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "replaceChildren",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "moveBefore",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "querySelector",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "querySelectorAll",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "previousElementSibling",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "nextElementSibling",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "before",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "after",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "replaceWith",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "remove",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "assignedSlot",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "Event": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "Event",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "type",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "target",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "srcElement",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "currentTarget",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "composedPath",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "eventPhase",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "stopPropagation",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "cancelBubble",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "stopImmediatePropagation",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "bubbles",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "cancelable",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "returnValue",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "preventDefault",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "defaultPrevented",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "composed",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "isTrusted",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "timeStamp",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "initEvent",
+          "kind": "method",
+          "status": "done"
+        }
+      ]
+    },
+    "EventTarget": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "EventTarget",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "addEventListener",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "removeEventListener",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "dispatchEvent",
+          "kind": "method",
+          "status": "done"
+        }
+      ]
+    },
+    "FormData": {
+      "spec_file": "xhr.idl",
+      "members": [
+        {
+          "name": "FormData",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "delete",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getAll",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "has",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "set",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLAnchorElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLAnchorElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "target",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "download",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "ping",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "rel",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "relList",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hreflang",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "text",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "referrerPolicy",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "coords",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "charset",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "rev",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "shape",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "origin",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "protocol",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "username",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "password",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "host",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hostname",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "port",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "pathname",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "search",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hash",
+          "kind": "attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLAudioElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLAudioElement",
+          "kind": "constructor",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLBRElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLBRElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "clear",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLBodyElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLBodyElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "text",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "link",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "vLink",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "aLink",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "bgColor",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "background",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLButtonElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLButtonElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "command",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "commandForElement",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formAction",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formEnctype",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formMethod",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formNoValidate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formTarget",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "value",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "willValidate",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validity",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validationMessage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "checkValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reportValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setCustomValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "labels",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "popoverTargetElement",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "popoverTargetAction",
+          "kind": "attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLCanvasElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLCanvasElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "getContext",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "toDataURL",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "toBlob",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "transferControlToOffscreen",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLDivElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLDivElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "title",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "lang",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "translate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "dir",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "hidden",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "inert",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "click",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "accessKey",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "accessKeyLabel",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "draggable",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "spellcheck",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "writingSuggestions",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "autocapitalize",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "autocorrect",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "innerText",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "outerText",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "attachInternals",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "showPopover",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "hidePopover",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "togglePopover",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "popover",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "headingOffset",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "headingReset",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "style",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "contentEditable",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "enterKeyHint",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "isContentEditable",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "inputMode",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "dataset",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "nonce",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "autofocus",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "tabIndex",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "focus",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "blur",
+          "kind": "method",
+          "status": "done"
+        }
+      ]
+    },
+    "HTMLFormElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLFormElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "action",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "autocomplete",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "enctype",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "encoding",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "method",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "noValidate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "target",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "rel",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "relList",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "elements",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "length",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "Element",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "submit",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "requestSubmit",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reset",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "checkValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reportValidity",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLHRElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLHRElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "color",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "noShade",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "size",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLHeadElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLHeadElement",
+          "kind": "constructor",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLHeadingElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLHeadingElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLHtmlElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLHtmlElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "version",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLIFrameElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLIFrameElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "src",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "srcdoc",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "sandbox",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "allow",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "allowFullscreen",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "referrerPolicy",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "loading",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "contentDocument",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "contentWindow",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getSVGDocument",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "scrolling",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "frameBorder",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "longDesc",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "marginHeight",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "marginWidth",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLImageElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLImageElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "alt",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "src",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "srcset",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "sizes",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "crossOrigin",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "useMap",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "isMap",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "naturalWidth",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "naturalHeight",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "complete",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "currentSrc",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "referrerPolicy",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "decoding",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "loading",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fetchPriority",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "decode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "lowsrc",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "hspace",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "vspace",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "longDesc",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "border",
+          "kind": "attribute",
+          "status": "done"
+        }
+      ]
+    },
+    "HTMLInputElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLInputElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "accept",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "alpha",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "alt",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "autocomplete",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "defaultChecked",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "checked",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "colorSpace",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "dirName",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "files",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formAction",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formEnctype",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formMethod",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formNoValidate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "formTarget",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "indeterminate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "list",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "max",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "maxLength",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "min",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "minLength",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "multiple",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "pattern",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "placeholder",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "readOnly",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "required",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "size",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "src",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "step",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "defaultValue",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "value",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "valueAsDate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "valueAsNumber",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "stepUp",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "stepDown",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "willValidate",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validity",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validationMessage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "checkValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reportValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setCustomValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "labels",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "select",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "selectionStart",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "selectionEnd",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "selectionDirection",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "setRangeText",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setSelectionRange",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "showPicker",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "useMap",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "popoverTargetElement",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "popoverTargetAction",
+          "kind": "attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLLIElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLLIElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "value",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLLabelElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLLabelElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "htmlFor",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "control",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLLinkElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLLinkElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "href",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "crossOrigin",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "rel",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "as",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "relList",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "media",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "integrity",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hreflang",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "sizes",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "imageSrcset",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "imageSizes",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "referrerPolicy",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "blocking",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fetchPriority",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "charset",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "rev",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "target",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "sheet",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLMediaElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "error",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "src",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "srcObject",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "currentSrc",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "crossOrigin",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "networkState",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "preload",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "buffered",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "load",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "canPlayType",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "readyState",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "seeking",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "currentTime",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fastSeek",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "duration",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getStartDate",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "paused",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "defaultPlaybackRate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "playbackRate",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "preservesPitch",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "played",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "seekable",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "ended",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "autoplay",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "loop",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "play",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "pause",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "controls",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "volume",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "muted",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "defaultMuted",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "audioTracks",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "videoTracks",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "textTracks",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "addTextTrack",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLMetaElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLMetaElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "content",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "media",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "scheme",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLOListElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLOListElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "reversed",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "start",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "compact",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLObjectElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLObjectElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "data",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "contentDocument",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "contentWindow",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getSVGDocument",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "willValidate",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validity",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validationMessage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "checkValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reportValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setCustomValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "archive",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "code",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "declare",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "hspace",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "standby",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "vspace",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "codeBase",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "codeType",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "useMap",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "border",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLOptionElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLOptionElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "label",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "defaultSelected",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "selected",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "value",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "text",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "index",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLParagraphElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLParagraphElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLPreElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLPreElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLScriptElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLScriptElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "src",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "noModule",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "async",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "defer",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "blocking",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "crossOrigin",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "referrerPolicy",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "integrity",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fetchPriority",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "text",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "supports",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "charset",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "event",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "htmlFor",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLSelectElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLSelectElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "autocomplete",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "multiple",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "required",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "size",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "options",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "length",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "item",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "namedItem",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "add",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "remove",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "undefined",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "selectedOptions",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "selectedIndex",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "value",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "willValidate",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validity",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validationMessage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "checkValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reportValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setCustomValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "showPicker",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "labels",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLSourceElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLSourceElement",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "src",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "srcset",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "sizes",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "media",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLSpanElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLSpanElement",
+          "kind": "constructor",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLStyleElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLStyleElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "media",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "blocking",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "sheet",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLTableCellElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLTableCellElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "colSpan",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "rowSpan",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "headers",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "cellIndex",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "scope",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "abbr",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "axis",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "ch",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "chOff",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "noWrap",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "vAlign",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "bgColor",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLTableElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLTableElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "caption",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "createCaption",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "deleteCaption",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "tHead",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "createTHead",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "deleteTHead",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "tFoot",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "createTFoot",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "deleteTFoot",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "tBodies",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "createTBody",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "rows",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "insertRow",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "deleteRow",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "border",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "frame",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "rules",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "summary",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "bgColor",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "cellPadding",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "cellSpacing",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLTableRowElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLTableRowElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "rowIndex",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "sectionRowIndex",
+          "kind": "readonly_attribute",
+          "status": "stub"
+        },
+        {
+          "name": "cells",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "insertCell",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "deleteCell",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "align",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "ch",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "chOff",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "vAlign",
+          "kind": "attribute",
+          "status": "stub"
+        },
+        {
+          "name": "bgColor",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLTextAreaElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLTextAreaElement",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "autocomplete",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "cols",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "dirName",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "disabled",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "form",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "maxLength",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "minLength",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "placeholder",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "readOnly",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "required",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "rows",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "wrap",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "defaultValue",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "value",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "textLength",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "willValidate",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validity",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "validationMessage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "checkValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "reportValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setCustomValidity",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "labels",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "select",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "selectionStart",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "selectionEnd",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "selectionDirection",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "setRangeText",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setSelectionRange",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLTitleElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLTitleElement",
+          "kind": "constructor",
+          "status": "stub"
+        },
+        {
+          "name": "text",
+          "kind": "attribute",
+          "status": "stub"
+        }
+      ]
+    },
+    "HTMLUListElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLUListElement",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "compact",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "HTMLVideoElement": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "HTMLVideoElement",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "width",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "height",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "videoWidth",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "videoHeight",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "poster",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "playsInline",
+          "kind": "attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "Headers": {
+      "spec_file": "fetch.idl",
+      "members": [
+        {
+          "name": "Headers",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "delete",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getSetCookie",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "has",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "set",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "History": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "length",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "scrollRestoration",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "state",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "go",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "back",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "forward",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "pushState",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "replaceState",
+          "kind": "method",
+          "status": "done"
+        }
+      ]
+    },
+    "KeyboardEvent": {
+      "spec_file": "uievents.idl",
+      "members": [
+        {
+          "name": "KeyboardEvent",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "key",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "code",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "location",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "ctrlKey",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "shiftKey",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "altKey",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "metaKey",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "repeat",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "isComposing",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getModifierState",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "initKeyboardEvent",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "charCode",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "keyCode",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "Location": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "origin",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "protocol",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "host",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "hostname",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "port",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "pathname",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "search",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "hash",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "assign",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "replace",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "reload",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "ancestorOrigins",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "MutationObserver": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "MutationObserver",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "observe",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "disconnect",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "takeRecords",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Navigator": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "userActivation",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "appCodeName",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "appName",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "appVersion",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "platform",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "product",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "productSub",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "userAgent",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "vendor",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "vendorSub",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "taintEnabled",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "oscpu",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "language",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "languages",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "onLine",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "registerProtocolHandler",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "unregisterProtocolHandler",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "cookieEnabled",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "plugins",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "mimeTypes",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "javaEnabled",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "pdfViewerEnabled",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hardwareConcurrency",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "storage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "Node": {
+      "spec_file": "dom.idl",
+      "members": [
+        {
+          "name": "nodeType",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "nodeName",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "baseURI",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "isConnected",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "ownerDocument",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "getRootNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "parentNode",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "parentElement",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "hasChildNodes",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "childNodes",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "firstChild",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "lastChild",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "previousSibling",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "nextSibling",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "nodeValue",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "textContent",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "normalize",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "cloneNode",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "isEqualNode",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "isSameNode",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "compareDocumentPosition",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "contains",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "lookupPrefix",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "lookupNamespaceURI",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "isDefaultNamespace",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "insertBefore",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "appendChild",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "replaceChild",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "removeChild",
+          "kind": "method",
+          "status": "done"
+        }
+      ]
+    },
+    "Performance": {
+      "spec_file": "hr-time.idl",
+      "members": [
+        {
+          "name": "now",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "timeOrigin",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "toJSON",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Request": {
+      "spec_file": "fetch.idl",
+      "members": [
+        {
+          "name": "Request",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "method",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "url",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "headers",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "destination",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "referrer",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "referrerPolicy",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "mode",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "credentials",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "cache",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "redirect",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "integrity",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "keepalive",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "isReloadNavigation",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "isHistoryNavigation",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "signal",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "duplex",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "clone",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "body",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "bodyUsed",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "arrayBuffer",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "blob",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "bytes",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "formData",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "json",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "text",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Response": {
+      "spec_file": "fetch.idl",
+      "members": [
+        {
+          "name": "Response",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "error",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "redirect",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "json",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "type",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "url",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "redirected",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "status",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "ok",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "statusText",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "headers",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "clone",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "body",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "bodyUsed",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "arrayBuffer",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "blob",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "bytes",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "formData",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "text",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Storage": {
+      "spec_file": "html.idl",
+      "members": [
+        {
+          "name": "length",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "key",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getItem",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setItem",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "removeItem",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "UIEvent": {
+      "spec_file": "uievents.idl",
+      "members": [
+        {
+          "name": "UIEvent",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "view",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "detail",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "initUIEvent",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "which",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "URL": {
+      "spec_file": "url.idl",
+      "members": [
+        {
+          "name": "URL",
+          "kind": "constructor",
+          "status": "done"
+        },
+        {
+          "name": "parse",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "canParse",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "origin",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "protocol",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "username",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "password",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "host",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "hostname",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "port",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "pathname",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "search",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "searchParams",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "hash",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "toJSON",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "URLSearchParams": {
+      "spec_file": "url.idl",
+      "members": [
+        {
+          "name": "URLSearchParams",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "size",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "append",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "delete",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "get",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getAll",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "has",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "set",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "sort",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    },
+    "Window": {
+      "spec_file": "cssom.idl",
+      "members": [
+        {
+          "name": "getComputedStyle",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "event",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fetchLater",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "window",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "self",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "document",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "name",
+          "kind": "attribute",
+          "status": "done"
+        },
+        {
+          "name": "location",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "history",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "navigation",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "customElements",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "locationbar",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "menubar",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "personalbar",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "scrollbars",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "statusbar",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "toolbar",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "status",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "close",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "closed",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "stop",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "focus",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "blur",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "frames",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "length",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "top",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "opener",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "parent",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "frameElement",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "object",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "navigator",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "clientInformation",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "originAgentCluster",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "alert",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "confirm",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "prompt",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "print",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "postMessage",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "captureEvents",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "releaseEvents",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "external",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "fetch",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "performance",
+          "kind": "readonly_attribute",
+          "status": "done"
+        },
+        {
+          "name": "origin",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "isSecureContext",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "crossOriginIsolated",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "reportError",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "btoa",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "atob",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setTimeout",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "clearTimeout",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "setInterval",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "clearInterval",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "queueMicrotask",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "createImageBitmap",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "structuredClone",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "requestAnimationFrame",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "cancelAnimationFrame",
+          "kind": "method",
+          "status": "done"
+        },
+        {
+          "name": "sessionStorage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "localStorage",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "XMLHttpRequest": {
+      "spec_file": "xhr.idl",
+      "members": [
+        {
+          "name": "XMLHttpRequest",
+          "kind": "constructor",
+          "status": "absent"
+        },
+        {
+          "name": "readyState",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "open",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "setRequestHeader",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "timeout",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "withCredentials",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "upload",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "send",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "abort",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "responseURL",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "status",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "statusText",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "getResponseHeader",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "getAllResponseHeaders",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "overrideMimeType",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "responseType",
+          "kind": "attribute",
+          "status": "absent"
+        },
+        {
+          "name": "response",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "responseText",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        },
+        {
+          "name": "responseXML",
+          "kind": "readonly_attribute",
+          "status": "absent"
+        }
+      ]
+    },
+    "console": {
+      "spec_file": "console.idl",
+      "members": [
+        {
+          "name": "assert",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "clear",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "debug",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "error",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "info",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "log",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "table",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "trace",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "warn",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "dir",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "dirxml",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "count",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "countReset",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "group",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "groupCollapsed",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "groupEnd",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "time",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "timeLog",
+          "kind": "method",
+          "status": "absent"
+        },
+        {
+          "name": "timeEnd",
+          "kind": "method",
+          "status": "absent"
+        }
+      ]
+    }
+  },
+  "summary": {
+    "total": 1021,
+    "done": 220,
+    "stub": 126,
+    "absent": 675
+  }
+}

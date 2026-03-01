@@ -203,6 +203,8 @@ def run_test_step_action_launch(ctx, step):
     monkey_cmd = [ctx["monkey"]]
     for option in step.get('launch-options', []):
         monkey_cmd.append("--{}".format(option))
+    for arg in step.get('args', []):
+        monkey_cmd.append(arg)
     print(get_indent(ctx) + "        " + "Command line: " + repr(monkey_cmd))
 
     # build command environment

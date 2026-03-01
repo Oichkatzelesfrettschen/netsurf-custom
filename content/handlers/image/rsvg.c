@@ -39,6 +39,8 @@
 #include <librsvg/rsvg-cairo.h>
 #endif
 
+#include <math.h>
+
 #include <nsutils/endian.h>
 
 #include "utils/log.h"
@@ -71,11 +73,16 @@ static nserror rsvg_create_svg_data(rsvg_content *c)
 	c->ct = NULL;
 	c->bitmap = NULL;
 
+#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+	/* Handle created from full data in rsvg_convert via
+	 * rsvg_handle_new_from_data(). No incremental handle needed. */
+#else
 	if ((c->rsvgh = rsvg_handle_new()) == NULL) {
 		NSLOG(netsurf, INFO, "rsvg_handle_new() returned NULL.");
 		content_broadcast_error(&c->base, NSERROR_NOMEM, NULL);
 		return NSERROR_NOMEM;
 	}
+#endif
 
 	return NSERROR_OK;
 }
@@ -115,6 +122,14 @@ static nserror rsvg_create(const content_handler *handler,
 static bool rsvg_process_data(struct content *c, const char *data,
 			unsigned int size)
 {
+#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+	/* Data is buffered by the content framework; handle created from
+	 * full data in rsvg_convert() via rsvg_handle_new_from_data(). */
+	(void)c;
+	(void)data;
+	(void)size;
+	return true;
+#else
 	rsvg_content *d = (rsvg_content *) c;
 	GError *err = NULL;
 
@@ -127,13 +142,51 @@ static bool rsvg_process_data(struct content *c, const char *data,
 	}
 
 	return true;
+#endif
 }
 
 static bool rsvg_convert(struct content *c)
 {
 	rsvg_content *d = (rsvg_content *) c;
-	RsvgDimensionData rsvgsize;
 	GError *err = NULL;
+
+#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+	const uint8_t *src;
+	size_t src_size;
+	gdouble dwidth, dheight;
+	RsvgRectangle viewport;
+
+	src = content__get_source_data(c, &src_size);
+	if (src == NULL || src_size == 0) {
+		NSLOG(netsurf, INFO, "No SVG data to convert.");
+		content_broadcast_error(c, NSERROR_SVG_ERROR, NULL);
+		return false;
+	}
+
+	d->rsvgh = rsvg_handle_new_from_data(src, (gsize)src_size, &err);
+	if (d->rsvgh == NULL) {
+		NSLOG(netsurf, INFO,
+		      "rsvg_handle_new_from_data error: %s",
+		      err ? err->message : "unknown");
+		if (err)
+			g_error_free(err);
+		content_broadcast_error(c, NSERROR_SVG_ERROR, NULL);
+		return false;
+	}
+
+	if (!rsvg_handle_get_intrinsic_size_in_pixels(d->rsvgh,
+						      &dwidth, &dheight) ||
+	    dwidth <= 0.0 || dheight <= 0.0) {
+		/* Fallback: use a default size when intrinsic size is
+		 * not available (e.g. SVGs that use only percentages). */
+		dwidth = 300.0;
+		dheight = 150.0;
+	}
+
+	c->width = (int)ceil(dwidth);
+	c->height = (int)ceil(dheight);
+#else
+	RsvgDimensionData rsvgsize;
 
 	if (rsvg_handle_close(d->rsvgh, &err) == FALSE) {
 		NSLOG(netsurf, INFO,
@@ -144,13 +197,10 @@ static bool rsvg_convert(struct content *c)
 
 	assert(err == NULL);
 
-	/* we should now be able to query librsvg for the natural size of the
-	 * graphic, so we can create our bitmap.
-	 */
-
 	rsvg_handle_get_dimensions(d->rsvgh, &rsvgsize);
 	c->width = rsvgsize.width;
 	c->height = rsvgsize.height;
+#endif
 
 	if ((d->bitmap = guit->bitmap->create(c->width, c->height,
 			BITMAP_NONE)) == NULL) {
@@ -178,7 +228,24 @@ static bool rsvg_convert(struct content *c)
 		return false;
 	}
 
+#if LIBRSVG_CHECK_VERSION(2, 52, 0)
+	viewport.x = 0;
+	viewport.y = 0;
+	viewport.width = (double)c->width;
+	viewport.height = (double)c->height;
+
+	if (!rsvg_handle_render_document(d->rsvgh, d->ct, &viewport, &err)) {
+		NSLOG(netsurf, INFO,
+		      "rsvg_handle_render_document error: %s",
+		      err ? err->message : "unknown");
+		if (err)
+			g_error_free(err);
+		content_broadcast_error(c, NSERROR_SVG_ERROR, NULL);
+		return false;
+	}
+#else
 	rsvg_handle_render_cairo(d->rsvgh, d->ct);
+#endif
 
 	bitmap_format_to_client(d->bitmap, &(bitmap_fmt_t) {
 		.layout = BITMAP_LAYOUT_ARGB8888,

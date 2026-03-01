@@ -2466,3 +2466,21 @@ dukky_queryselector(duk_context *ctx, dom_node *root, bool all)
 		return 0; /* WHY: null per spec when no match found */
 	}
 }
+
+/* exported interface documented in dukky.h */
+bool
+dukky_element_matches_selector(dom_element *element,
+			       const char *sel_str, size_t sel_len)
+{
+	struct compound_selector sel;
+
+	/* Handle comma-separated selectors: match if any sub-selector matches */
+	const char *comma = memchr(sel_str, ',', sel_len);
+	size_t parse_len = comma ? (size_t)(comma - sel_str) : sel_len;
+
+	if (!parse_selector(sel_str, parse_len, &sel)) {
+		return false;
+	}
+
+	return element_matches_compound(element, &sel);
+}

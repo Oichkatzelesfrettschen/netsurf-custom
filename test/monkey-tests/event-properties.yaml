@@ -1,0 +1,42 @@
+title: Event.timeStamp/srcElement/returnValue/cancelBubble/composed properties
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      var div=document.createElement("div");
+      document.body.appendChild(div);
+      div.addEventListener("click",function(e){
+        ok("timeStamp is number", typeof e.timeStamp==="number");
+        ok("srcElement===target", e.srcElement===div);
+        ok("returnValue===true", e.returnValue===true);
+        ok("cancelBubble is boolean", typeof e.cancelBubble==="boolean");
+        ok("composed===false", e.composed===false);
+        console.log(f===0?"ALL PASS":"FAILURES: "+f);
+        console.log("DONE");
+      });
+      var evt=document.createEvent("Event");
+      evt.initEvent("click",true,true);
+      div.dispatchEvent(evt);
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

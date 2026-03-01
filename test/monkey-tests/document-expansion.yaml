@@ -1,0 +1,39 @@
+title: Document.compatMode/contentType/URL/hidden/visibilityState/createComment/defaultView
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      ok("compatMode is string", typeof document.compatMode==="string");
+      ok("compatMode value", document.compatMode==="BackCompat"||document.compatMode==="CSS1Compat");
+      ok("contentType", document.contentType==="text/html");
+      ok("URL is string", typeof document.URL==="string");
+      ok("documentURI is string", typeof document.documentURI==="string");
+      ok("hidden is boolean", typeof document.hidden==="boolean");
+      ok("visibilityState", document.visibilityState==="visible");
+      try{var c=document.createComment("test");ok("createComment",c.nodeType===8);}catch(e){ok("createComment",false);}
+      ok("defaultView===window", document.defaultView===window);
+      console.log(f===0?"ALL PASS":"FAILURES: "+f);
+      console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

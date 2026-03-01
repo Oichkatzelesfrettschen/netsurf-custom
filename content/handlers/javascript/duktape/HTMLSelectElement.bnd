@@ -98,3 +98,54 @@ setter HTMLSelectElement::value()
 	}
 	return 0;
 %}
+
+getter HTMLSelectElement::selectedIndex()
+%{
+	int32_t val = -1;
+	dom_html_select_element_get_selected_index(SELECT_NODE, &val);
+	duk_push_int(ctx, val);
+	return 1;
+%}
+
+setter HTMLSelectElement::selectedIndex()
+%{
+	dom_html_select_element_set_selected_index(SELECT_NODE,
+		(int32_t)duk_to_int(ctx, 0));
+	return 0;
+%}
+
+getter HTMLSelectElement::length()
+%{
+	uint32_t val = 0;
+	dom_html_select_element_get_length(SELECT_NODE, &val);
+	duk_push_uint(ctx, (duk_uint_t)val);
+	return 1;
+%}
+
+getter HTMLSelectElement::size()
+%{
+	int32_t val = 0;
+	dom_html_select_element_get_size(SELECT_NODE, &val);
+	duk_push_int(ctx, val);
+	return 1;
+%}
+
+setter HTMLSelectElement::size()
+%{
+	dom_html_select_element_set_size(SELECT_NODE,
+		(int32_t)duk_to_int(ctx, 0));
+	return 0;
+%}
+
+getter HTMLSelectElement::form()
+%{
+	dom_html_form_element *form = NULL;
+	dom_html_select_element_get_form(SELECT_NODE, &form);
+	if (form == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+	dukky_push_node(ctx, (dom_node *)form);
+	dom_node_unref(form);
+	return 1;
+%}

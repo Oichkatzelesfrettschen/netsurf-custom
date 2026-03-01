@@ -70,6 +70,7 @@ struct dom_html_br_element;
 #include "Performance.bnd"
 #include "Navigator.bnd"
 #include "Crypto.bnd"
+#include "Storage.bnd"
 #include "TextDecoder.bnd"
 #include "URL.bnd"
 #include "DOMImplementation.bnd"

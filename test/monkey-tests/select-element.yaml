@@ -1,0 +1,41 @@
+title: HTMLSelectElement.selectedIndex/length/size/form
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      var form=document.createElement("form");
+      document.body.appendChild(form);
+      var sel=document.createElement("select");
+      form.appendChild(sel);
+      var o1=document.createElement("option"); o1.value="a"; o1.textContent="Alpha"; sel.appendChild(o1);
+      var o2=document.createElement("option"); o2.value="b"; sel.appendChild(o2);
+      var o3=document.createElement("option"); o3.value="c"; sel.appendChild(o3);
+      ok("length===3", sel.length===3);
+      ok("selectedIndex is number", typeof sel.selectedIndex==="number");
+      ok("size is number", typeof sel.size==="number");
+      ok("type is string", typeof sel.type==="string");
+      console.log(f===0?"ALL PASS":"FAILURES: "+f);
+      console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

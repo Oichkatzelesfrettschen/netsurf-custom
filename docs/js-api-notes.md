@@ -408,3 +408,200 @@ reducing per-map RSS from 32 KB to as low as 64 bytes.
 from 2 MB to 512 KB.  llcache source buffer slack in `content/llcache.c`
 reduced from 64 KB to 4 KB.  These changes reduce minimum RAM requirements
 for embedded targets.
+
+---
+
+## HTTP Cache-Control Extension (Round 8)
+
+**Status:** Extended `utils/http/cache-control.c` to parse `must-revalidate`,
+`private`, and `s-maxage` directives (RFC 9111).
+
+`must_revalidate` is stored in `llcache_cache_control` and prevents serving
+stale responses when the directive is present.  `private` and `s-maxage` are
+parsed and accessible but not yet used by llcache (relevant for shared caches,
+which NetSurf is not).
+
+---
+
+## Event Properties (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/Event.bnd`:
+- `timeStamp` (readonly): returns `dom_event_get_timestamp()` as a number.
+- `srcElement` (readonly): legacy IE alias for `target`.
+- `returnValue` (getter/setter): inverse of `defaultPrevented`; setting false
+  calls `preventDefault()`.
+- `cancelBubble` (getter/setter): getter returns false (no libdom API to query
+  propagation-stopped); setter calls `stopPropagation()` when true.
+- `composed` (readonly): always false (no shadow DOM support).
+
+---
+
+## HTMLElement Attribute Expansion (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/HTMLElement.bnd`:
+- `draggable` (bool attribute), `spellcheck` (bool), `translate` (bool),
+  `inert` (bool): getter via `dom_element_has_attribute()`, setter via
+  `set_attribute` / `remove_attribute`.
+- `contentEditable` (string): getter returns attribute value or "inherit" if
+  absent; setter via `dom_element_set_attribute()`.
+- `isContentEditable` (readonly bool): true if contenteditable is "" or "true".
+
+---
+
+## HTMLSelectElement Expansion (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/HTMLSelectElement.bnd`:
+- `selectedIndex` (getter/setter): `dom_html_select_element_get/set_selected_index()`.
+- `length` (readonly): `dom_html_select_element_get_length()`.
+- `size` (getter/setter): `dom_html_select_element_get/set_size()`.
+- `form` (readonly): `dom_html_select_element_get_form()`, pushes form node.
+
+---
+
+## HTMLInputElement Validation Attributes (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/HTMLInputElement.bnd`:
+- `required` (bool attribute): getter/setter via generic DOM.
+- `placeholder`, `pattern`, `min`, `max`, `step` (string attributes): all
+  getter/setter via `dom_element_get/set_attribute()`.
+
+---
+
+## Element Methods (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/Element.bnd`:
+- `remove()`: detaches element from its parent via `dom_node_remove_child()`.
+- `toggleAttribute(name, force?)`: adds or removes a boolean attribute.
+- `getAttributeNames()`: returns array of attribute names from
+  `dom_node_get_attributes()`.
+- `children` (readonly): returns array of child element nodes.
+
+---
+
+## Document Collections (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/Document.bnd`:
+- `forms`, `images`, `links` (readonly): wrap `dom_html_document_get_forms()` /
+  `get_images()` / `get_links()` in HTMLCollection with `makeListProxy`.
+- `characterSet` / `charset` (readonly): returns "UTF-8".
+- `readyState` (readonly): returns "complete" (JS runs post-parse in NetSurf).
+
+---
+
+## Window Properties (Round 8)
+
+**Status:** Added to `content/handlers/javascript/duktape/Window.bnd`:
+- `self`, `top`, `parent` (readonly): return the global object (no frame support).
+- `closed` (readonly): returns `priv->closed_down`.
+- `innerWidth`, `innerHeight` (readonly): from `browser_window_get_dimensions()`.
+
+---
+
+## Console Methods (Round 9)
+
+**Status:** Added to `content/handlers/javascript/duktape/Console.bnd`:
+- `assert(condition, ...data)`: logs "Assertion failed: ..." if condition is falsy.
+- `count(label?)`: per-label counter, logs "label: N".
+- `countReset(label?)`: resets counter to 0.
+- `table(data)`: delegates to `write_log_entry` (no table formatting).
+
+Counters are stored in a Duktape object in the heap stash, keyed by label.
+Previously implemented: log, warn, error, info, debug, dir, group,
+groupCollapsed, groupEnd, time, timeEnd, trace.
+
+---
+
+## Document Expansion (Round 9)
+
+**Status:** Added to `content/handlers/javascript/duktape/Document.bnd`:
+- `compatMode` (readonly): "BackCompat" or "CSS1Compat" based on quirks mode.
+- `contentType` (readonly): always "text/html".
+- `documentURI` / `URL` (readonly): document URL via `nsurl_access()`.
+- `hidden` (readonly): always false (no tab visibility model).
+- `visibilityState` (readonly): always "visible".
+- `createComment(data)`: creates comment node via `dom_document_create_comment()`.
+- `defaultView` (readonly): pushes the global (Window) object.
+
+---
+
+## Element Expansion (Round 9)
+
+**Status:** Added to `content/handlers/javascript/duktape/Element.bnd`:
+- `matches(selector)`: tests if element matches CSS selector.  Reuses
+  `dukky_queryselector()` on the document root and checks if the element
+  is in the result set.  O(n) for document size.
+- `closest(selector)`: walks ancestors via `dom_node_get_parent_node()`,
+  calling matches() on each.  Returns first match or null.
+- `hasAttributes()`: checks `dom_namednodemap_get_length() > 0`.
+- `namespaceURI` (readonly): `dom_node_get_namespace()`.
+- `prefix` (readonly): `dom_node_get_prefix()`.
+- `outerHTML` (readonly getter): serializes element tag + attributes +
+  innerHTML.  Reuses `dukky_push_node_innerhtml()` for children.
+- `slot` (getter/setter): string attribute on "slot" name.
+- `insertAdjacentHTML(position, text)`: parses HTML fragment and inserts
+  at one of four positions (beforebegin, afterbegin, beforeend, afterend).
+
+---
+
+## Window Expansion (Round 9)
+
+**Status:** Added to `content/handlers/javascript/duktape/Window.bnd`:
+- `devicePixelRatio` (readonly): returns 1.0 (no HiDPI awareness).
+- `screenX`, `screenY` (readonly): return 0.
+- `outerWidth`, `outerHeight` (readonly): same as innerWidth/innerHeight.
+- `scrollTo(x, y)`, `scrollBy(x, y)`, `scroll(x, y)`: no-op stubs.
+- `focus()`, `blur()`: no-op stubs.
+- `atob(data)`: base64 decode using lookup table.  Throws DOMException on
+  invalid input.
+- `btoa(data)`: base64 encode.  Throws InvalidCharacterError if input
+  contains characters > 0xFF.
+
+---
+
+## Storage API (Round 9)
+
+**Status:** Implemented in `content/handlers/javascript/duktape/Storage.bnd`.
+Exposed as `window.localStorage` and `window.sessionStorage` via lazy-create
+getters in Window.bnd.
+
+**Implementation:** In-memory per-origin storage using Duktape objects in the
+heap stash.  Each origin maps to a separate key-value store.  Data is lost
+on browser restart (acceptable for initial implementation).
+
+**Members (6/6 = 100%):**
+- `length` (readonly): count of stored keys.
+- `key(index)`: returns key at given index or null.
+- `getItem(key)`: returns value or null.
+- `setItem(key, value)`: stores key-value pair.
+- `removeItem(key)`: deletes a key.
+- `clear()`: deletes all keys.
+
+**KNOWN LIMITATION -- no persistence:** Storage is purely in-memory.  Data
+does not survive browser restart.  Persistence via filesystem would require
+platform-specific file I/O integration.
+
+**KNOWN LIMITATION -- no StorageEvent:** Mutations do not fire `storage`
+events on other windows/tabs.  This requires cross-window event dispatch
+infrastructure that NetSurf does not have.
+
+---
+
+## Monkey Test Infrastructure (Round 9)
+
+**monkeyfarmer.py asyncio migration:** Replaced deprecated `asyncore` module
+(removed in Python 3.12+) with `selectors.DefaultSelector`.  External API
+unchanged.  Tests now run on Python 3.14 (Arch Linux).
+
+**monkey EXEC off-by-one fix:** Fixed `frontends/monkey/browser.c`
+`monkey_window_handle_exec()` where `total - 1` passed an srclen one byte
+too large to `browser_window_exec()`, causing Duktape to read past the NUL
+terminator.  Changed to `strlen(cmd)`.
+
+**js_exec newline collapse:** `monkeyfarmer.py` `js_exec()` now collapses
+newlines to spaces before sending, because the monkey protocol is
+line-based (`fgets`).  YAML `>-` folded scalars with indented content
+produce embedded newlines that would truncate the command.
+
+**Test results:** 29/33 monkey tests pass.  4 pre-existing failures:
+innerHTML-correctness (SIGSEGV in setter), inserted-script/quit-mid-fetch/
+resource-scheme (upstream timeouts).

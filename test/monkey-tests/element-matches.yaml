@@ -1,0 +1,47 @@
+title: Element.matches/closest/hasAttributes/namespaceURI/prefix/outerHTML/slot
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      var div=document.createElement("div");
+      div.className="test-class";
+      div.id="test-id";
+      document.body.appendChild(div);
+      var span=document.createElement("span");
+      div.appendChild(span);
+      try{ok("matches(.test-class)", div.matches(".test-class"));}catch(e){ok("matches",false);}
+      try{ok("matches(#test-id)", div.matches("#test-id"));}catch(e){ok("matches id",false);}
+      try{ok("closest(div)", span.closest("div")===div);}catch(e){ok("closest",false);}
+      try{ok("closest returns null", span.closest("p")===null);}catch(e){ok("closest null",false);}
+      ok("hasAttributes with attrs", div.hasAttributes()===true);
+      var bare=document.createElement("p");
+      ok("hasAttributes without attrs", bare.hasAttributes()===false);
+      ok("namespaceURI is string or null", typeof div.namespaceURI==="string"||div.namespaceURI===null);
+      ok("outerHTML contains tag", typeof div.outerHTML==="string"&&div.outerHTML.indexOf("<div")===0);
+      div.slot="myslot";
+      ok("slot getter", div.slot==="myslot");
+      console.log(f===0?"ALL PASS":"FAILURES: "+f);
+      console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit
