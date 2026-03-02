@@ -46,17 +46,17 @@ steps:
     }catch(e){console.log("FAIL: pushState relative: "+e);f++;}
     try{
     history.pushState({}, "");
-    console.log("FAIL: pushState 2-arg should throw");
-    f++;
+    ok("pushState 2-arg no throw", true);
     }catch(e){
-    ok("pushState 2-arg throws", true);
+    console.log("FAIL: pushState 2-arg threw: "+e);
+    f++;
     }
     try{
     history.replaceState({}, "");
-    console.log("FAIL: replaceState 2-arg should throw");
-    f++;
+    ok("replaceState 2-arg no throw", true);
     }catch(e){
-    ok("replaceState 2-arg throws", true);
+    console.log("FAIL: replaceState 2-arg threw: "+e);
+    f++;
     }
     console.log(f===0?"ALL PASS":"FAILURES: "+f);
     console.log("DONE");

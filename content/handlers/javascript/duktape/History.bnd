@@ -184,15 +184,17 @@ method History::pushState()
 		return duk_error(ctx, DUK_ERR_ERROR,
 				 "History is not attached to a window");
 	}
-	if (duk_get_top(ctx) < 3) {
-		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
-				 "pushState requires 3 arguments (state, title, url)");
+	/* WHY: WHATWG spec declares pushState(any, DOMString, optional
+	 * DOMString? url = null).  The third arg is optional; all major
+	 * browsers accept 2 args.  When omitted or null, silently succeed
+	 * without changing the URL. */
+	const char *url_str = NULL;
+	duk_size_t url_len = 0;
+	if (duk_get_top(ctx) >= 3 && !duk_is_null_or_undefined(ctx, 2)) {
+		url_str = duk_safe_to_lstring(ctx, 2, &url_len);
 	}
-
-	duk_size_t url_len;
-	const char *url_str = duk_safe_to_lstring(ctx, 2, &url_len);
 	if (url_str == NULL || url_len == 0) {
-		return 0;
+		return 0; /* no URL change -- silently succeed per spec */
 	}
 
 	nsurl *current_url = NULL;
@@ -234,15 +236,17 @@ method History::replaceState()
 		return duk_error(ctx, DUK_ERR_ERROR,
 				 "History is not attached to a window");
 	}
-	if (duk_get_top(ctx) < 3) {
-		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
-				 "replaceState requires 3 arguments (state, title, url)");
+	/* WHY: WHATWG spec declares replaceState(any, DOMString, optional
+	 * DOMString? url = null).  The third arg is optional; all major
+	 * browsers accept 2 args.  When omitted or null, silently succeed
+	 * without changing the URL. */
+	const char *url_str = NULL;
+	duk_size_t url_len = 0;
+	if (duk_get_top(ctx) >= 3 && !duk_is_null_or_undefined(ctx, 2)) {
+		url_str = duk_safe_to_lstring(ctx, 2, &url_len);
 	}
-
-	duk_size_t url_len;
-	const char *url_str = duk_safe_to_lstring(ctx, 2, &url_len);
 	if (url_str == NULL || url_len == 0) {
-		return 0;
+		return 0; /* no URL change -- silently succeed per spec */
 	}
 
 	nsurl *current_url = NULL;

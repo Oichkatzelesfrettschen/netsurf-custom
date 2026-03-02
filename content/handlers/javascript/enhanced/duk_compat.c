@@ -175,10 +175,18 @@ static JSValue duk_cfunc_trampoline(JSContext *qjs, JSValueConst this_val,
 	int old_base = ctx->base;
 	JSValue old_this = ctx->this_val;
 	int old_argc = ctx->argc;
+	bool old_is_ctor = ctx->is_constructor_call;
 
 	ctx->base = old_top;  /* new frame starts at current top */
 	ctx->this_val = JS_DupValue(qjs, this_val);
 	ctx->argc = argc;
+
+	/* WHY: When called via `new`, QuickJS passes new_target as
+	 * this_val.  new_target is the constructor function (always
+	 * JS_IsFunction true).  For normal calls, this_val is the
+	 * receiver (Window, Element, etc.) which is an object but not
+	 * a function.  Only URL/USP constructors check this flag. */
+	ctx->is_constructor_call = JS_IsFunction(qjs, this_val);
 
 	/* Push arguments onto the compat stack */
 	for (int i = 0; i < argc; i++) {
@@ -214,6 +222,7 @@ static JSValue duk_cfunc_trampoline(JSContext *qjs, JSValueConst this_val,
 	ctx->base = old_base;
 	ctx->this_val = old_this;
 	ctx->argc = old_argc;
+	ctx->is_constructor_call = old_is_ctor;
 
 	return result;
 }
@@ -238,8 +247,16 @@ void duk_push_c_function(duk_context *ctx, duk_c_function func, int nargs)
 
 	int qjs_nargs = (nargs == DUK_VARARGS) ? 0 : nargs;
 
-	ctx->vstack[ctx->top++] = JS_NewCFunctionData(
+	ctx->vstack[ctx->top] = JS_NewCFunctionData(
 		ctx->qjs, duk_cfunc_trampoline, qjs_nargs, 0, 1, &data);
+
+	/* WHY: JS_NewCFunctionData does not set the constructor bit.
+	 * Without it, `new Fn()` throws "not a constructor" before
+	 * reaching our trampoline.  Setting the bit on all C functions
+	 * is safe: only URL/USP constructors check duk_is_constructor_call. */
+	JS_SetConstructorBit(ctx->qjs, ctx->vstack[ctx->top], true);
+	ctx->top++;
+
 	JS_FreeValue(ctx->qjs, data);
 }
 
@@ -516,9 +533,7 @@ void *duk_require_pointer(duk_context *ctx, duk_idx_t idx)
 
 duk_bool_t duk_is_constructor_call(duk_context *ctx)
 {
-	/* TODO: properly detect new.target in QuickJS */
-	(void)ctx;
-	return 0;
+	return ctx->is_constructor_call ? 1 : 0;
 }
 
 /* ------------------------------------------------------------------ */

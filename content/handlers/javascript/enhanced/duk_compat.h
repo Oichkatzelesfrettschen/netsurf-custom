@@ -135,6 +135,7 @@ typedef struct duk_context {
 	int capacity;         /**< allocated stack slots */
 	JSValue this_val;     /**< current 'this' for C function dispatch */
 	int argc;             /**< argument count for current C call */
+	bool is_constructor_call; /**< true when invoked via `new` */
 } duk_context;
 
 /* ------------------------------------------------------------------ */

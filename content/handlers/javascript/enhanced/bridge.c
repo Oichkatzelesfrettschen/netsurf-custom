@@ -103,6 +103,47 @@ void enhanced_leave_thread(jsthread *thread)
 }
 
 /* ------------------------------------------------------------------ */
+/* Microtask flush (Promise reactions)                                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Drain all pending microtask jobs (Promise reactions).
+ *
+ * WHY: QuickJS-NG queues Promise reactions via JS_EnqueueJob.
+ * The embedder must drain after each top-level JS entry point
+ * (js_exec, js_fire_event).  Without this call, Promise .then /
+ * .catch / .finally callbacks never fire.
+ *
+ * The enhanced_interrupt_handler timeout applies to microtask
+ * execution too, preventing infinite loops in Promise chains.
+ */
+static void enhanced_flush_microtasks(jsthread *thread)
+{
+	JSContext *pctx;
+	int ret;
+
+	for (;;) {
+		ret = JS_ExecutePendingJob(thread->heap->rt, &pctx);
+		if (ret <= 0) {
+			if (ret < 0) {
+				JSValue exc = JS_GetException(pctx);
+				const char *str = JS_ToCString(pctx, exc);
+				if (str) {
+					NSLOG(jserrors, WARNING,
+					      "Uncaught error in Promise job: %s",
+					      str);
+					JS_FreeCString(pctx, str);
+				}
+				JS_FreeValue(pctx, exc);
+				/* continue draining -- other jobs may be queued */
+			} else {
+				break; /* ret == 0: no more jobs */
+			}
+		}
+	}
+}
+
+/* ------------------------------------------------------------------ */
 /* Interrupt handler for execution timeout                             */
 /* ------------------------------------------------------------------ */
 
@@ -131,60 +172,93 @@ static void enhanced_reset_start_time(jsheap *heap)
 }
 
 /* ------------------------------------------------------------------ */
-/* Console implementation (native QuickJS, not via duk_compat)         */
+/* Console implementation (native QuickJS, routes through monkey)      */
 /* ------------------------------------------------------------------ */
+
+/* WHY: The binding-based Console (Console.bnd) uses dukky_push_generics
+ * and browser_window_console_log to route output through the monkey
+ * protocol. However, the binding Console throws in enhanced mode
+ * (generics/formatter issues). This native console implementation
+ * calls browser_window_console_log directly, ensuring output goes
+ * through the monkey protocol for test harness visibility. */
+
+#include "netsurf/console.h"
+#include "netsurf/browser_window.h"
+
+static JSValue enhanced_console_method(JSContext *ctx, JSValueConst this_val,
+				       int argc, JSValueConst *argv,
+				       int level)
+{
+	(void)this_val;
+
+	/* Build the concatenated message */
+	char buf[4096];
+	int pos = 0;
+	for (int i = 0; i < argc && pos < (int)sizeof(buf) - 1; i++) {
+		if (i != 0 && pos < (int)sizeof(buf) - 1)
+			buf[pos++] = ' ';
+		const char *str = JS_ToCString(ctx, argv[i]);
+		if (str) {
+			int slen = (int)strlen(str);
+			if (slen > (int)sizeof(buf) - 1 - pos)
+				slen = (int)sizeof(buf) - 1 - pos;
+			memcpy(buf + pos, str, slen);
+			pos += slen;
+			JS_FreeCString(ctx, str);
+		}
+	}
+	buf[pos] = '\0';
+
+	/* Log through NSLOG for stderr visibility */
+	switch (level) {
+	case 0: NSLOG(jserrors, INFO, "%s", buf); break;
+	case 1: NSLOG(jserrors, WARNING, "%s", buf); break;
+	case 2: NSLOG(jserrors, ERROR, "%s", buf); break;
+	}
+
+	/* Route through browser_window_console_log for monkey protocol.
+	 * Get the browser_window from the jsthread. */
+	struct jsthread *thread = enhanced_get_thread(ctx);
+	if (thread != NULL && thread->compat_ctx != NULL) {
+		duk_context *dctx = thread->compat_ctx;
+		duk_push_global_object(dctx);
+		duk_get_prop_string(dctx, -1, MAGIC(PRIVATE));
+		window_private_t *priv_win = duk_get_pointer(dctx, -1);
+		duk_pop_2(dctx);
+		if (priv_win != NULL && priv_win->win != NULL &&
+		    !priv_win->closed_down) {
+			browser_window_console_flags flags;
+			switch (level) {
+			case 1:  flags = BW_CS_FLAG_LEVEL_WARN; break;
+			case 2:  flags = BW_CS_FLAG_LEVEL_ERROR; break;
+			default: flags = BW_CS_FLAG_LEVEL_LOG; break;
+			}
+			browser_window_console_log(priv_win->win,
+						   BW_CS_SCRIPT_CONSOLE,
+						   buf, (size_t)pos,
+						   flags);
+		}
+	}
+
+	return JS_UNDEFINED;
+}
 
 static JSValue enhanced_console_log(JSContext *ctx, JSValueConst this_val,
 				    int argc, JSValueConst *argv)
 {
-	(void)this_val;
-	int i;
-	const char *str;
-
-	for (i = 0; i < argc; i++) {
-		if (i != 0)
-			NSLOG(jserrors, INFO, " ");
-		str = JS_ToCString(ctx, argv[i]);
-		if (str) {
-			NSLOG(jserrors, INFO, "%s", str);
-			JS_FreeCString(ctx, str);
-		}
-	}
-	return JS_UNDEFINED;
+	return enhanced_console_method(ctx, this_val, argc, argv, 0);
 }
 
 static JSValue enhanced_console_warn(JSContext *ctx, JSValueConst this_val,
 				     int argc, JSValueConst *argv)
 {
-	(void)this_val;
-	int i;
-	const char *str;
-
-	for (i = 0; i < argc; i++) {
-		str = JS_ToCString(ctx, argv[i]);
-		if (str) {
-			NSLOG(jserrors, WARNING, "%s", str);
-			JS_FreeCString(ctx, str);
-		}
-	}
-	return JS_UNDEFINED;
+	return enhanced_console_method(ctx, this_val, argc, argv, 1);
 }
 
 static JSValue enhanced_console_error(JSContext *ctx, JSValueConst this_val,
 				      int argc, JSValueConst *argv)
 {
-	(void)this_val;
-	int i;
-	const char *str;
-
-	for (i = 0; i < argc; i++) {
-		str = JS_ToCString(ctx, argv[i]);
-		if (str) {
-			NSLOG(jserrors, ERROR, "%s", str);
-			JS_FreeCString(ctx, str);
-		}
-	}
-	return JS_UNDEFINED;
+	return enhanced_console_method(ctx, this_val, argc, argv, 2);
 }
 
 static void enhanced_install_console(JSContext *ctx)
@@ -321,7 +395,11 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv,
 	/* Store the global object for convenient access */
 	ret->global = JS_GetGlobalObject(ret->ctx);
 
-	/* Install console object (native, not via bindings) */
+	/* Install console before bindings so it's available during init.
+	 * WHY: The binding Console (Console.bnd) uses generics/formatter
+	 * which may not work in enhanced mode. This native console routes
+	 * output through browser_window_console_log for monkey protocol
+	 * visibility AND through NSLOG for stderr. */
 	enhanced_install_console(ret->ctx);
 
 	/* Create persistent compat context for bindings */
@@ -421,7 +499,8 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv,
 		/* ... Win oldGlobal */
 
 		static const char * const es6_names[] = {
-			"Map", "Set", "WeakMap", "WeakSet", "Promise", NULL
+			"Map", "Set", "WeakMap", "WeakSet", "Promise",
+			"console", NULL
 		};
 		for (const char * const *p = es6_names; *p != NULL; p++) {
 			if (duk_get_prop_string(CTX, -1, *p)) {
@@ -693,6 +772,7 @@ bool js_exec(jsthread *thread, const uint8_t *txt, size_t txtlen,
 	JS_FreeValue(thread->ctx, result);
 
 out:
+	enhanced_flush_microtasks(thread);
 	enhanced_leave_thread(thread);
 	return ret;
 }
@@ -787,6 +867,7 @@ bool js_fire_event(jsthread *thread, const char *type,
 		duk_pop_n(CTX, 6);
 		js_event_cleanup(thread, evt);
 		dom_event_unref(evt);
+		enhanced_flush_microtasks(thread);
 		enhanced_leave_thread(thread);
 		return true;
 	}
@@ -794,6 +875,7 @@ bool js_fire_event(jsthread *thread, const char *type,
 	duk_pop(CTX);
 	js_event_cleanup(thread, evt);
 	dom_event_unref(evt);
+	enhanced_flush_microtasks(thread);
 	enhanced_leave_thread(thread);
 	return true;
 }
