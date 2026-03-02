@@ -92,3 +92,45 @@ getter CustomEvent::cancelable ()
 	duk_push_boolean(ctx, cancelable);
 	return 1;
 %}
+
+method CustomEvent::initCustomEvent ()
+%{
+	/* initCustomEvent(type, bubbles, cancelable, detail)
+	 * Legacy method per spec; re-initialises the event. */
+	dom_exception exc;
+	duk_size_t text_len;
+	const char *text = duk_safe_to_lstring(ctx, 0, &text_len);
+	dom_string *text_str;
+	bool bubbles;
+	bool cancelable;
+
+	exc = dom_string_create((const uint8_t *)text, text_len, &text_str);
+	if (exc != DOM_NO_ERR) return 0;
+
+	bubbles = duk_get_boolean(ctx, 1);
+	cancelable = duk_get_boolean(ctx, 2);
+
+	exc = dom_event_init(priv->evt, text_str, bubbles, cancelable);
+	dom_string_unref(text_str);
+
+	/* WHY: The prototype has a getter-only accessor for "detail" (no setter).
+	 * duk_put_prop_string would fail with "setter undefined". Use
+	 * duk_def_prop with DUK_DEFPROP_HAVE_VALUE to define an own data
+	 * property on the instance that shadows the prototype accessor. */
+	if (duk_get_top(ctx) >= 4) {
+		duk_push_this(ctx);
+		duk_push_string(ctx, "detail");
+		duk_dup(ctx, 3);
+		duk_def_prop(ctx, -3,
+			     DUK_DEFPROP_HAVE_VALUE |
+			     DUK_DEFPROP_HAVE_WRITABLE |
+			     DUK_DEFPROP_WRITABLE |
+			     DUK_DEFPROP_HAVE_ENUMERABLE |
+			     DUK_DEFPROP_ENUMERABLE |
+			     DUK_DEFPROP_HAVE_CONFIGURABLE |
+			     DUK_DEFPROP_CONFIGURABLE);
+		duk_pop(ctx);
+	}
+
+	return 0;
+%}

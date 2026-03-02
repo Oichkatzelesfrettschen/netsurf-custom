@@ -213,25 +213,33 @@ method Storage::removeItem()
 method Storage::clear()
 %{
 	bool is_session = storage_is_session(ctx);
-	duk_idx_t idx = storage_push_backing(ctx, is_session);
-	if (idx < 0) return 0;
+	const char *stash_key = is_session ? STORAGE_SESSION_KEY
+					   : STORAGE_LOCAL_KEY;
 
-	/* Delete all own properties */
-	duk_enum(ctx, idx, DUK_ENUM_OWN_PROPERTIES_ONLY);
-	/* Collect keys first (cannot modify during enumeration) */
-	duk_push_array(ctx);
-	duk_uint_t count = 0;
-	while (duk_next(ctx, -2, 0)) {
-		duk_put_prop_index(ctx, -2, count++);
-	}
-	duk_pop(ctx); /* enum */
+	/* WHY: Instead of deleting properties one by one, replace the
+	 * entire origin bucket with a fresh empty object. This is simpler
+	 * and avoids stack management issues with duk_del_prop. */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, PRIVATE_MAGIC);
+	window_private_t *priv_win = duk_get_pointer(ctx, -1);
+	duk_pop_2(ctx);
 
-	/* Delete each key */
-	for (duk_uint_t i = 0; i < count; i++) {
-		duk_get_prop_index(ctx, -1, i);
-		duk_del_prop(ctx, idx);
+	if (priv_win == NULL || priv_win->htmlc == NULL) return 0;
+
+	nsurl *url = llcache_handle_get_url(priv_win->htmlc->base.llcache);
+	if (url == NULL) return 0;
+	const char *origin = nsurl_access(url);
+
+	/* WHY: storage_push_backing uses heap stash, not global stash. */
+	duk_push_heap_stash(ctx);
+	if (!duk_has_prop_string(ctx, -1, stash_key)) {
+		duk_pop(ctx);
+		return 0;
 	}
-	duk_pop(ctx); /* key array */
-	duk_pop(ctx); /* backing */
+	duk_get_prop_string(ctx, -1, stash_key);
+	/* Replace origin bucket with fresh empty object */
+	duk_push_object(ctx);
+	duk_put_prop_string(ctx, -2, origin);
+	duk_pop_2(ctx); /* stash_key_obj, stash */
 	return 0;
 %}

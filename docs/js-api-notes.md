@@ -605,3 +605,87 @@ produce embedded newlines that would truncate the command.
 **Test results:** 29/33 monkey tests pass.  4 pre-existing failures:
 innerHTML-correctness (SIGSEGV in setter), inserted-script/quit-mid-fetch/
 resource-scheme (upstream timeouts).
+
+---
+
+## Round 10: Spec Coverage 29.1% -> 41.9% (March 2026)
+
+Major API expansion across all core interfaces.  135 new done members,
+pushing spec coverage from 29.1% (297/1021) to 41.9% (428/1021).
+
+### Document Expansion
+- `inputEncoding` (getter, hardcoded "UTF-8"), `doctype` (getter via
+  `dom_document_get_doctype`), `getElementsByClassName`, `createAttribute`,
+  `createCDATASection`, `createProcessingInstruction`, `importNode`,
+  `adoptNode`, `getElementsByTagNameNS`
+- HTML members: `referrer`, `lastModified`, `domain`, `dir` (getter/setter),
+  `embeds`, `plugins`, `scripts`, `getElementsByName`, `hasFocus`, `close`,
+  `anchors`, `designMode` (getter/setter), `currentScript`, `activeElement`
+- ParentNode mixin: `prepend`, `append`, `replaceChildren`
+
+### Element Expansion
+- `getAttributeNS`, `setAttributeNS`, `removeAttributeNS`, `hasAttributeNS`,
+  `getElementsByClassName`, `getElementsByTagNameNS`
+- `insertAdjacentElement`, `insertAdjacentText` (reuse insertAdjacentHTML
+  position-parsing logic)
+- ChildNode mixin: `before`, `after`, `replaceWith`
+- `nonce` (getter/setter via generic attribute)
+
+### URLSearchParams (new binding)
+- Full implementation: constructor, `size`, `append`, `delete`, `get`,
+  `getAll`, `has`, `set`, `sort`, `toString` (100% spec coverage)
+
+### Form Elements
+- HTMLInputElement: `form`, `autocomplete`, `autofocus`, `multiple`, type
+  setter, `indeterminate`, `formAction/Enctype/Method/NoValidate/Target`,
+  `labels`
+- HTMLSelectElement: `autocomplete`, `required`, `options` (HTMLCollection
+  proxy), `labels`, `willValidate`, `validationMessage`, `checkValidity`,
+  `reportValidity`
+- HTMLTextAreaElement: `form`, `autocomplete`, `autofocus`, `placeholder`,
+  `maxLength`, `minLength`, `textLength`, `wrap`, `labels`, `required`
+- HTMLFormElement: `autocomplete`, `encoding` (enctype alias), `noValidate`,
+  `rel`, `elements`, `checkValidity`, `reportValidity`, `requestSubmit`
+- HTMLButtonElement: `form`, `type` (getter/setter), `formAction/Enctype/
+  Method/NoValidate/Target`, `willValidate`, `validationMessage`,
+  `checkValidity`
+- HTMLAnchorElement: `download`, `ping`, `referrerPolicy`, `origin`, `text`
+  (getter/setter via textContent)
+
+### Window / Navigator
+- Window: `frames` (self), `length` (0), `frameElement` (null), `opener`
+  (null/no-op), `status` (get/set via MAGIC), `close`/`stop`/`print`
+  (no-op), `confirm` (false), `prompt` (null), `originAgentCluster` (false),
+  `clientInformation` (navigator alias)
+- Navigator: `language` ("en"), `languages` (frozen ["en"]), `onLine` (true),
+  `pdfViewerEnabled` (false), `plugins` (empty), `mimeTypes` (empty)
+
+### Node / DocumentFragment / Console / History / Event
+- Node: `isConnected` (walk to Document), `getRootNode` (walk to root),
+  `isSameNode` (pointer compare)
+- DocumentFragment (new .bnd): `querySelector`, `querySelectorAll`,
+  `getElementById`, `children`, `firstElementChild`, `lastElementChild`,
+  `childElementCount`, `prepend`, `append`, `replaceChildren`
+- Console: `timeLog`, `clear`, `dirxml`
+- History: `scrollRestoration` (get/set via MAGIC), `state` (null)
+- Event: `composedPath` (returns [target])
+
+### WebIDL Updates
+- dom.idl: Added `isConnected`, `getRootNode`, `isSameNode` to Node;
+  `composedPath` to Event; `insertAdjacentElement`/`insertAdjacentText` to
+  Element; `replaceChildren` to ParentNode; `GetRootNodeOptions` dictionary
+- html.idl: Added `scrollRestoration` to History; `clientInformation` and
+  `originAgentCluster` to Window; `pdfViewerEnabled` to NavigatorPlugins;
+  `ScrollRestoration` enum
+- console.idl: Added `timeLog`, `clear`, `dirxml`
+
+### Corestrings
+15 new: autofocus, download, formaction, formenctype, formmethod,
+formnovalidate, formtarget, maxlength, minlength, multiple, nonce,
+novalidate, ping, referrerpolicy, wrap.  CORESTRING_TEST_COUNT: 524 -> 554.
+
+### Test Results
+- Unit tests: 12 suites, all pass (555 corestring checks)
+- Monkey tests: 5 new YAMLs (document-expansion-r10, element-expansion-r10,
+  form-button-anchor, node-completion, window-navigator-r10)
+- Lacunae scan: 2,152 entries (done=494, stub=1,401, absent=257)

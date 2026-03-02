@@ -73,7 +73,9 @@ struct dom_html_br_element;
 #include "Storage.bnd"
 #include "TextDecoder.bnd"
 #include "URL.bnd"
+#include "URLSearchParams.bnd"
 #include "DOMImplementation.bnd"
+#include "DocumentFragment.bnd"
 
 /* events */
 
@@ -197,7 +199,6 @@ init ProcessingInstruction(struct dom_node_text *text::character_data);
 init XMLDocument(struct dom_document *document);
 
 init CharacterData(struct dom_node_character_data *character_data::node);
-init DocumentFragment(struct dom_document *document::node);
 init DocumentType(struct dom_document *document::node);
 
 init PropertyNodeList(struct dom_nodelist *nodes);

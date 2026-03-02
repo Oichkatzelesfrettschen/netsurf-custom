@@ -91,6 +91,10 @@ partial /*sealed*/ interface Document {
   readonly attribute Element? activeElement;
   boolean hasFocus();
   attribute DOMString designMode;
+
+  // Page Visibility API
+  readonly attribute boolean hidden;
+  readonly attribute DOMString visibilityState;
   boolean execCommand(DOMString commandId, optional boolean showUI = false, optional DOMString value = "");
   boolean queryCommandEnabled(DOMString commandId);
   boolean queryCommandIndeterm(DOMString commandId);
@@ -117,6 +121,10 @@ interface HTMLElement : Element {
   attribute boolean translate;
   attribute DOMString dir;
   [SameObject] readonly attribute DOMStringMap dataset;
+
+  // rendering
+  [CEReactions] attribute DOMString innerText;
+  attribute DOMString nonce;
 
   // user interaction
   attribute boolean hidden;
@@ -248,6 +256,7 @@ interface HTMLAnchorElement : HTMLElement {
   [PutForwards=value] readonly attribute DOMSettableTokenList ping;
   attribute DOMString rel;
   readonly attribute DOMTokenList relList;
+  attribute DOMString referrerPolicy;
   attribute DOMString hreflang;
   attribute DOMString type;
 
@@ -1418,6 +1427,8 @@ dictionary DragEventInit : MouseEventInit {
 
   // the user agent
   readonly attribute Navigator navigator;
+  readonly attribute Navigator clientInformation;
+  readonly attribute boolean originAgentCluster;
   [Replaceable, SameObject] readonly attribute External external;
   readonly attribute ApplicationCache applicationCache;
 
@@ -1445,8 +1456,11 @@ interface BarProp {
   readonly attribute boolean visible;
 };
 
+enum ScrollRestoration { "auto", "manual" };
+
 interface History {
   readonly attribute unsigned long length;
+  attribute ScrollRestoration scrollRestoration;
   readonly attribute any state;
   void go(optional long delta = 0);
   void back();
@@ -1725,7 +1739,8 @@ interface NavigatorStorageUtils {
 interface NavigatorPlugins {
   [SameObject] readonly attribute PluginArray plugins;
   [SameObject] readonly attribute MimeTypeArray mimeTypes;
-  readonly attribute boolean javaEnabled;
+  boolean javaEnabled();
+  readonly attribute boolean pdfViewerEnabled;
 };
 
 interface PluginArray {

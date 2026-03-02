@@ -824,6 +824,117 @@ method Window::blur()
 	return 0;
 %}
 
+getter Window::frames()
+%{
+	/* No frame support; frames is always self */
+	duk_push_global_object(ctx);
+	return 1;
+%}
+
+getter Window::length()
+%{
+	/* Number of child frames; always 0 (no frame support) */
+	duk_push_int(ctx, 0);
+	return 1;
+%}
+
+getter Window::frameElement()
+%{
+	/* Always null; NetSurf does not support iframes/frames via JS */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Window::opener()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
+setter Window::opener()
+%{
+	/* No-op; spec allows setting but we do not track openers */
+	return 0;
+%}
+
+getter Window::status()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(Status));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		duk_push_lstring(ctx, "", 0);
+	}
+	return 1;
+%}
+
+setter Window::status()
+%{
+	duk_push_this(ctx);
+	duk_dup(ctx, 0);
+	duk_put_prop_string(ctx, -2, MAGIC(Status));
+	duk_pop(ctx);
+	return 0;
+%}
+
+method Window::close()
+%{
+	/* No-op: scripts cannot close the browser window */
+	return 0;
+%}
+
+method Window::stop()
+%{
+	/* No-op: stop loading */
+	return 0;
+%}
+
+method Window::print()
+%{
+	/* No-op: no print support from JS */
+	return 0;
+%}
+
+method Window::confirm()
+%{
+	/* Always return false; no UI dialog */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+method Window::prompt()
+%{
+	/* Always return null; no UI dialog */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Window::originAgentCluster()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+getter Window::clientInformation()
+%{
+	/* Alias for navigator */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(Navigator));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		if (dukky_create_object(ctx,
+					PROTO_NAME(NAVIGATOR),
+					0) != DUK_EXEC_SUCCESS) {
+			return duk_error(ctx,
+				  DUK_ERR_ERROR,
+				  "Unable to create navigator object");
+		}
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(Navigator));
+	}
+	return 1;
+%}
+
 method Window::atob()
 %{
 	/* Base64 decode */

@@ -130,8 +130,12 @@ method DOMTokenList::toggle()
 	dom_string *value;
 	duk_size_t slen;
 	const char *s = duk_require_lstring(ctx, 0, &slen);
-	bool toggle_set = duk_get_top(ctx) > 1;
-	bool toggle = duk_opt_boolean(ctx, 1, 0);
+	/* WHY: nsgenbind pads optional arguments with undefined,
+	 * so duk_get_top is always >= 2. Use dukky_argc (the
+	 * original argument count saved by the generated prologue)
+	 * to detect whether 'force' was actually provided. */
+	bool toggle_set = dukky_argc > 1;
+	bool toggle = duk_to_boolean(ctx, 1);
 	bool present;
 
 	exc = dom_string_create_interned((const uint8_t *)s, slen, &value);
@@ -143,21 +147,29 @@ method DOMTokenList::toggle()
 		return 0;
 	}
 
-	/* Decision matrix is based on present, toggle_set, and toggle */
+	/* WHY: Per spec, toggle(token) removes if present, adds if absent.
+	 * toggle(token, force) adds if force=true, removes if force=false.
+	 * Returns true if token is present after the operation. */
+	bool result;
 	if (toggle_set) {
 		if (toggle) {
 			exc = dom_tokenlist_add(priv->tokens, value);
+			result = true;
 		} else {
 			exc = dom_tokenlist_remove(priv->tokens, value);
+			result = false;
 		}
 	} else {
 		if (present) {
-			exc = dom_tokenlist_add(priv->tokens, value);
-		} else {
 			exc = dom_tokenlist_remove(priv->tokens, value);
+			result = false;
+		} else {
+			exc = dom_tokenlist_add(priv->tokens, value);
+			result = true;
 		}
 	}
 	dom_string_unref(value);
 
-	return 0;
+	duk_push_boolean(ctx, result);
+	return 1;
 %}

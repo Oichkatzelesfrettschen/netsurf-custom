@@ -269,6 +269,9 @@ def run_test_step_action_navigate(ctx, step):
     else:
         url = None
     assert url is not None
+    # Expand ${CWD} for portable file:// URLs
+    if '${CWD}' in url:
+        url = url.replace('${CWD}', os.getcwd())
     tag = step['window']
     print(get_indent(ctx) + "        " + tag + " --> " + url)
     win = ctx['windows'].get(tag)
@@ -574,6 +577,10 @@ def run_test_step_action_wait_log(ctx, step):
     win = ctx['windows'].get(tag)
     assert win is not None
     win.wait_for_log(source=source, foldable=foldable, level=level, substr=substr)
+    # Echo accumulated log entries so benchmark runners can parse them
+    for (_src, _fold, _lvl, msg) in win.log_entries:
+        print(get_indent(ctx) + "        " + tag + " LOG: " + msg)
+    win.clear_log()
 
 
 def run_test_step_action_js_exec(ctx, step):

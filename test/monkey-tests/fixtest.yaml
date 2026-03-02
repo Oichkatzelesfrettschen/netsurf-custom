@@ -1,0 +1,25 @@
+title: Debug Window dimension properties
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){ try { console.log("innerWidth type: " + typeof window.innerWidth); console.log("innerWidth: " + window.innerWidth); console.log("innerHeight: " + window.innerHeight); console.log("outerWidth: " + window.outerWidth); console.log("outerHeight: " + window.outerHeight); console.log("screenX: " + window.screenX); console.log("screenY: " + window.screenY); console.log("scrollTo type: " + typeof window.scrollTo); console.log("scrollBy type: " + typeof window.scrollBy); console.log("scroll type: " + typeof window.scroll); } catch(e) { console.log("err: " + e.message); } console.log("DONE"); })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

@@ -320,28 +320,20 @@ method Node::compareDocumentPosition()
 
 method Node::contains()
 %{
-	dom_exception exc;
-	uint16_t ret;
-
-	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) return 0;
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
 
 	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
 	node_private_t *other = duk_get_pointer(ctx, -1);
 	duk_pop(ctx);
 
-	/* Note that inclusive descendant says *IS* or *CONTAINED_BY* */
-	if (priv->node == other->node) {
-		duk_push_boolean(ctx, true);
-		return 1;
-	}
-
-	exc = dom_node_compare_document_position(priv->node, other->node,
-			&ret);
-
-	if (exc != DOM_NO_ERR) return 0;
-
-	duk_push_boolean(ctx, ret == DOM_DOCUMENT_POSITION_CONTAINED_BY);
-
+	/* dom_node_compare_document_position is not implemented in
+	 * libdom, but dom_node_contains does a parent-chain walk. */
+	bool result = false;
+	dom_node_contains(priv->node, other->node, &result);
+	duk_push_boolean(ctx, result);
 	return 1;
 %}
 
@@ -436,7 +428,6 @@ method Node::appendChild()
 	dom_exception err;
 	dom_node *spare;
 
-	NSLOG(dukky, DEEPDEBUG, "About to append %p to %p", other->node, priv->node);
 	err = dom_node_append_child(priv->node, other->node, &spare);
 	if (err != DOM_NO_ERR) return 0;
 	dukky_push_node(ctx, spare);
@@ -467,6 +458,65 @@ method Node::replaceChild()
 	dukky_push_node(ctx, spare);
 	dom_node_unref(spare);
 
+	return 1;
+%}
+
+getter Node::isConnected()
+%{
+	/* Walk parentNode chain; if we reach a Document node, we are connected */
+	dom_node *cur = priv->node;
+	dom_node_ref(cur);
+	bool connected = false;
+
+	while (cur != NULL) {
+		dom_node_type ntype;
+		dom_exception exc = dom_node_get_node_type(cur, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_DOCUMENT_NODE) {
+			connected = true;
+			dom_node_unref(cur);
+			break;
+		}
+		dom_node *parent = NULL;
+		exc = dom_node_get_parent_node(cur, &parent);
+		dom_node_unref(cur);
+		if (exc != DOM_NO_ERR) break;
+		cur = parent;
+	}
+
+	duk_push_boolean(ctx, connected);
+	return 1;
+%}
+
+method Node::getRootNode()
+%{
+	dom_node *cur = priv->node;
+	dom_node_ref(cur);
+
+	for (;;) {
+		dom_node *parent = NULL;
+		dom_exception exc = dom_node_get_parent_node(cur, &parent);
+		if (exc != DOM_NO_ERR || parent == NULL) break;
+		dom_node_unref(cur);
+		cur = parent;
+	}
+
+	dukky_push_node(ctx, cur);
+	dom_node_unref(cur);
+	return 1;
+%}
+
+method Node::isSameNode()
+%{
+	if (!dukky_instanceof(ctx, 0, PROTO_NAME(NODE))) {
+		duk_push_boolean(ctx, false);
+		return 1;
+	}
+
+	duk_get_prop_string(ctx, 0, PRIVATE_MAGIC);
+	node_private_t *other = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+
+	duk_push_boolean(ctx, priv->node == other->node);
 	return 1;
 %}
 

@@ -1,0 +1,53 @@
+title: Window/Navigator R10 - frames, length, opener, status, navigator extensions
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      ok("frames===window", window.frames===window);
+      ok("length===0", window.length===0);
+      ok("frameElement===null", window.frameElement===null);
+      ok("opener===null", window.opener===null);
+      ok("status is string", typeof window.status==="string");
+      window.status="test";
+      ok("status setter", window.status==="test");
+      ok("close is function", typeof window.close==="function");
+      ok("stop is function", typeof window.stop==="function");
+      ok("print is function", typeof window.print==="function");
+      ok("confirm is function", typeof window.confirm==="function");
+      ok("confirm returns false", window.confirm("test")===false);
+      ok("prompt is function", typeof window.prompt==="function");
+      ok("prompt returns null", window.prompt("test")===null);
+      ok("originAgentCluster is bool", typeof window.originAgentCluster==="boolean");
+      ok("clientInformation exists", window.clientInformation!==undefined);
+      var nav=navigator;
+      ok("nav.language", nav.language==="en");
+      ok("nav.languages", Array.isArray(nav.languages)&&nav.languages.length>=1);
+      ok("nav.onLine", nav.onLine===true);
+      ok("nav.pdfViewerEnabled is bool", typeof nav.pdfViewerEnabled==="boolean");
+      ok("nav.plugins is array-like", typeof nav.plugins==="object");
+      ok("nav.mimeTypes is array-like", typeof nav.mimeTypes==="object");
+      console.log(f===0?"ALL PASS":"FAILURES: "+f);
+      console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

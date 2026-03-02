@@ -58,8 +58,8 @@ interface URLSearchParams {
   sequence<USVString> getAll(USVString name);
   boolean has(USVString name);
   void set(USVString name, USVString value);
-  iterable<USVString, USVString>;
-  stringifier;
+  void sort();
+  readonly attribute unsigned long size;
 };
 
 

@@ -285,6 +285,55 @@ method Console::countReset()
 	return 0;
 %}
 
+method Console::timeLog()
+%{
+	uint64_t time_ms = 0;
+
+	if (nsu_getmonotonic_ms(&time_ms) != NSUERROR_OK)
+		return 0;
+
+	const char *label = "default";
+	duk_size_t label_len = 7;
+	if (duk_get_top(ctx) >= 1 && duk_is_string(ctx, 0)) {
+		label = duk_get_lstring(ctx, 0, &label_len);
+	}
+
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, CONSOLE_TIMERS);
+	duk_push_lstring(ctx, label, label_len);
+	duk_get_prop(ctx, -2);
+
+	uint64_t old_time_ms = time_ms;
+	if (duk_is_number(ctx, -1)) {
+		old_time_ms = duk_to_uint32(ctx, -1);
+	}
+	duk_pop_3(ctx);
+
+	/* Build log message: "label: Nms" followed by any extra args */
+	duk_idx_t start = (duk_get_top(ctx) >= 1 && duk_is_string(ctx, 0)) ? 1 : 0;
+	duk_push_sprintf(ctx, "%s: %u ms", label,
+			 (unsigned int)(time_ms - old_time_ms));
+	duk_insert(ctx, start);
+	/* Remove the label argument if present */
+	if (start == 1) { duk_remove(ctx, 0); }
+
+	write_log_entry(ctx, priv->group, BW_CS_FLAG_LEVEL_INFO);
+	return 0;
+%}
+
+method Console::clear()
+%{
+	/* No-op: clearing the console is not meaningful in NetSurf */
+	return 0;
+%}
+
+method Console::dirxml()
+%{
+	/* Alias for console.log per spec */
+	write_log_entry(ctx, priv->group, BW_CS_FLAG_LEVEL_INFO);
+	return 0;
+%}
+
 method Console::table()
 %{
 	/* No table formatting in headless console; delegate to write_log_entry

@@ -208,6 +208,15 @@ if (typeof AbortController === 'undefined') {
 //      lookup. Object/null/boolean/NaN keys fall back to O(n) linear scan.
 //      The hash is kept in sync with the arrays by set(), delete(), and clear().
 
+// WHY: Shared helper for Map and Set hash-based O(1) lookup.
+// Must be in outer scope so both Map and Set IIFEs can access it.
+function _hashKey(key) {
+  var t = typeof key;
+  if (t === 'string') return 's:' + key;
+  if (t === 'number' && key === key && isFinite(key)) return 'n:' + key;
+  return null;
+}
+
 if (typeof Map === 'undefined') {
   (function () {
     // Use Symbol-based private slots when available, string fallbacks otherwise.
@@ -221,17 +230,6 @@ if (typeof Map === 'undefined') {
     // primitive (string, finite number) keys. Keys are prefixed to avoid
     // collisions between string 'x' and number x.
     var MAP_HASH = (typeof Symbol === 'function') ? Symbol('Map.hash') : '_hash';
-
-    // _hashKey(key): return the hash bucket string for a primitive key,
-    // or null if the key is not hashable (object, NaN, boolean, etc.).
-    // WHY: NaN !== NaN so it cannot be a reliable hash key; booleans
-    // are rare as Map keys and the linear scan is negligible for them.
-    function _hashKey(key) {
-      var t = typeof key;
-      if (t === 'string') return 's:' + key;
-      if (t === 'number' && key === key && isFinite(key)) return 'n:' + key;
-      return null;
-    }
 
     function Map(iterable) {
       this[MAP_KEYS] = [];

@@ -124,4 +124,19 @@ duk_ret_t dukky_push_node_innerhtml(duk_context *ctx, struct dom_node *node);
 bool dukky_element_matches_selector(struct dom_element *element,
 				    const char *sel_str, size_t sel_len);
 
+/**
+ * Create a URLSearchParams object from a query string and push it.
+ *
+ * WHY: nsgenbind registers the URLSearchParams __constructor with nargs=1,
+ * so dukky_create_object cannot pass the query string through. This helper
+ * builds the object manually with the correct prototype and parsed params.
+ *
+ * \param ctx   Duktape context
+ * \param qs    Query string (may start with '?', which is stripped)
+ * \param len   Length of query string
+ * \return 1 if object was pushed, 0 on error
+ */
+duk_ret_t dukky_push_urlsearchparams(duk_context *ctx,
+				     const char *qs, size_t len);
+
 #endif

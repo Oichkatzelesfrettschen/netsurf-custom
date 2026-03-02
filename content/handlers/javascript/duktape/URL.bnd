@@ -31,44 +31,13 @@ prologue URL()
 
 init URL()
 %{
-	nsurl *parsed = NULL;
-	nserror err;
-
-	if (duk_get_top(ctx) == 0 || duk_is_undefined(ctx, 0)) {
-		/* duk_error is noreturn; cast to void to avoid unused-value
-		 * warning from the macro's comma expression. */
-		(void)duk_error(ctx, DUK_ERR_TYPE_ERROR,
-				"URL constructor requires at least one argument");
-	}
-
-	{
-		const char *href = duk_safe_to_string(ctx, 0);
-
-		if (duk_get_top(ctx) >= 2 && !duk_is_undefined(ctx, 1)) {
-			/* Resolve relative URL against base */
-			const char *base_s = duk_safe_to_string(ctx, 1);
-			nsurl *base = NULL;
-			err = nsurl_create(base_s, &base);
-			if (err != NSERROR_OK) {
-				(void)duk_error(ctx, DUK_ERR_TYPE_ERROR,
-						"URL: invalid base URL");
-			}
-			err = nsurl_join(base, href, &parsed);
-			nsurl_unref(base);
-			if (err != NSERROR_OK) {
-				(void)duk_error(ctx, DUK_ERR_TYPE_ERROR,
-						"URL: could not resolve relative URL");
-			}
-		} else {
-			err = nsurl_create(href, &parsed);
-			if (err != NSERROR_OK) {
-				(void)duk_error(ctx, DUK_ERR_TYPE_ERROR,
-						"URL: invalid URL");
-			}
-		}
-	}
-
-	priv->url = parsed;
+	/* WHY: The real URL constructor is dukky_url_constructor in dukky.c,
+	 * which bypasses dukky_create_object because nsgenbind registers
+	 * __constructor with nargs=1, truncating constructor arguments.
+	 * This init body is only called from internal dukky_create_object
+	 * paths (e.g. URL.searchParams lazy creation) where no URL string
+	 * argument is passed. Initialize priv->url to NULL (no-op). */
+	priv->url = NULL;
 %}
 
 fini URL()
@@ -130,7 +99,13 @@ getter URL::port()
 	size_t l;
 	if (priv->url == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
 	nsurl_get(priv->url, NSURL_PORT, &s, &l);
-	duk_push_lstring(ctx, s ? s : "", l);
+	/* WHY: nsurl_get returns port with colon prefix (":8080").
+	 * Per spec, URL.port must return digits only ("8080"). */
+	if (s != NULL && l > 0 && s[0] == ':') {
+		duk_push_lstring(ctx, s + 1, l - 1);
+	} else {
+		duk_push_lstring(ctx, s ? s : "", s ? l : 0);
+	}
 	if (s) free(s);
 	return 1;
 %}
@@ -210,12 +185,53 @@ getter URL::origin()
 	return 1;
 %}
 
-method URL::toString()
+getter URL::username()
 %{
-	if (priv->url == NULL) {
-		duk_push_lstring(ctx, "", 0);
-		return 1;
-	}
-	duk_push_string(ctx, nsurl_access(priv->url));
+	char *s = NULL;
+	size_t l;
+	if (priv->url == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	nsurl_get(priv->url, NSURL_USERNAME, &s, &l);
+	duk_push_lstring(ctx, s ? s : "", s ? l : 0);
+	if (s) free(s);
 	return 1;
 %}
+
+getter URL::password()
+%{
+	char *s = NULL;
+	size_t l;
+	if (priv->url == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	nsurl_get(priv->url, NSURL_PASSWORD, &s, &l);
+	duk_push_lstring(ctx, s ? s : "", s ? l : 0);
+	if (s) free(s);
+	return 1;
+%}
+
+getter URL::searchParams()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(SearchParams));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		/* WHY: Cannot use dukky_create_object because nsgenbind
+		 * registers __constructor with nargs=1, truncating the
+		 * query string argument. Use helper instead. */
+		char *q = NULL;
+		size_t ql = 0;
+		if (priv->url != NULL) {
+			nsurl_get(priv->url, NSURL_QUERY, &q, &ql);
+		}
+		if (dukky_push_urlsearchparams(ctx, q ? q : "", ql) != 1) {
+			if (q) free(q);
+			return 0;
+		}
+		if (q) free(q);
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(SearchParams));
+	}
+	return 1;
+%}
+
+/* WHY: toString and toJSON are installed by dukky.c (js_newthread fixup)
+ * because adding them to the WebIDL conflicts with the generic toString
+ * that binding.c installs. See dukky_url_tostring/dukky_url_tojson. */

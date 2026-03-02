@@ -1,0 +1,61 @@
+title: DOM Mutation Diagnostic
+group: diagnostic
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    var div=document.createElement("div");
+    console.log("DIAG div created: "+div.nodeType);
+    console.log("DIAG document.body: "+document.body);
+    console.log("DIAG document.body.nodeType: "+document.body.nodeType);
+    console.log("DIAG document.body.childNodes: "+document.body.childNodes.length);
+    console.log("DIAG body.firstChild: "+document.body.firstChild);
+    var txt=document.createTextNode("hi");
+    console.log("DIAG txt created: "+txt.nodeType);
+    try{var r=document.body.appendChild(txt); console.log("DIAG append txt: "+r+" parentNode: "+txt.parentNode);}catch(e){console.log("DIAG append txt err: "+e);}
+    try{
+    document.body.innerHTML="<p>hello</p>";
+    console.log("DIAG innerHTML set ok, body.innerHTML: "+document.body.innerHTML);
+    console.log("DIAG body.firstChild: "+document.body.firstChild);
+    console.log("DIAG body.firstChild.tagName: "+(document.body.firstChild?document.body.firstChild.tagName:"null"));
+    var p=document.body.firstChild;
+    p.id="myp";
+    console.log("DIAG p.id: "+p.id);
+    p.setAttribute("data-x","1");
+    console.log("DIAG p.getAttribute: "+p.getAttribute("data-x"));
+    var sp=document.createElement("span");
+    var r2=p.appendChild(sp);
+    console.log("DIAG appendChild to parsed: "+r2+" sp.parentNode: "+sp.parentNode);
+    }catch(e){console.log("DIAG innerHTML test err: "+e);}
+    var d2=document.createElement("div");
+    document.body.appendChild(d2);
+    var s2=document.createElement("span");
+    d2.appendChild(s2);
+    console.log("DIAG contains self: "+d2.contains(d2));
+    console.log("DIAG contains child: "+d2.contains(s2));
+    console.log("DIAG contains body: "+d2.contains(document.body));
+    try{d2.toggleAttribute("hidden");console.log("DIAG toggleAttr hidden: hasAttr="+d2.hasAttribute("hidden"));}catch(e){console.log("DIAG toggleAttr err: "+e);}
+    try{d2.setAttribute("hidden","");console.log("DIAG setAttribute hidden empty: hasAttr="+d2.hasAttribute("hidden"));}catch(e){console.log("DIAG setAttribute hidden err: "+e);}
+    console.log("DIAG toggleAttribute result: "+d2.toggleAttribute("data-test"));
+    console.log("DIAG hasAttribute data-test: "+d2.hasAttribute("data-test"));
+    console.log("DIAGNOSTIC DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DIAGNOSTIC DONE
+- action: quit

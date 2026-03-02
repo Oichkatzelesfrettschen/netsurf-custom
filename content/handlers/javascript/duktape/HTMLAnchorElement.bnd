@@ -11,6 +11,8 @@
 prologue HTMLAnchorElement()
 %{
 #include <dom/html/html_anchor_element.h>
+#include "utils/corestrings.h"
+#include "utils/nsurl.h"
 
 #define ANCHOR_NODE ((dom_html_anchor_element *)((node_private_t *)priv)->node)
 %}
@@ -194,6 +196,253 @@ setter HTMLAnchorElement::text()
 		dom_string_unref(str);
 	}
 	return 0;
+%}
+
+getter HTMLAnchorElement::download()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_download, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::download()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_download, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::ping()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_ping, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::ping()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_ping, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::referrerPolicy()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_referrerpolicy, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLAnchorElement::referrerPolicy()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_referrerpolicy, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLAnchorElement::origin()
+%{
+	/* Extract origin from href using nsurl */
+	dom_string *href_str = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &href_str);
+	if (href_str == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+
+	nsurl *url = NULL;
+	nserror err = nsurl_create(dom_string_data(href_str), &url);
+	dom_string_unref(href_str);
+	if (err != NSERROR_OK || url == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	lwc_string *scheme = nsurl_get_component(url, NSURL_SCHEME);
+	lwc_string *host = nsurl_get_component(url, NSURL_HOST);
+	lwc_string *port = nsurl_get_component(url, NSURL_PORT);
+
+	if (scheme == NULL || host == NULL) {
+		duk_push_lstring(ctx, "null", 4);
+	} else if (port != NULL) {
+		duk_push_sprintf(ctx, "%s://%s:%s",
+			lwc_string_data(scheme),
+			lwc_string_data(host),
+			lwc_string_data(port));
+	} else {
+		duk_push_sprintf(ctx, "%s://%s",
+			lwc_string_data(scheme),
+			lwc_string_data(host));
+	}
+
+	if (port != NULL) lwc_string_unref(port);
+	if (host != NULL) lwc_string_unref(host);
+	if (scheme != NULL) lwc_string_unref(scheme);
+	nsurl_unref(url);
+	return 1;
+%}
+
+/* WHY: HTMLHyperlinkElementUtils mixin properties -- parse the href
+ * attribute via nsurl to extract individual URL components. */
+
+getter HTMLAnchorElement::protocol()
+%{
+	dom_string *href_str = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &href_str);
+	if (href_str == NULL) { duk_push_lstring(ctx, ":", 1); return 1; }
+
+	nsurl *url = NULL;
+	nserror err = nsurl_create(dom_string_data(href_str), &url);
+	dom_string_unref(href_str);
+	if (err != NSERROR_OK || url == NULL) {
+		duk_push_lstring(ctx, ":", 1);
+		return 1;
+	}
+
+	lwc_string *scheme = nsurl_get_component(url, NSURL_SCHEME);
+	if (scheme != NULL) {
+		duk_push_sprintf(ctx, "%s:", lwc_string_data(scheme));
+		lwc_string_unref(scheme);
+	} else {
+		duk_push_lstring(ctx, ":", 1);
+	}
+	nsurl_unref(url);
+	return 1;
+%}
+
+getter HTMLAnchorElement::hostname()
+%{
+	dom_string *href_str = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &href_str);
+	if (href_str == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+
+	nsurl *url = NULL;
+	nserror err = nsurl_create(dom_string_data(href_str), &url);
+	dom_string_unref(href_str);
+	if (err != NSERROR_OK || url == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	lwc_string *host = nsurl_get_component(url, NSURL_HOST);
+	if (host != NULL) {
+		duk_push_lstring(ctx, lwc_string_data(host),
+				lwc_string_length(host));
+		lwc_string_unref(host);
+	} else {
+		duk_push_lstring(ctx, "", 0);
+	}
+	nsurl_unref(url);
+	return 1;
+%}
+
+getter HTMLAnchorElement::pathname()
+%{
+	dom_string *href_str = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &href_str);
+	if (href_str == NULL) { duk_push_lstring(ctx, "/", 1); return 1; }
+
+	nsurl *url = NULL;
+	nserror err = nsurl_create(dom_string_data(href_str), &url);
+	dom_string_unref(href_str);
+	if (err != NSERROR_OK || url == NULL) {
+		duk_push_lstring(ctx, "/", 1);
+		return 1;
+	}
+
+	lwc_string *path = nsurl_get_component(url, NSURL_PATH);
+	if (path != NULL) {
+		duk_push_lstring(ctx, lwc_string_data(path),
+				lwc_string_length(path));
+		lwc_string_unref(path);
+	} else {
+		duk_push_lstring(ctx, "/", 1);
+	}
+	nsurl_unref(url);
+	return 1;
+%}
+
+getter HTMLAnchorElement::search()
+%{
+	dom_string *href_str = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &href_str);
+	if (href_str == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+
+	nsurl *url = NULL;
+	nserror err = nsurl_create(dom_string_data(href_str), &url);
+	dom_string_unref(href_str);
+	if (err != NSERROR_OK || url == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	lwc_string *query = nsurl_get_component(url, NSURL_QUERY);
+	if (query != NULL) {
+		duk_push_sprintf(ctx, "?%s", lwc_string_data(query));
+		lwc_string_unref(query);
+	} else {
+		duk_push_lstring(ctx, "", 0);
+	}
+	nsurl_unref(url);
+	return 1;
+%}
+
+getter HTMLAnchorElement::hash()
+%{
+	dom_string *href_str = NULL;
+	dom_html_anchor_element_get_href(ANCHOR_NODE, &href_str);
+	if (href_str == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+
+	nsurl *url = NULL;
+	nserror err = nsurl_create(dom_string_data(href_str), &url);
+	dom_string_unref(href_str);
+	if (err != NSERROR_OK || url == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	lwc_string *frag = nsurl_get_component(url, NSURL_FRAGMENT);
+	if (frag != NULL) {
+		duk_push_sprintf(ctx, "#%s", lwc_string_data(frag));
+		lwc_string_unref(frag);
+	} else {
+		duk_push_lstring(ctx, "", 0);
+	}
+	nsurl_unref(url);
+	return 1;
 %}
 
 getter HTMLAnchorElement::coords();

@@ -5,6 +5,7 @@
 // Yay for non-standard standards
 
 interface Console {
+  void assert(boolean condition, DOMString msg);
   void debug(DOMString msg, Substitition... subst);
   void dir(JSObject object);
   void error(DOMString msg, Substitition... subst);
@@ -13,10 +14,16 @@ interface Console {
   void groupEnd();
   void info(DOMString msg, Substitition... subst);
   void log(DOMString msg, Substitition... subst);
+  void count(optional DOMString label);
+  void countReset(optional DOMString label);
+  void table(optional JSObject data);
   void time(DOMString timerName);
   void timeEnd(DOMString timerName);
+  void timeLog(DOMString timerName, Substitition... subst);
   void trace();
   void warn(DOMString msg, Substitition... subst);
+  void clear();
+  void dirxml(JSObject object);
 };
 
 partial interface Window {

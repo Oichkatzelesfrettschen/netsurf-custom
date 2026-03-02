@@ -70,6 +70,38 @@ fini History()
 	/* browser_window lifetime is managed by the window; no ref to drop */
 %}
 
+getter History::scrollRestoration()
+%{
+	/* Default is "auto"; we do not persist this */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(ScrollRestoration));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		duk_push_string(ctx, "auto");
+	}
+	return 1;
+%}
+
+setter History::scrollRestoration()
+%{
+	const char *val = duk_safe_to_string(ctx, 0);
+	/* Only "auto" and "manual" are valid per spec */
+	if (strcmp(val, "auto") == 0 || strcmp(val, "manual") == 0) {
+		duk_push_this(ctx);
+		duk_dup(ctx, 0);
+		duk_put_prop_string(ctx, -2, MAGIC(ScrollRestoration));
+		duk_pop(ctx);
+	}
+	return 0;
+%}
+
+getter History::state()
+%{
+	/* State is always null; we do not persist pushState data */
+	duk_push_null(ctx);
+	return 1;
+%}
+
 getter History::length()
 %{
 	duk_push_int(ctx, browser_window_history_length(priv->win));

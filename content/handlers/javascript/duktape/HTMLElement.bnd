@@ -607,6 +607,55 @@ setter HTMLElement::inert()
 	return 0;
 %}
 
+/* -- nonce: string attribute -- */
+
+getter HTMLElement::nonce()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_nonce, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::nonce()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_nonce, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLElement::dataset()
+%{
+	/* Return a cached plain object as minimal DOMStringMap stub. */
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(dataset));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop(ctx);
+		duk_push_object(ctx);
+		duk_dup(ctx, -1);
+		duk_put_prop_string(ctx, -3, MAGIC(dataset));
+	} else {
+		duk_remove(ctx, -2);
+	}
+	return 1;
+%}
+
 getter HTMLElement::style()
 %{
 	/* Minimal implementation to avoid infinite-loop in Modernizr (c.f. #2413) */

@@ -1,0 +1,614 @@
+title: Web Standards Compliance Benchmark
+group: benchmark
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    window._B={p:0,f:0,s:0,cats:{},res:[]};
+    window.T=function(cat,n,e){
+    var B=window._B;if(!B.cats[cat])B.cats[cat]={p:0,f:0,s:0};
+    try{if(e){B.p++;B.cats[cat].p++;console.log("PASS ["+cat+"] "+n);}
+    else{B.f++;B.cats[cat].f++;console.log("FAIL ["+cat+"] "+n);B.res.push("["+cat+"] "+n);}}
+    catch(x){B.s++;B.cats[cat].s++;console.log("SKIP ["+cat+"] "+n+": "+x);}};
+    window.S=function(cat,n){var B=window._B;B.s++;if(!B.cats[cat])B.cats[cat]={p:0,f:0,s:0};B.cats[cat].s++;console.log("SKIP ["+cat+"] "+n);};
+    window.R=function(done,fn){try{fn();}catch(x){console.log("SKIP [Error] Block crashed: "+x);}console.log(done);};
+    console.log("HARNESS READY");
+    })()
+- action: wait-log
+  window: win1
+  substring: HARNESS READY
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("NODE DONE",function(){
+    var div=document.createElement("div");
+    T("Node","createElement",div!==null&&div.nodeType===1);
+    T("Node","ELEMENT_NODE",Node.ELEMENT_NODE===1);
+    T("Node","TEXT_NODE",Node.TEXT_NODE===3);
+    T("Node","COMMENT_NODE",Node.COMMENT_NODE===8);
+    T("Node","DOCUMENT_NODE",Node.DOCUMENT_NODE===9);
+    T("Node","DOCUMENT_FRAGMENT_NODE",Node.DOCUMENT_FRAGMENT_NODE===11);
+    T("Node","nodeName",div.nodeName==="DIV");
+    T("Node","ownerDocument",div.ownerDocument===document);
+    T("Node","parentNode null",div.parentNode===null);
+    T("Node","isConnected false",div.isConnected===false);
+    document.body.appendChild(div);
+    T("Node","isConnected true",div.isConnected===true);
+    T("Node","parentNode",div.parentNode===document.body);
+    T("Node","parentElement",div.parentElement===document.body);
+    T("Node","getRootNode",div.getRootNode()===document);
+    T("Node","isSameNode self",div.isSameNode(div)===true);
+    T("Node","isSameNode other",div.isSameNode(document.createElement("span"))===false);
+    T("Node","hasChildNodes false",div.hasChildNodes()===false);
+    var sp=document.createElement("span");div.appendChild(sp);
+    T("Node","hasChildNodes true",div.hasChildNodes()===true);
+    T("Node","firstChild",div.firstChild===sp);
+    T("Node","lastChild",div.lastChild===sp);
+    T("Node","childNodes.length",div.childNodes.length===1);
+    var txt=document.createTextNode("hello");
+    T("Node","createTextNode",txt.nodeType===3);
+    T("Node","textContent",txt.textContent==="hello");
+    div.appendChild(txt);
+    T("Node","previousSibling",txt.previousSibling===sp);
+    T("Node","nextSibling",sp.nextSibling===txt);
+    try{T("Node","cloneNode shallow",div.cloneNode(false).childNodes.length===0);}catch(e){S("Node","cloneNode shallow");}
+    try{T("Node","cloneNode deep",div.cloneNode(true).childNodes.length===2);}catch(e){S("Node","cloneNode deep");}
+    T("Node","contains self",div.contains(div)===true);
+    T("Node","contains child",div.contains(sp)===true);
+    T("Node","contains unrelated",div.contains(document.body)===false);
+    T("Node","removeChild",div.removeChild(txt)===txt);
+    T("Node","normalize fn",typeof div.normalize==="function");
+    T("Node","compareDocumentPosition fn",typeof div.compareDocumentPosition==="function");
+    T("Node","baseURI",typeof div.baseURI==="string");
+    document.body.removeChild(div);
+    })
+- action: wait-log
+  window: win1
+  substring: NODE DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("DOCUMENT DONE",function(){
+    T("Document","nodeType",document.nodeType===9);
+    T("Document","documentElement",document.documentElement!==null);
+    T("Document","documentElement tag",document.documentElement.tagName==="HTML");
+    T("Document","body",document.body!==null);
+    T("Document","head",document.head!==null);
+    T("Document","title getter",typeof document.title==="string");
+    document.title="Benchmark";
+    T("Document","title setter",document.title==="Benchmark");
+    T("Document","URL",typeof document.URL==="string");
+    T("Document","documentURI",typeof document.documentURI==="string");
+    T("Document","characterSet",document.characterSet==="UTF-8");
+    T("Document","inputEncoding",document.inputEncoding==="UTF-8");
+    T("Document","contentType",document.contentType==="text/html");
+    T("Document","compatMode",document.compatMode==="BackCompat"||document.compatMode==="CSS1Compat");
+    T("Document","hidden",typeof document.hidden==="boolean");
+    T("Document","visibilityState",document.visibilityState==="visible"||document.visibilityState==="hidden");
+    T("Document","readyState",document.readyState==="complete"||document.readyState==="interactive"||document.readyState==="loading");
+    T("Document","getElementById fn",typeof document.getElementById==="function");
+    T("Document","getElementsByTagName fn",typeof document.getElementsByTagName==="function");
+    T("Document","getElementsByClassName fn",typeof document.getElementsByClassName==="function");
+    T("Document","getElementsByName fn",typeof document.getElementsByName==="function");
+    T("Document","querySelector fn",typeof document.querySelector==="function");
+    T("Document","querySelectorAll fn",typeof document.querySelectorAll==="function");
+    T("Document","createElement fn",typeof document.createElement==="function");
+    T("Document","createElementNS fn",typeof document.createElementNS==="function");
+    T("Document","createTextNode fn",typeof document.createTextNode==="function");
+    T("Document","createComment fn",typeof document.createComment==="function");
+    T("Document","createComment nodeType",document.createComment("x").nodeType===8);
+    T("Document","createDocumentFragment fn",typeof document.createDocumentFragment==="function");
+    T("Document","createAttribute fn",typeof document.createAttribute==="function");
+    T("Document","createProcessingInstruction fn",typeof document.createProcessingInstruction==="function");
+    T("Document","importNode fn",typeof document.importNode==="function");
+    T("Document","adoptNode fn",typeof document.adoptNode==="function");
+    T("Document","doctype",document.doctype===null||document.doctype.nodeType===10);
+    T("Document","defaultView",document.defaultView===window);
+    T("Document","forms",typeof document.forms==="object");
+    T("Document","images",typeof document.images==="object");
+    T("Document","links",typeof document.links==="object");
+    T("Document","referrer",typeof document.referrer==="string");
+    T("Document","lastModified",typeof document.lastModified==="string");
+    T("Document","domain",typeof document.domain==="string");
+    T("Document","dir",typeof document.dir==="string");
+    T("Document","hasFocus fn",typeof document.hasFocus==="function");
+    T("Document","close fn",typeof document.close==="function");
+    T("Document","activeElement",document.activeElement===null||document.activeElement.nodeType===1);
+    T("Document","designMode",typeof document.designMode==="string");
+    T("Document","implementation",document.implementation!==null);
+    T("Document","createEvent fn",typeof document.createEvent==="function");
+    })
+- action: wait-log
+  window: win1
+  substring: DOCUMENT DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("ELEMENT DONE",function(){
+    var frag=document.createDocumentFragment();
+    T("DocFrag","nodeType",frag.nodeType===11);
+    T("DocFrag","childElementCount 0",frag.childElementCount===0);
+    var fc=document.createElement("p");frag.appendChild(fc);
+    T("DocFrag","childElementCount 1",frag.childElementCount===1);
+    T("DocFrag","firstElementChild",frag.firstElementChild===fc);
+    T("DocFrag","lastElementChild",frag.lastElementChild===fc);
+    T("DocFrag","querySelector fn",typeof frag.querySelector==="function");
+    T("DocFrag","querySelectorAll fn",typeof frag.querySelectorAll==="function");
+    var el=document.createElement("div");el.id="bel";el.className="foo bar";document.body.appendChild(el);
+    T("Element","tagName",el.tagName==="DIV");
+    T("Element","localName",el.localName==="div");
+    T("Element","id",el.id==="bel");
+    T("Element","className",el.className==="foo bar");
+    T("Element","classList",el.classList!==undefined);
+    T("Element","classList.contains",el.classList.contains("foo")===true);
+    T("Element","namespaceURI",typeof el.namespaceURI==="string");
+    T("Element","getAttribute fn",typeof el.getAttribute==="function");
+    el.setAttribute("data-x","1");
+    T("Element","setAttribute+getAttribute",el.getAttribute("data-x")==="1");
+    T("Element","hasAttribute",el.hasAttribute("data-x")===true);
+    el.removeAttribute("data-x");
+    T("Element","removeAttribute",el.hasAttribute("data-x")===false);
+    T("Element","toggleAttribute fn",typeof el.toggleAttribute==="function");
+    try{el.toggleAttribute("hidden");T("Element","toggleAttribute sets",el.hasAttribute("hidden")===true);el.toggleAttribute("hidden");T("Element","toggleAttribute removes",el.hasAttribute("hidden")===false);}catch(e){S("Element","toggleAttribute sets");S("Element","toggleAttribute removes");}
+    T("Element","getAttributeNames fn",typeof el.getAttributeNames==="function");
+    T("Element","hasAttributes fn",typeof el.hasAttributes==="function");
+    T("Element","attributes",el.attributes!==undefined);
+    T("Element","getAttributeNS fn",typeof el.getAttributeNS==="function");
+    T("Element","setAttributeNS fn",typeof el.setAttributeNS==="function");
+    T("Element","removeAttributeNS fn",typeof el.removeAttributeNS==="function");
+    T("Element","hasAttributeNS fn",typeof el.hasAttributeNS==="function");
+    T("Element","getElementsByClassName fn",typeof el.getElementsByClassName==="function");
+    T("Element","getElementsByTagName fn",typeof el.getElementsByTagName==="function");
+    T("Element","getElementsByTagNameNS fn",typeof el.getElementsByTagNameNS==="function");
+    T("Element","querySelector fn",typeof el.querySelector==="function");
+    T("Element","querySelectorAll fn",typeof el.querySelectorAll==="function");
+    T("Element","matches fn",typeof el.matches==="function");
+    T("Element","closest fn",typeof el.closest==="function");
+    T("Element","matches self",el.matches("#bel")===true);
+    T("Element","closest self",el.closest("div")===el);
+    T("Element","insertAdjacentElement fn",typeof el.insertAdjacentElement==="function");
+    T("Element","insertAdjacentText fn",typeof el.insertAdjacentText==="function");
+    T("Element","insertAdjacentHTML fn",typeof el.insertAdjacentHTML==="function");
+    T("Element","children",el.children!==undefined);
+    T("Element","childElementCount",typeof el.childElementCount==="number");
+    T("Element","innerHTML",typeof el.innerHTML==="string");
+    T("Element","outerHTML",typeof el.outerHTML==="string");
+    T("Element","before fn",typeof el.before==="function");
+    T("Element","after fn",typeof el.after==="function");
+    T("Element","replaceWith fn",typeof el.replaceWith==="function");
+    T("Element","remove fn",typeof el.remove==="function");
+    T("Element","nonce",typeof el.nonce==="string");
+    T("Element","slot",typeof el.slot==="string");
+    try{el.remove();}catch(e){}
+    })
+- action: wait-log
+  window: win1
+  substring: ELEMENT DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("HTMLELEMENT EVENT DONE",function(){
+    var el=document.createElement("div");document.body.appendChild(el);
+    T("HTMLElement","title",typeof el.title==="string");
+    T("HTMLElement","lang",typeof el.lang==="string");
+    T("HTMLElement","dir",typeof el.dir==="string");
+    T("HTMLElement","hidden",typeof el.hidden==="boolean");
+    T("HTMLElement","tabIndex",typeof el.tabIndex==="number");
+    T("HTMLElement","draggable",typeof el.draggable==="boolean");
+    T("HTMLElement","spellcheck",typeof el.spellcheck==="boolean");
+    T("HTMLElement","contentEditable",typeof el.contentEditable==="string");
+    T("HTMLElement","isContentEditable",typeof el.isContentEditable==="boolean");
+    T("HTMLElement","translate",typeof el.translate==="boolean");
+    T("HTMLElement","innerText",typeof el.innerText==="string");
+    T("HTMLElement","click fn",typeof el.click==="function");
+    T("HTMLElement","focus fn",typeof el.focus==="function");
+    T("HTMLElement","blur fn",typeof el.blur==="function");
+    T("HTMLElement","style",el.style!==undefined);
+    T("HTMLElement","dataset",el.dataset!==undefined);
+    try{el.remove();}catch(e){}
+    var evt=document.createEvent("Event");evt.initEvent("test",true,true);
+    T("Event","initEvent type",evt.type==="test");
+    T("Event","bubbles",evt.bubbles===true);
+    T("Event","cancelable",evt.cancelable===true);
+    T("Event","defaultPrevented",evt.defaultPrevented===false);
+    T("Event","eventPhase",typeof evt.eventPhase==="number");
+    T("Event","isTrusted",typeof evt.isTrusted==="boolean");
+    T("Event","timeStamp",typeof evt.timeStamp==="number");
+    T("Event","stopPropagation fn",typeof evt.stopPropagation==="function");
+    T("Event","stopImmediatePropagation fn",typeof evt.stopImmediatePropagation==="function");
+    T("Event","preventDefault fn",typeof evt.preventDefault==="function");
+    T("Event","composedPath fn",typeof evt.composedPath==="function");
+    T("Event","srcElement",evt.srcElement===null||evt.srcElement!==undefined);
+    T("Event","returnValue",typeof evt.returnValue==="boolean");
+    T("Event","cancelBubble",typeof evt.cancelBubble==="boolean");
+    T("Event","composed",typeof evt.composed==="boolean");
+    var ce=document.createEvent("CustomEvent");ce.initCustomEvent("myev",false,false,{a:1});
+    T("CustomEvent","type",ce.type==="myev");
+    T("CustomEvent","detail",ce.detail!==null&&ce.detail.a===1);
+    var tgt=document.createElement("div");document.body.appendChild(tgt);
+    T("EventTarget","addEventListener fn",typeof tgt.addEventListener==="function");
+    T("EventTarget","removeEventListener fn",typeof tgt.removeEventListener==="function");
+    T("EventTarget","dispatchEvent fn",typeof tgt.dispatchEvent==="function");
+    var fired=false;tgt.addEventListener("x",function(){fired=true;});
+    var xe=document.createEvent("Event");xe.initEvent("x",false,false);tgt.dispatchEvent(xe);
+    T("EventTarget","dispatch fires",fired===true);
+    try{tgt.remove();}catch(e){}
+    })
+- action: wait-log
+  window: win1
+  substring: HTMLELEMENT EVENT DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("WINDOW NAV DONE",function(){
+    T("Window","self",window.self===window);
+    T("Window","top",window.top===window);
+    T("Window","parent",window.parent===window);
+    T("Window","closed",window.closed===false);
+    T("Window","frames",window.frames===window);
+    T("Window","length",window.length===0);
+    T("Window","frameElement",window.frameElement===null);
+    T("Window","opener",window.opener===null);
+    T("Window","document",window.document===document);
+    T("Window","navigator",window.navigator!==undefined);
+    T("Window","clientInformation",window.clientInformation!==undefined);
+    T("Window","innerWidth",typeof window.innerWidth==="number");
+    T("Window","innerHeight",typeof window.innerHeight==="number");
+    T("Window","outerWidth",typeof window.outerWidth==="number");
+    T("Window","outerHeight",typeof window.outerHeight==="number");
+    T("Window","screenX",typeof window.screenX==="number");
+    T("Window","screenY",typeof window.screenY==="number");
+    T("Window","status",typeof window.status==="string");
+    T("Window","close fn",typeof window.close==="function");
+    T("Window","stop fn",typeof window.stop==="function");
+    T("Window","print fn",typeof window.print==="function");
+    T("Window","confirm fn",typeof window.confirm==="function");
+    T("Window","prompt fn",typeof window.prompt==="function");
+    T("Window","alert fn",typeof window.alert==="function");
+    T("Window","setTimeout fn",typeof window.setTimeout==="function");
+    T("Window","clearTimeout fn",typeof window.clearTimeout==="function");
+    T("Window","setInterval fn",typeof window.setInterval==="function");
+    T("Window","clearInterval fn",typeof window.clearInterval==="function");
+    T("Window","atob fn",typeof window.atob==="function");
+    T("Window","btoa fn",typeof window.btoa==="function");
+    T("Window","atob round-trip",window.atob(window.btoa("test"))==="test");
+    T("Window","scrollTo fn",typeof window.scrollTo==="function");
+    T("Window","scrollBy fn",typeof window.scrollBy==="function");
+    T("Window","scroll fn",typeof window.scroll==="function");
+    T("Window","focus fn",typeof window.focus==="function");
+    T("Window","blur fn",typeof window.blur==="function");
+    T("Window","originAgentCluster",typeof window.originAgentCluster==="boolean");
+    T("Window","requestAnimationFrame fn",typeof window.requestAnimationFrame==="function");
+    T("Window","cancelAnimationFrame fn",typeof window.cancelAnimationFrame==="function");
+    T("Window","getComputedStyle fn",typeof window.getComputedStyle==="function");
+    var nav=window.navigator;
+    T("Navigator","userAgent",typeof nav.userAgent==="string");
+    T("Navigator","appName",typeof nav.appName==="string");
+    T("Navigator","appVersion",typeof nav.appVersion==="string");
+    T("Navigator","platform",typeof nav.platform==="string");
+    T("Navigator","language",typeof nav.language==="string");
+    T("Navigator","languages",Array.isArray(nav.languages));
+    T("Navigator","onLine",typeof nav.onLine==="boolean");
+    T("Navigator","cookieEnabled",typeof nav.cookieEnabled==="boolean");
+    T("Navigator","pdfViewerEnabled",typeof nav.pdfViewerEnabled==="boolean");
+    T("Navigator","javaEnabled fn",typeof nav.javaEnabled==="function");
+    T("Navigator","javaEnabled false",nav.javaEnabled()===false);
+    T("Navigator","plugins",nav.plugins!==undefined);
+    T("Navigator","mimeTypes",nav.mimeTypes!==undefined);
+    })
+- action: wait-log
+  window: win1
+  substring: WINDOW NAV DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("LOC HIST CON DONE",function(){
+    T("Location","href",typeof location.href==="string");
+    T("Location","protocol",typeof location.protocol==="string");
+    T("Location","host",typeof location.host==="string");
+    T("Location","hostname",typeof location.hostname==="string");
+    T("Location","pathname",typeof location.pathname==="string");
+    T("Location","search",typeof location.search==="string");
+    T("Location","hash",typeof location.hash==="string");
+    T("Location","origin",typeof location.origin==="string");
+    T("Location","toString fn",typeof location.toString==="function");
+    T("Location","assign fn",typeof location.assign==="function");
+    T("Location","replace fn",typeof location.replace==="function");
+    T("History","length",typeof history.length==="number");
+    T("History","scrollRestoration",typeof history.scrollRestoration==="string");
+    T("History","state",history.state===null||history.state!==undefined);
+    T("History","pushState fn",typeof history.pushState==="function");
+    T("History","replaceState fn",typeof history.replaceState==="function");
+    T("History","go fn",typeof history.go==="function");
+    T("History","back fn",typeof history.back==="function");
+    T("History","forward fn",typeof history.forward==="function");
+    T("Console","log fn",typeof console.log==="function");
+    T("Console","warn fn",typeof console.warn==="function");
+    T("Console","error fn",typeof console.error==="function");
+    T("Console","info fn",typeof console.info==="function");
+    T("Console","debug fn",typeof console.debug==="function");
+    T("Console","dir fn",typeof console.dir==="function");
+    T("Console","dirxml fn",typeof console.dirxml==="function");
+    T("Console","trace fn",typeof console.trace==="function");
+    T("Console","group fn",typeof console.group==="function");
+    T("Console","groupCollapsed fn",typeof console.groupCollapsed==="function");
+    T("Console","groupEnd fn",typeof console.groupEnd==="function");
+    T("Console","time fn",typeof console.time==="function");
+    T("Console","timeEnd fn",typeof console.timeEnd==="function");
+    T("Console","timeLog fn",typeof console.timeLog==="function");
+    T("Console","clear fn",typeof console.clear==="function");
+    T("Console","assert fn",typeof console.assert==="function");
+    T("Console","count fn",typeof console.count==="function");
+    T("Console","countReset fn",typeof console.countReset==="function");
+    T("Console","table fn",typeof console.table==="function");
+    })
+- action: wait-log
+  window: win1
+  substring: LOC HIST CON DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("URL USP DONE",function(){
+    try{var u=new URL("https://example.com:8080/path?q=1#frag");
+    T("URL","constructor",u!==null);
+    T("URL","href",u.href.indexOf("example.com")>0);
+    T("URL","protocol",u.protocol==="https:");
+    T("URL","hostname",u.hostname==="example.com");
+    T("URL","port",u.port==="8080");
+    T("URL","pathname",u.pathname==="/path");
+    T("URL","search",u.search==="?q=1");
+    T("URL","hash",u.hash==="#frag");
+    T("URL","origin",u.origin.indexOf("example.com")>0);
+    T("URL","host",u.host.indexOf("example.com")>=0);
+    T("URL","username",typeof u.username==="string");
+    T("URL","password",typeof u.password==="string");
+    T("URL","toString fn",typeof u.toString==="function");
+    T("URL","toJSON fn",typeof u.toJSON==="function");
+    T("URL","searchParams",u.searchParams!==undefined);
+    }catch(x){S("URL","constructor: "+x);}
+    try{var usp=new URLSearchParams("a=1&b=2&a=3");
+    T("USP","constructor",usp!==null);
+    T("USP","get",usp.get("a")==="1");
+    T("USP","getAll",usp.getAll("a").length===2);
+    T("USP","has",usp.has("b")===true);
+    T("USP","has missing",usp.has("z")===false);
+    usp.append("c","4");
+    T("USP","append",usp.get("c")==="4");
+    usp.set("a","10");
+    T("USP","set",usp.get("a")==="10");
+    T("USP","set dedupes",usp.getAll("a").length===1);
+    usp["delete"]("c");
+    T("USP","delete",usp.has("c")===false);
+    T("USP","toString",typeof usp.toString()==="string");
+    T("USP","size",typeof usp.size==="number");
+    usp.sort();
+    T("USP","sort",usp.toString().indexOf("a=")===0);
+    }catch(x){S("USP","constructor: "+x);}
+    })
+- action: wait-log
+  window: win1
+  substring: URL USP DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("STORAGE FORM DONE",function(){
+    try{var ls=window.localStorage;
+    T("Storage","localStorage",ls!==undefined&&ls!==null);
+    ls.setItem("bk","bv");
+    T("Storage","setItem+getItem",ls.getItem("bk")==="bv");
+    T("Storage","length",ls.length>=1);
+    T("Storage","key fn",typeof ls.key==="function");
+    ls.removeItem("bk");
+    T("Storage","removeItem",ls.getItem("bk")===null);
+    ls.setItem("t1","1");ls.setItem("t2","2");ls.clear();
+    T("Storage","clear",ls.length===0);
+    }catch(x){S("Storage","localStorage: "+x);}
+    try{var ss=window.sessionStorage;
+    T("Storage","sessionStorage",ss!==undefined&&ss!==null);
+    ss.setItem("sk","sv");
+    T("Storage","ss setItem+getItem",ss.getItem("sk")==="sv");
+    ss.clear();
+    T("Storage","ss clear",ss.length===0);
+    }catch(x){S("Storage","sessionStorage: "+x);}
+    var form=document.createElement("form");form.method="post";form.action="/submit";document.body.appendChild(form);
+    T("Form","method",form.method==="post");
+    T("Form","action",typeof form.action==="string");
+    T("Form","enctype",typeof form.enctype==="string");
+    T("Form","target",typeof form.target==="string");
+    T("Form","name",typeof form.name==="string");
+    T("Form","autocomplete",typeof form.autocomplete==="string");
+    T("Form","noValidate",typeof form.noValidate==="boolean");
+    T("Form","elements",form.elements!==undefined);
+    T("Form","length",typeof form.length==="number");
+    T("Form","submit fn",typeof form.submit==="function");
+    T("Form","reset fn",typeof form.reset==="function");
+    T("Form","checkValidity fn",typeof form.checkValidity==="function");
+    T("Form","reportValidity fn",typeof form.reportValidity==="function");
+    window._form=form;
+    })
+- action: wait-log
+  window: win1
+  substring: STORAGE FORM DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("INPUT SELECT DONE",function(){
+    var form=window._form;
+    var inp=document.createElement("input");inp.type="text";inp.value="hello";form.appendChild(inp);
+    T("Input","type",inp.type==="text");
+    T("Input","value",inp.value==="hello");
+    T("Input","name",typeof inp.name==="string");
+    T("Input","disabled",typeof inp.disabled==="boolean");
+    T("Input","checked",typeof inp.checked==="boolean");
+    T("Input","defaultChecked",typeof inp.defaultChecked==="boolean");
+    T("Input","defaultValue",typeof inp.defaultValue==="string");
+    T("Input","readOnly",typeof inp.readOnly==="boolean");
+    T("Input","required",typeof inp.required==="boolean");
+    T("Input","placeholder",typeof inp.placeholder==="string");
+    T("Input","pattern",typeof inp.pattern==="string");
+    T("Input","min",typeof inp.min==="string");
+    T("Input","max",typeof inp.max==="string");
+    T("Input","step",typeof inp.step==="string");
+    T("Input","size",typeof inp.size==="number");
+    T("Input","maxLength",typeof inp.maxLength==="number");
+    T("Input","autocomplete",typeof inp.autocomplete==="string");
+    T("Input","autofocus",typeof inp.autofocus==="boolean");
+    T("Input","multiple",typeof inp.multiple==="boolean");
+    T("Input","form",inp.form===form);
+    T("Input","indeterminate",typeof inp.indeterminate==="boolean");
+    T("Input","formAction",typeof inp.formAction==="string");
+    T("Input","formEnctype",typeof inp.formEnctype==="string");
+    T("Input","formMethod",typeof inp.formMethod==="string");
+    T("Input","formNoValidate",typeof inp.formNoValidate==="boolean");
+    T("Input","formTarget",typeof inp.formTarget==="string");
+    T("Input","select fn",typeof inp.select==="function");
+    var sel=document.createElement("select");form.appendChild(sel);
+    T("Select","type",sel.type==="select-one"||sel.type==="select-multiple");
+    T("Select","name",typeof sel.name==="string");
+    T("Select","disabled",typeof sel.disabled==="boolean");
+    T("Select","multiple",typeof sel.multiple==="boolean");
+    T("Select","required",typeof sel.required==="boolean");
+    T("Select","size",typeof sel.size==="number");
+    T("Select","length",typeof sel.length==="number");
+    T("Select","selectedIndex",typeof sel.selectedIndex==="number");
+    T("Select","value",typeof sel.value==="string");
+    T("Select","form",sel.form===form);
+    T("Select","options",sel.options!==undefined);
+    T("Select","autocomplete",typeof sel.autocomplete==="string");
+    T("Select","willValidate",typeof sel.willValidate==="boolean");
+    T("Select","validationMessage",typeof sel.validationMessage==="string");
+    T("Select","checkValidity fn",typeof sel.checkValidity==="function");
+    T("Select","reportValidity fn",typeof sel.reportValidity==="function");
+    })
+- action: wait-log
+  window: win1
+  substring: INPUT SELECT DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    R("TEXTAREA BUTTON ANCHOR IMAGE DONE",function(){
+    var form=window._form;
+    var ta=document.createElement("textarea");form.appendChild(ta);
+    T("TextArea","value",typeof ta.value==="string");
+    T("TextArea","name",typeof ta.name==="string");
+    T("TextArea","disabled",typeof ta.disabled==="boolean");
+    T("TextArea","readOnly",typeof ta.readOnly==="boolean");
+    T("TextArea","required",typeof ta.required==="boolean");
+    T("TextArea","rows",typeof ta.rows==="number");
+    T("TextArea","cols",typeof ta.cols==="number");
+    T("TextArea","defaultValue",typeof ta.defaultValue==="string");
+    T("TextArea","placeholder",typeof ta.placeholder==="string");
+    T("TextArea","maxLength",typeof ta.maxLength==="number");
+    T("TextArea","wrap",typeof ta.wrap==="string");
+    T("TextArea","form",ta.form===form);
+    T("TextArea","autocomplete",typeof ta.autocomplete==="string");
+    T("TextArea","autofocus",typeof ta.autofocus==="boolean");
+    T("TextArea","textLength",typeof ta.textLength==="number");
+    T("TextArea","select fn",typeof ta.select==="function");
+    var btn=document.createElement("button");form.appendChild(btn);
+    T("Button","type",typeof btn.type==="string");
+    T("Button","name",typeof btn.name==="string");
+    T("Button","value",typeof btn.value==="string");
+    T("Button","disabled",typeof btn.disabled==="boolean");
+    T("Button","form",btn.form===form);
+    T("Button","formAction",typeof btn.formAction==="string");
+    T("Button","formEnctype",typeof btn.formEnctype==="string");
+    T("Button","formMethod",typeof btn.formMethod==="string");
+    T("Button","formNoValidate",typeof btn.formNoValidate==="boolean");
+    T("Button","formTarget",typeof btn.formTarget==="string");
+    T("Button","willValidate",typeof btn.willValidate==="boolean");
+    T("Button","validationMessage",typeof btn.validationMessage==="string");
+    T("Button","checkValidity fn",typeof btn.checkValidity==="function");
+    var a=document.createElement("a");document.body.appendChild(a);
+    T("Anchor","href",typeof a.href==="string");
+    T("Anchor","target",typeof a.target==="string");
+    T("Anchor","rel",typeof a.rel==="string");
+    T("Anchor","download",typeof a.download==="string");
+    T("Anchor","ping",typeof a.ping==="string");
+    T("Anchor","referrerPolicy",typeof a.referrerPolicy==="string");
+    T("Anchor","text",typeof a.text==="string");
+    T("Anchor","origin",typeof a.origin==="string");
+    T("Anchor","protocol",typeof a.protocol==="string");
+    T("Anchor","hostname",typeof a.hostname==="string");
+    T("Anchor","pathname",typeof a.pathname==="string");
+    T("Anchor","search",typeof a.search==="string");
+    T("Anchor","hash",typeof a.hash==="string");
+    var img=document.createElement("img");
+    T("Image","src",typeof img.src==="string");
+    T("Image","alt",typeof img.alt==="string");
+    T("Image","width",typeof img.width==="number");
+    T("Image","height",typeof img.height==="number");
+    T("Image","name",typeof img.name==="string");
+    T("Image","useMap",typeof img.useMap==="string");
+    try{a.remove();form.remove();}catch(e){}
+    })
+- action: wait-log
+  window: win1
+  substring: TEXTAREA BUTTON ANCHOR IMAGE DONE
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+    try{
+    T("ES6","Map",typeof Map==="function");
+    T("ES6","Set",typeof Set==="function");
+    T("ES6","WeakMap",typeof WeakMap==="function");
+    T("ES6","WeakSet",typeof WeakSet==="function");
+    T("ES6","Promise",typeof Promise==="function");
+    var m=new Map();m.set("k","v");
+    T("ES6","Map.set+get",m.get("k")==="v");
+    T("ES6","Map.has",m.has("k")===true);
+    T("ES6","Map.size",m.size===1);
+    m["delete"]("k");
+    T("ES6","Map.delete",m.has("k")===false);
+    var s=new Set();s.add(1);s.add(2);s.add(1);
+    T("ES6","Set.add+size",s.size===2);
+    T("ES6","Set.has",s.has(1)===true);
+    T("ES6","Promise.resolve fn",typeof Promise.resolve==="function");
+    var dtl=document.createElement("div");document.body.appendChild(dtl);
+    var cl=dtl.classList;
+    T("TokenList","length",typeof cl.length==="number");
+    T("TokenList","contains fn",typeof cl.contains==="function");
+    T("TokenList","add fn",typeof cl.add==="function");
+    T("TokenList","remove fn",typeof cl.remove==="function");
+    T("TokenList","toggle fn",typeof cl.toggle==="function");
+    T("TokenList","item fn",typeof cl.item==="function");
+    cl.add("tc");
+    T("TokenList","add works",cl.contains("tc")===true);
+    cl.remove("tc");
+    T("TokenList","remove works",cl.contains("tc")===false);
+    cl.toggle("tg");
+    T("TokenList","toggle adds",cl.contains("tg")===true);
+    cl.toggle("tg");
+    T("TokenList","toggle removes",cl.contains("tg")===false);
+    try{dtl.remove();}catch(e){}
+    }catch(x){console.log("SKIP [Error] ES6/TokenList block: "+x);}
+    var B=window._B;
+    var total=B.p+B.f+B.s;
+    var pct=total>0?Math.round(B.p*1000/total)/10:0;
+    console.log("BENCHMARK COMPLETE");
+    console.log("TOTAL: "+total+" PASS: "+B.p+" FAIL: "+B.f+" SKIP: "+B.s+" SCORE: "+pct+"%");
+    var ck=Object.keys(B.cats);ck.sort();
+    for(var i=0;i<ck.length;i++){var c=ck[i];var ct=B.cats[c];var cp=ct.p+ct.f+ct.s;var cpct=cp>0?Math.round(ct.p*1000/cp)/10:0;console.log("  "+c+": "+ct.p+"/"+cp+" ("+cpct+"%)");}
+    if(B.res.length>0){console.log("FAILURES:");for(var j=0;j<B.res.length;j++){console.log("  "+B.res[j]);}}
+    console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

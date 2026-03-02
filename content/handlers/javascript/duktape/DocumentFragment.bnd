@@ -1,0 +1,231 @@
+/* DocumentFragment binding using duktape and libdom
+ *
+ * Copyright 2026 NetSurf contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+prologue DocumentFragment()
+%{
+#include "utils/corestrings.h"
+%}
+
+init DocumentFragment(struct dom_document *document::node);
+
+method DocumentFragment::querySelector()
+%{
+	return dukky_queryselector(ctx, ((node_private_t *)priv)->node, false);
+%}
+
+method DocumentFragment::querySelectorAll()
+%{
+	return dukky_queryselector(ctx, ((node_private_t *)priv)->node, true);
+%}
+
+method DocumentFragment::getElementById()
+%{
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	dom_string *id_str = NULL;
+	if (dom_string_create((const uint8_t *)s, slen, &id_str) != DOM_NO_ERR) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	/* Walk children looking for matching id */
+	dom_node *child = NULL;
+	dom_exception exc;
+	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type ntype;
+		exc = dom_node_get_node_type(child, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_ELEMENT_NODE) {
+			dom_string *eid = NULL;
+			dom_element_get_attribute(
+				(dom_element *)child,
+				corestring_dom_id, &eid);
+			if (eid != NULL) {
+				if (dom_string_isequal(eid, id_str)) {
+					dom_string_unref(eid);
+					dom_string_unref(id_str);
+					dukky_push_node(ctx, child);
+					dom_node_unref(child);
+					return 1;
+				}
+				dom_string_unref(eid);
+			}
+		}
+		dom_node *next = NULL;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+
+	dom_string_unref(id_str);
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter DocumentFragment::children()
+%{
+	dom_node *child = NULL;
+	dom_exception exc;
+	duk_idx_t idx = 0;
+
+	duk_push_array(ctx);
+	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type ntype;
+		exc = dom_node_get_node_type(child, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_ELEMENT_NODE) {
+			dukky_push_node(ctx, child);
+			duk_put_prop_index(ctx, -2, (duk_uarridx_t)idx++);
+		}
+		dom_node *next = NULL;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+	return 1;
+%}
+
+getter DocumentFragment::firstElementChild()
+%{
+	dom_node *child = NULL;
+	dom_exception exc;
+	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type ntype;
+		exc = dom_node_get_node_type(child, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_ELEMENT_NODE) {
+			dukky_push_node(ctx, child);
+			dom_node_unref(child);
+			return 1;
+		}
+		dom_node *next = NULL;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter DocumentFragment::lastElementChild()
+%{
+	dom_node *child = NULL;
+	dom_exception exc;
+	exc = dom_node_get_last_child(((node_private_t *)priv)->node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type ntype;
+		exc = dom_node_get_node_type(child, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_ELEMENT_NODE) {
+			dukky_push_node(ctx, child);
+			dom_node_unref(child);
+			return 1;
+		}
+		dom_node *prev = NULL;
+		exc = dom_node_get_previous_sibling(child, &prev);
+		dom_node_unref(child);
+		child = prev;
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter DocumentFragment::childElementCount()
+%{
+	dom_node *child = NULL;
+	dom_exception exc;
+	duk_uint_t count = 0;
+
+	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node_type ntype;
+		exc = dom_node_get_node_type(child, &ntype);
+		if (exc == DOM_NO_ERR && ntype == DOM_ELEMENT_NODE) {
+			count++;
+		}
+		dom_node *next = NULL;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_unref(child);
+		child = next;
+	}
+	duk_push_uint(ctx, count);
+	return 1;
+%}
+
+method DocumentFragment::prepend()
+%{
+	dom_node *parent = ((node_private_t *)priv)->node;
+	dom_node *first = NULL;
+	dom_exception exc;
+	dom_node *spare = NULL;
+
+	exc = dom_node_get_first_child(parent, &first);
+	if (exc != DOM_NO_ERR) return 0;
+
+	for (duk_idx_t i = 0; i < duk_get_top(ctx); i++) {
+		if (!dukky_instanceof(ctx, i, PROTO_NAME(NODE))) continue;
+		duk_get_prop_string(ctx, i, PRIVATE_MAGIC);
+		node_private_t *np = duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		if (np == NULL) continue;
+		exc = dom_node_insert_before(parent, np->node, first, &spare);
+		if (exc == DOM_NO_ERR && spare != NULL) dom_node_unref(spare);
+	}
+	if (first != NULL) dom_node_unref(first);
+	return 0;
+%}
+
+method DocumentFragment::append()
+%{
+	dom_node *parent = ((node_private_t *)priv)->node;
+	dom_exception exc;
+	dom_node *spare = NULL;
+
+	for (duk_idx_t i = 0; i < duk_get_top(ctx); i++) {
+		if (!dukky_instanceof(ctx, i, PROTO_NAME(NODE))) continue;
+		duk_get_prop_string(ctx, i, PRIVATE_MAGIC);
+		node_private_t *np = duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		if (np == NULL) continue;
+		exc = dom_node_append_child(parent, np->node, &spare);
+		if (exc == DOM_NO_ERR && spare != NULL) dom_node_unref(spare);
+	}
+	return 0;
+%}
+
+method DocumentFragment::replaceChildren()
+%{
+	dom_node *parent = ((node_private_t *)priv)->node;
+	dom_exception exc;
+	dom_node *spare = NULL;
+
+	/* Remove all existing children */
+	dom_node *child = NULL;
+	exc = dom_node_get_first_child(parent, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node *next = NULL;
+		exc = dom_node_get_next_sibling(child, &next);
+		dom_node_remove_child(parent, child, &spare);
+		if (spare != NULL) dom_node_unref(spare);
+		dom_node_unref(child);
+		child = next;
+	}
+
+	/* Append new children */
+	for (duk_idx_t i = 0; i < duk_get_top(ctx); i++) {
+		if (!dukky_instanceof(ctx, i, PROTO_NAME(NODE))) continue;
+		duk_get_prop_string(ctx, i, PRIVATE_MAGIC);
+		node_private_t *np = duk_get_pointer(ctx, -1);
+		duk_pop(ctx);
+		if (np == NULL) continue;
+		exc = dom_node_append_child(parent, np->node, &spare);
+		if (exc == DOM_NO_ERR && spare != NULL) dom_node_unref(spare);
+	}
+	return 0;
+%}

@@ -39,7 +39,17 @@ getter Navigator::appVersion()
 
 getter Navigator::platform()
 %{
-	duk_push_string(ctx, NULL);
+	/* WHY: Per spec, returns a string identifying the platform.
+	 * NetSurf runs on many platforms; report the build target. */
+#if defined(__linux__)
+	duk_push_string(ctx, "Linux x86_64");
+#elif defined(_WIN32)
+	duk_push_string(ctx, "Win32");
+#elif defined(__APPLE__)
+	duk_push_string(ctx, "MacIntel");
+#else
+	duk_push_string(ctx, "NetSurf");
+#endif
 	return 1;
 %}
 
@@ -73,8 +83,8 @@ getter Navigator::cookieEnabled()
 	return 1;
 %}
 
-/* indicate there is no plugin for java installed */
-getter Navigator::javaEnabled()
+/* Per spec, javaEnabled() is a method, not a property */
+method Navigator::javaEnabled()
 %{
 	duk_push_boolean(ctx, false);
 	return 1;
@@ -83,5 +93,52 @@ getter Navigator::javaEnabled()
 getter Navigator::userAgent()
 %{
 	duk_push_string(ctx, user_agent_string());
+	return 1;
+%}
+
+getter Navigator::language()
+%{
+	duk_push_string(ctx, "en");
+	return 1;
+%}
+
+getter Navigator::languages()
+%{
+	duk_push_array(ctx);
+	duk_push_string(ctx, "en");
+	duk_put_prop_index(ctx, -2, 0);
+	/* Freeze the array per spec */
+	duk_push_global_object(ctx);
+	duk_get_prop_string(ctx, -1, "Object");
+	duk_get_prop_string(ctx, -1, "freeze");
+	duk_dup(ctx, -4);
+	duk_call(ctx, 1);
+	duk_pop_3(ctx);
+	return 1;
+%}
+
+getter Navigator::onLine()
+%{
+	duk_push_boolean(ctx, true);
+	return 1;
+%}
+
+getter Navigator::pdfViewerEnabled()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+getter Navigator::plugins()
+%{
+	/* Empty array-like object; no plugins in NetSurf */
+	duk_push_array(ctx);
+	return 1;
+%}
+
+getter Navigator::mimeTypes()
+%{
+	/* Empty array-like object */
+	duk_push_array(ctx);
 	return 1;
 %}

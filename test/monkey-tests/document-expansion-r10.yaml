@@ -1,0 +1,56 @@
+title: Document expansion R10 - doctype, inputEncoding, getElementsByClassName, createAttribute, adoptNode
+group: js-api
+steps:
+- action: launch
+  args:
+  - "--enable_javascript=1"
+- action: window-new
+  tag: win1
+- action: navigate
+  window: win1
+  url: about:blank
+- action: block
+  conditions:
+  - window: win1
+    status: complete
+- action: clear-log
+  window: win1
+- action: js-exec
+  window: win1
+  cmd: >-
+    (function(){
+      var f=0;
+      function ok(n,e){if(e){console.log("PASS: "+n);}else{console.log("FAIL: "+n);f++;}}
+      ok("inputEncoding is UTF-8", document.inputEncoding==="UTF-8");
+      ok("doctype exists", document.doctype!==undefined);
+      ok("hasFocus is function", typeof document.hasFocus==="function");
+      ok("hasFocus returns bool", typeof document.hasFocus()==="boolean");
+      ok("close is function", typeof document.close==="function");
+      ok("activeElement", document.activeElement===document.body||document.activeElement===null);
+      ok("currentScript is null", document.currentScript===null);
+      ok("designMode is off", document.designMode==="off");
+      ok("referrer is string", typeof document.referrer==="string");
+      ok("lastModified is string", typeof document.lastModified==="string");
+      ok("domain is string", typeof document.domain==="string");
+      ok("dir is string", typeof document.dir==="string");
+      ok("getElementsByName is function", typeof document.getElementsByName==="function");
+      ok("getElementsByClassName is function", typeof document.getElementsByClassName==="function");
+      var div=document.createElement("div");
+      div.className="testclass";
+      document.body.appendChild(div);
+      var found=document.getElementsByClassName("testclass");
+      ok("getElementsByClassName works", found!==null&&found.length>=1);
+      var attr=document.createAttribute("data-test");
+      ok("createAttribute works", attr!==null);
+      var comment=document.createComment("test comment");
+      ok("createComment works", comment!==null&&comment.nodeType===8);
+      var div2=document.createElement("div");
+      var adopted=document.adoptNode(div2);
+      ok("adoptNode works", adopted!==null);
+      console.log(f===0?"ALL PASS":"FAILURES: "+f);
+      console.log("DONE");
+    })()
+- action: wait-log
+  window: win1
+  substring: DONE
+- action: quit

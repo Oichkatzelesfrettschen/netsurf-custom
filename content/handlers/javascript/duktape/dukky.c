@@ -40,11 +40,13 @@
 #include "duktape/binding.h"
 #include "duktape/generics.js.inc"
 #include "duktape/polyfill.js.inc"
+#include "duktape/private.h"
 
 #include "duktape.h"
 #include "dukky.h"
 
 #include <dom/dom.h>
+#include <ctype.h>
 
 #define EVENT_MAGIC MAGIC(EVENT_MAP)
 #define HANDLER_LISTENER_MAGIC MAGIC(HANDLER_LISTENER_MAP)
@@ -466,10 +468,12 @@ dukky_push_node_klass(duk_context *ctx, struct dom_node *node)
 	case DOM_DOCUMENT_NODE:
 		duk_push_string(ctx, PROTO_NAME(DOCUMENT));
 		break;
+	case DOM_DOCUMENT_FRAGMENT_NODE:
+		duk_push_string(ctx, PROTO_NAME(DOCUMENTFRAGMENT));
+		break;
 	case DOM_ATTRIBUTE_NODE:
 	case DOM_PROCESSING_INSTRUCTION_NODE:
 	case DOM_DOCUMENT_TYPE_NODE:
-	case DOM_DOCUMENT_FRAGMENT_NODE:
 	case DOM_NOTATION_NODE:
 	case DOM_ENTITY_REFERENCE_NODE:
 	case DOM_ENTITY_NODE:
@@ -538,6 +542,316 @@ dukky_inject_not_ctr(duk_context *ctx, int idx, const char *name)
 	duk_put_prop_string(ctx, idx, name);
 	/* ... p ... */
 	return;
+}
+
+/* WHY: nsgenbind registers all classes with dukky_inject_not_ctr, which
+ * throws "Bad constructor". URL and URLSearchParams need real constructors
+ * so that `new URL(href)` and `new URLSearchParams(init)` work.
+ *
+ * WHY we cannot use dukky_create_object: nsgenbind registers the
+ * __constructor function via duk_push_c_function(ctx, fn, 1), hard-coding
+ * nargs=1. When dukky_populate_object calls duk_call(ctx, nargs+1), Duktape
+ * truncates the argument list to 1 because the target function was registered
+ * with nargs=1. This means the URL/USP init body never sees the constructor
+ * arguments. Instead, we build the object manually: create object, set
+ * prototype, allocate private data, and run the init logic inline. */
+
+/* Helper: create object with prototype from proto table, set up handlers
+ * and private data. Returns the object on top of the Duktape stack. */
+static bool
+dukky_construct_with_proto(duk_context *ctx, const char *proto_name,
+			   void *priv_ptr)
+{
+	/* Push a new object */
+	duk_push_object(ctx);
+	/* Set up handler maps */
+	duk_push_object(ctx);
+	duk_put_prop_string(ctx, -2, MAGIC(HANDLER_LISTENER_MAP));
+	duk_push_object(ctx);
+	duk_put_prop_string(ctx, -2, MAGIC(HANDLER_MAP));
+
+	/* Get prototype from proto table */
+	duk_get_global_string(ctx, PROTO_MAGIC);
+	duk_get_prop_string(ctx, -1, proto_name);
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop_3(ctx); /* undef, prototab, obj */
+		return false;
+	}
+	duk_remove(ctx, -2); /* prototab */
+	/* ... obj proto */
+	duk_set_prototype(ctx, -2);
+	/* ... obj[proto] */
+
+	/* Attach private data */
+	duk_push_pointer(ctx, priv_ptr);
+	duk_put_prop_string(ctx, -2, dukky_magic_string_private);
+
+	/* Object with prototype and private data is on the stack */
+	return true;
+}
+
+static duk_ret_t
+dukky_url_constructor(duk_context *ctx)
+{
+	if (!duk_is_constructor_call(ctx))
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "URL must be called with new");
+
+	int nargs = duk_get_top(ctx);
+	if (nargs < 1)
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "URL constructor requires at least one argument");
+
+	const char *href = duk_safe_to_string(ctx, 0);
+	nsurl *parsed = NULL;
+	nserror err;
+
+	if (nargs >= 2 && !duk_is_undefined(ctx, 1)) {
+		const char *base_s = duk_safe_to_string(ctx, 1);
+		nsurl *base = NULL;
+		err = nsurl_create(base_s, &base);
+		if (err != NSERROR_OK)
+			return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+					 "URL: invalid base URL");
+		err = nsurl_join(base, href, &parsed);
+		nsurl_unref(base);
+		if (err != NSERROR_OK)
+			return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+					 "URL: could not resolve relative URL");
+	} else {
+		err = nsurl_create(href, &parsed);
+		if (err != NSERROR_OK)
+			return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+					 "URL: invalid URL");
+	}
+
+	url_private_t *priv = calloc(1, sizeof(*priv));
+	if (priv == NULL) {
+		nsurl_unref(parsed);
+		return duk_error(ctx, DUK_ERR_ERROR, "URL: out of memory");
+	}
+	priv->url = parsed;
+
+	if (!dukky_construct_with_proto(ctx, PROTO_NAME(URL), priv)) {
+		nsurl_unref(parsed);
+		free(priv);
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "URL: prototype not found");
+	}
+
+	return 1;
+}
+
+/* Percent-decode a string in-place (output <= input length) */
+static size_t usp_percent_decode(char *s, size_t len)
+{
+	size_t out = 0;
+	for (size_t i = 0; i < len; i++) {
+		if (s[i] == '%' && i + 2 < len &&
+		    isxdigit((unsigned char)s[i+1]) &&
+		    isxdigit((unsigned char)s[i+2])) {
+			char hex[3] = { s[i+1], s[i+2], '\0' };
+			s[out++] = (char)strtol(hex, NULL, 16);
+			i += 2;
+		} else if (s[i] == '+') {
+			s[out++] = ' ';
+		} else {
+			s[out++] = s[i];
+		}
+	}
+	return out;
+}
+
+/* WHY: nsgenbind does not generate toString for URLSearchParams because
+ * adding it to the WebIDL conflicts with the generic toString installed by
+ * dukky_create_prototype in binding.c. Instead, we install this proper
+ * toString on the prototype after creation. */
+static duk_ret_t
+dukky_urlsearchparams_tostring(duk_context *ctx)
+{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(Params));
+	duk_size_t len = duk_get_length(ctx, -1);
+
+	if (len == 0) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	duk_idx_t parts = 0;
+	for (duk_size_t i = 0; i < len; i++) {
+		if (i > 0) {
+			duk_push_lstring(ctx, "&", 1);
+			parts++;
+		}
+		duk_get_prop_index(ctx, -1 - parts, (duk_uarridx_t)i);
+		duk_get_prop_index(ctx, -1, 0);
+		duk_remove(ctx, -2);
+		parts++;
+		duk_push_lstring(ctx, "=", 1);
+		parts++;
+		duk_get_prop_index(ctx, -1 - parts, (duk_uarridx_t)i);
+		duk_get_prop_index(ctx, -1, 1);
+		duk_remove(ctx, -2);
+		parts++;
+	}
+
+	duk_concat(ctx, (duk_idx_t)parts);
+	return 1;
+}
+
+/* WHY: Same issue as URLSearchParams -- URL toString/toJSON are not in the
+ * WebIDL (adding them conflicts with binding.c generic toString). */
+static duk_ret_t
+dukky_url_tostring(duk_context *ctx)
+{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, dukky_magic_string_private);
+	url_private_t *priv = duk_get_pointer(ctx, -1);
+	if (priv == NULL || priv->url == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_string(ctx, nsurl_access(priv->url));
+	return 1;
+}
+
+static duk_ret_t
+dukky_url_tojson(duk_context *ctx)
+{
+	return dukky_url_tostring(ctx);
+}
+
+static duk_ret_t
+dukky_urlsearchparams_constructor(duk_context *ctx)
+{
+	if (!duk_is_constructor_call(ctx))
+		return duk_error(ctx, DUK_ERR_TYPE_ERROR,
+				 "URLSearchParams must be called with new");
+
+	url_search_params_private_t *priv = calloc(1, sizeof(*priv));
+	if (priv == NULL)
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "URLSearchParams: out of memory");
+
+	int nargs = duk_get_top(ctx);
+
+	if (!dukky_construct_with_proto(ctx, PROTO_NAME(URLSEARCHPARAMS),
+					priv)) {
+		free(priv);
+		return duk_error(ctx, DUK_ERR_ERROR,
+				 "URLSearchParams: prototype not found");
+	}
+	/* ... obj is on top of stack */
+
+	/* Create internal params array */
+	duk_push_array(ctx);
+
+	if (nargs >= 1 && duk_is_string(ctx, 0)) {
+		duk_size_t init_len;
+		const char *init = duk_safe_to_lstring(ctx, 0, &init_len);
+		const char *p = init;
+		if (init_len > 0 && p[0] == '?') { p++; init_len--; }
+
+		uint32_t idx = 0;
+		while (init_len > 0) {
+			const char *amp = memchr(p, '&', init_len);
+			size_t pair_len = amp ? (size_t)(amp - p) : init_len;
+			const char *eq = memchr(p, '=', pair_len);
+			size_t key_len = eq ? (size_t)(eq - p) : pair_len;
+			size_t val_len = eq ? pair_len - key_len - 1 : 0;
+			const char *val_p = eq ? eq + 1 : p + key_len;
+
+			if (key_len > 0) {
+				char *key = malloc(key_len + 1);
+				char *val = malloc(val_len + 1);
+				if (key != NULL && val != NULL) {
+					memcpy(key, p, key_len);
+					key[key_len] = '\0';
+					size_t dk = usp_percent_decode(
+							key, key_len);
+					memcpy(val, val_p, val_len);
+					val[val_len] = '\0';
+					size_t dv = usp_percent_decode(
+							val, val_len);
+					duk_push_array(ctx);
+					duk_push_lstring(ctx, key, dk);
+					duk_put_prop_index(ctx, -2, 0);
+					duk_push_lstring(ctx, val, dv);
+					duk_put_prop_index(ctx, -2, 1);
+					duk_put_prop_index(ctx, -2, idx++);
+				}
+				free(key);
+				free(val);
+			}
+
+			if (amp == NULL) break;
+			p = amp + 1;
+			init_len -= pair_len + 1;
+		}
+	}
+
+	duk_put_prop_string(ctx, -2, MAGIC(Params));
+	/* obj is still on top */
+	return 1;
+}
+
+duk_ret_t
+dukky_push_urlsearchparams(duk_context *ctx, const char *qs, size_t len)
+{
+	url_search_params_private_t *priv = calloc(1, sizeof(*priv));
+	if (priv == NULL)
+		return 0;
+
+	if (!dukky_construct_with_proto(ctx, PROTO_NAME(URLSEARCHPARAMS),
+					priv)) {
+		free(priv);
+		return 0;
+	}
+
+	/* Create params array and parse query string */
+	duk_push_array(ctx);
+
+	const char *p = qs;
+	if (len > 0 && p[0] == '?') { p++; len--; }
+
+	uint32_t idx = 0;
+	while (len > 0) {
+		const char *amp = memchr(p, '&', len);
+		size_t pair_len = amp ? (size_t)(amp - p) : len;
+		const char *eq = memchr(p, '=', pair_len);
+		size_t key_len = eq ? (size_t)(eq - p) : pair_len;
+		size_t val_len = eq ? pair_len - key_len - 1 : 0;
+		const char *val_p = eq ? eq + 1 : p + key_len;
+
+		if (key_len > 0) {
+			char *key = malloc(key_len + 1);
+			char *val = malloc(val_len + 1);
+			if (key != NULL && val != NULL) {
+				memcpy(key, p, key_len);
+				key[key_len] = '\0';
+				size_t dk = usp_percent_decode(key, key_len);
+				memcpy(val, val_p, val_len);
+				val[val_len] = '\0';
+				size_t dv = usp_percent_decode(val, val_len);
+				duk_push_array(ctx);
+				duk_push_lstring(ctx, key, dk);
+				duk_put_prop_index(ctx, -2, 0);
+				duk_push_lstring(ctx, val, dv);
+				duk_put_prop_index(ctx, -2, 1);
+				duk_put_prop_index(ctx, -2, idx++);
+			}
+			free(key);
+			free(val);
+		}
+
+		if (amp == NULL) break;
+		p = amp + 1;
+		len -= pair_len + 1;
+	}
+
+	duk_put_prop_string(ctx, -2, MAGIC(Params));
+	return 1; /* USP object on stack */
 }
 
 /* Duktape heap utility functions */
@@ -777,6 +1091,141 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv, jsthread **th
 	/* ..., result */
 	duk_pop(CTX);
 	/* ... */
+
+	/* WHY: polyfill.js stores Map, Set, etc. on globalThis, which in
+	 * Duktape after duk_set_global_object is the OLD Duktape global
+	 * (stored as PROTO_MAGIC on Window), not the Window itself. Variable
+	 * resolution uses Window (the current global), so bare `Map` fails.
+	 *
+	 * Fix: copy polyfill-defined names from the old Duktape global
+	 * (PROTO_MAGIC) onto the Window, and register real constructors
+	 * for URL and URLSearchParams.
+	 */
+	{
+		duk_push_global_object(CTX);
+		/* ... Win */
+
+		/* Get old Duktape global (stored as PROTO_MAGIC on Window) */
+		duk_get_prop_string(CTX, -1, PROTO_MAGIC);
+		/* ... Win oldGlobal */
+
+		/* Copy ES6 polyfills from old global onto Window */
+		static const char * const es6_names[] = {
+			"Map", "Set", "WeakMap", "WeakSet", "Promise", NULL
+		};
+		for (const char * const *p = es6_names; *p != NULL; p++) {
+			if (duk_get_prop_string(CTX, -1, *p)) {
+				/* ... Win oldGlobal value */
+				duk_put_prop_string(CTX, -3, *p);
+				/* ... Win oldGlobal */
+			} else {
+				duk_pop(CTX); /* undefined */
+			}
+		}
+
+		duk_pop(CTX); /* oldGlobal */
+		/* ... Win */
+
+		/* Register real URL constructor */
+		duk_push_c_function(CTX, dukky_url_constructor,
+				    DUK_VARARGS);
+		duk_get_global_string(CTX, dukky_magic_string_prototypes);
+		duk_get_prop_string(CTX, -1,
+			"\xFF\xFFNETSURF_DUKTAPE_PROTOTYPE_URL");
+		duk_remove(CTX, -2); /* prototypes table */
+		duk_put_prop_string(CTX, -2, "prototype");
+		duk_put_prop_string(CTX, -2, "URL");
+
+		/* Register real URLSearchParams constructor */
+		duk_push_c_function(CTX, dukky_urlsearchparams_constructor,
+				    DUK_VARARGS);
+		duk_get_global_string(CTX, dukky_magic_string_prototypes);
+		duk_get_prop_string(CTX, -1,
+			"\xFF\xFFNETSURF_DUKTAPE_PROTOTYPE_URLSEARCHPARAMS");
+		duk_remove(CTX, -2); /* prototypes table */
+		duk_put_prop_string(CTX, -2, "prototype");
+		duk_put_prop_string(CTX, -2, "URLSearchParams");
+
+		/* WHY: Install real toString/toJSON on URL and USP prototypes.
+		 * dukky_create_prototype installs a generic toString that
+		 * returns "[object ClassName]". We need proper implementations.
+		 * Use duk_def_prop with FORCE to override regardless of
+		 * writability. */
+		duk_get_global_string(CTX, dukky_magic_string_prototypes);
+		/* ... Win prototab */
+
+		/* URL prototype: toString and toJSON */
+		duk_get_prop_string(CTX, -1,
+			"\xFF\xFFNETSURF_DUKTAPE_PROTOTYPE_URL");
+		/* ... Win prototab url_proto */
+		duk_push_string(CTX, "toString");
+		duk_push_c_function(CTX, dukky_url_tostring, 0);
+		duk_def_prop(CTX, -3,
+			     DUK_DEFPROP_HAVE_VALUE |
+			     DUK_DEFPROP_HAVE_WRITABLE |
+			     DUK_DEFPROP_WRITABLE |
+			     DUK_DEFPROP_HAVE_CONFIGURABLE |
+			     DUK_DEFPROP_CONFIGURABLE |
+			     DUK_DEFPROP_FORCE);
+		duk_push_string(CTX, "toJSON");
+		duk_push_c_function(CTX, dukky_url_tojson, 0);
+		duk_def_prop(CTX, -3,
+			     DUK_DEFPROP_HAVE_VALUE |
+			     DUK_DEFPROP_HAVE_WRITABLE |
+			     DUK_DEFPROP_WRITABLE |
+			     DUK_DEFPROP_HAVE_CONFIGURABLE |
+			     DUK_DEFPROP_CONFIGURABLE);
+		duk_pop(CTX); /* url_proto */
+
+		/* URLSearchParams prototype: toString */
+		duk_get_prop_string(CTX, -1,
+			"\xFF\xFFNETSURF_DUKTAPE_PROTOTYPE_URLSEARCHPARAMS");
+		duk_push_string(CTX, "toString");
+		duk_push_c_function(CTX, dukky_urlsearchparams_tostring, 0);
+		duk_def_prop(CTX, -3,
+			     DUK_DEFPROP_HAVE_VALUE |
+			     DUK_DEFPROP_HAVE_WRITABLE |
+			     DUK_DEFPROP_WRITABLE |
+			     DUK_DEFPROP_HAVE_CONFIGURABLE |
+			     DUK_DEFPROP_CONFIGURABLE |
+			     DUK_DEFPROP_FORCE);
+		duk_pop(CTX); /* usp_proto */
+
+		duk_pop(CTX); /* prototab */
+
+		/* WHY: Node.ELEMENT_NODE etc. are const members in the WebIDL
+		 * but nsgenbind doesn't register them as properties on the
+		 * constructor function. Install them on the Node constructor
+		 * and prototype for spec compliance. */
+		duk_get_prop_string(CTX, -1, "Node");
+		/* ... Win Node */
+		if (duk_is_function(CTX, -1)) {
+			static const struct {
+				const char *name;
+				unsigned short value;
+			} node_consts[] = {
+				{"ELEMENT_NODE", 1},
+				{"ATTRIBUTE_NODE", 2},
+				{"TEXT_NODE", 3},
+				{"CDATA_SECTION_NODE", 4},
+				{"PROCESSING_INSTRUCTION_NODE", 7},
+				{"COMMENT_NODE", 8},
+				{"DOCUMENT_NODE", 9},
+				{"DOCUMENT_TYPE_NODE", 10},
+				{"DOCUMENT_FRAGMENT_NODE", 11},
+				{NULL, 0}
+			};
+			for (int i = 0; node_consts[i].name != NULL; i++) {
+				duk_push_uint(CTX, node_consts[i].value);
+				duk_put_prop_string(CTX, -2,
+						    node_consts[i].name);
+			}
+		}
+		duk_pop(CTX); /* Node */
+
+		duk_pop(CTX); /* Win */
+		/* ... */
+	}
 
 	/* Now load the NetSurf table in */
 	/* ... */

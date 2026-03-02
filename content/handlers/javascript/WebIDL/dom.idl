@@ -16,6 +16,8 @@ interface Event {
   const unsigned short BUBBLING_PHASE = 3;
   readonly attribute unsigned short eventPhase;
 
+  sequence<EventTarget> composedPath();
+
   void stopPropagation();
   void stopImmediatePropagation();
 
@@ -24,10 +26,17 @@ interface Event {
   void preventDefault();
   readonly attribute boolean defaultPrevented;
 
+  readonly attribute boolean composed;
+
   [Unforgeable] readonly attribute boolean isTrusted;
   readonly attribute DOMTimeStamp timeStamp;
 
   void initEvent(DOMString type, boolean bubbles, boolean cancelable);
+
+  // legacy properties (used by many sites)
+  readonly attribute EventTarget? srcElement;
+  attribute boolean cancelBubble;
+  attribute boolean returnValue;
 };
 
 dictionary EventInit {
@@ -76,6 +85,7 @@ interface ParentNode {
 
   [Unscopeable] void prepend((Node or DOMString)... nodes);
   [Unscopeable] void append((Node or DOMString)... nodes);
+  [Unscopeable] void replaceChildren((Node or DOMString)... nodes);
 
   [Unscopeable] Element? query(DOMString relativeSelectors);
   [NewObject, Unscopeable] Elements queryAll(DOMString relativeSelectors);
@@ -180,6 +190,8 @@ interface Node : EventTarget {
   readonly attribute Document? ownerDocument;
   readonly attribute Node? parentNode;
   readonly attribute Element? parentElement;
+  readonly attribute boolean isConnected;
+  Node getRootNode(optional GetRootNodeOptions options);
   boolean hasChildNodes();
   [SameObject] readonly attribute NodeList childNodes;
   readonly attribute Node? firstChild;
@@ -193,6 +205,7 @@ interface Node : EventTarget {
 
   [NewObject] Node cloneNode(optional boolean deep = false);
   boolean isEqualNode(Node? otherNode);
+  boolean isSameNode(Node? otherNode);
 
   const unsigned short DOCUMENT_POSITION_DISCONNECTED = 0x01;
   const unsigned short DOCUMENT_POSITION_PRECEDING = 0x02;
@@ -211,6 +224,10 @@ interface Node : EventTarget {
   Node appendChild(Node node);
   Node replaceChild(Node node, Node child);
   Node removeChild(Node child);
+};
+
+dictionary GetRootNodeOptions {
+  boolean composed = false;
 };
 
 [Constructor,
@@ -287,9 +304,11 @@ interface Element : Node {
            attribute DOMString id;
            attribute DOMString className;
   [SameObject] readonly attribute DOMTokenList classList;
+           attribute DOMString slot;
 
   boolean hasAttributes();
   [SameObject] readonly attribute NamedNodeMap attributes;
+  sequence<DOMString> getAttributeNames();
   DOMString? getAttribute(DOMString name);
   DOMString? getAttributeNS(DOMString? namespace, DOMString localName);
   void setAttribute(DOMString name, DOMString value);
@@ -298,6 +317,7 @@ interface Element : Node {
   void removeAttributeNS(DOMString? namespace, DOMString localName);
   boolean hasAttribute(DOMString name);
   boolean hasAttributeNS(DOMString? namespace, DOMString localName);
+  boolean toggleAttribute(DOMString qualifiedName, optional boolean force);
 
   Attr? getAttributeNode(DOMString name);
   Attr? getAttributeNodeNS(DOMString? namespace, DOMString localName);
@@ -311,6 +331,9 @@ interface Element : Node {
   HTMLCollection getElementsByTagName(DOMString localName);
   HTMLCollection getElementsByTagNameNS(DOMString? namespace, DOMString localName);
   HTMLCollection getElementsByClassName(DOMString classNames);
+
+  Element? insertAdjacentElement(DOMString where, Element element);
+  void insertAdjacentText(DOMString where, DOMString data);
 };
 [Exposed=Window]
 interface NamedNodeMap {

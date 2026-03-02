@@ -12,6 +12,7 @@ prologue HTMLInputElement()
 %{
 #include <utils/corestrings.h>
 #include <dom/html/html_input_element.h>
+#include <dom/html/html_element.h>
 
 #define INPUT_NODE ((dom_html_input_element *)((node_private_t *)priv)->node)
 %}
@@ -493,6 +494,302 @@ setter HTMLInputElement::step()
 		dom_string_unref(str);
 	}
 	return 0;
+%}
+
+getter HTMLInputElement::form()
+%{
+	dom_html_form_element *form = NULL;
+	dom_exception exc;
+
+	exc = dom_html_input_element_get_form(INPUT_NODE, &form);
+	if (exc == DOM_NO_ERR && form != NULL) {
+		dukky_push_node(ctx, (dom_node *)form);
+		dom_node_unref(form);
+		return 1;
+	}
+	/* Fallback: walk DOM tree for nearest <form> ancestor */
+	dom_node *cur = ((node_private_t *)priv)->node;
+	dom_node_ref(cur);
+	while (cur != NULL) {
+		dom_node *parent = NULL;
+		exc = dom_node_get_parent_node(cur, &parent);
+		dom_node_unref(cur);
+		if (exc != DOM_NO_ERR || parent == NULL) break;
+		cur = parent;
+		dom_html_element_type tag_type;
+		tag_type = DOM_HTML_ELEMENT_TYPE__UNKNOWN;
+		exc = dom_html_element_get_tag_type(cur, &tag_type);
+		if (exc == DOM_NO_ERR &&
+		    tag_type == DOM_HTML_ELEMENT_TYPE_FORM) {
+			dukky_push_node(ctx, cur);
+			dom_node_unref(cur);
+			return 1;
+		}
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter HTMLInputElement::autocomplete()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_autocomplete, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::autocomplete()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_autocomplete, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::autofocus()
+%{
+	bool has = false;
+	dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_autofocus, &has);
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLInputElement::autofocus()
+%{
+	bool val = duk_to_boolean(ctx, 0);
+	if (val) {
+		dom_string *empty = NULL;
+		if (dom_string_create((const uint8_t *)"", 0, &empty) == DOM_NO_ERR) {
+			dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_autofocus, empty);
+			dom_string_unref(empty);
+		}
+	} else {
+		dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_autofocus);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::multiple()
+%{
+	bool has = false;
+	dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_multiple, &has);
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLInputElement::multiple()
+%{
+	bool val = duk_to_boolean(ctx, 0);
+	if (val) {
+		dom_string *empty = NULL;
+		if (dom_string_create((const uint8_t *)"", 0, &empty) == DOM_NO_ERR) {
+			dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_multiple, empty);
+			dom_string_unref(empty);
+		}
+	} else {
+		dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_multiple);
+	}
+	return 0;
+%}
+
+setter HTMLInputElement::type()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_type, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::indeterminate()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(indeterminate));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop_2(ctx);
+		duk_push_boolean(ctx, false);
+	} else {
+		duk_remove(ctx, -2);
+	}
+	return 1;
+%}
+
+setter HTMLInputElement::indeterminate()
+%{
+	duk_push_this(ctx);
+	duk_push_boolean(ctx, duk_to_boolean(ctx, 0));
+	duk_put_prop_string(ctx, -2, MAGIC(indeterminate));
+	return 0;
+%}
+
+getter HTMLInputElement::formAction()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_formaction, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::formAction()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_formaction, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::formEnctype()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_formenctype, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::formEnctype()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_formenctype, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::formMethod()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_formmethod, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::formMethod()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_formmethod, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::formNoValidate()
+%{
+	bool has = false;
+	dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_formnovalidate, &has);
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLInputElement::formNoValidate()
+%{
+	bool val = duk_to_boolean(ctx, 0);
+	if (val) {
+		dom_string *empty = NULL;
+		if (dom_string_create((const uint8_t *)"", 0, &empty) == DOM_NO_ERR) {
+			dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_formnovalidate, empty);
+			dom_string_unref(empty);
+		}
+	} else {
+		dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_formnovalidate);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::formTarget()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_formtarget, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLInputElement::formTarget()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_formtarget, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLInputElement::labels()
+%{
+	duk_push_array(ctx);
+	return 1;
 %}
 
 /* -- Deferred: valueAsNumber, valueHigh, valueLow (non-standard or complex) -- */

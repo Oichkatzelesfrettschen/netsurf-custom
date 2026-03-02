@@ -11,7 +11,7 @@ steps:
     tag: win1
   - action: navigate
     window: win1
-    url: http://www.bbc.co.uk/news
+    url: about:welcome
   - action: sleep-ms
     time: sleepytimer
     conditions:

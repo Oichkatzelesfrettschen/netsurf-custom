@@ -132,6 +132,19 @@ SVGElement implements ElementCSSInlineStyle;
 
 partial interface Window {
   [NewObject] CSSStyleDeclaration getComputedStyle(Element elt , optional DOMString? pseudoElt );
+
+  /* CSSOM View Module -- viewport, screen, and scroll */
+  readonly attribute long innerWidth;
+  readonly attribute long innerHeight;
+  readonly attribute long outerWidth;
+  readonly attribute long outerHeight;
+  readonly attribute long screenX;
+  readonly attribute long screenY;
+  readonly attribute double devicePixelRatio;
+
+  void scroll(optional long x, optional long y);
+  void scrollTo(optional long x, optional long y);
+  void scrollBy(optional long x, optional long y);
 };
 
 [NoInterfaceObject]interface GetStyleUtils  {

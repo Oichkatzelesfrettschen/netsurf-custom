@@ -11,6 +11,8 @@
 prologue HTMLSelectElement()
 %{
 #include <dom/html/html_select_element.h>
+#include <dom/html/html_element.h>
+#include "utils/corestrings.h"
 
 #define SELECT_NODE ((dom_html_select_element *)((node_private_t *)priv)->node)
 %}
@@ -140,12 +142,141 @@ setter HTMLSelectElement::size()
 getter HTMLSelectElement::form()
 %{
 	dom_html_form_element *form = NULL;
-	dom_html_select_element_get_form(SELECT_NODE, &form);
-	if (form == NULL) {
-		duk_push_null(ctx);
+	dom_exception exc;
+
+	exc = dom_html_select_element_get_form(SELECT_NODE, &form);
+	if (exc == DOM_NO_ERR && form != NULL) {
+		dukky_push_node(ctx, (dom_node *)form);
+		dom_node_unref(form);
 		return 1;
 	}
-	dukky_push_node(ctx, (dom_node *)form);
-	dom_node_unref(form);
+	/* Fallback: walk DOM tree for nearest <form> ancestor */
+	dom_node *cur = ((node_private_t *)priv)->node;
+	dom_node_ref(cur);
+	while (cur != NULL) {
+		dom_node *parent = NULL;
+		exc = dom_node_get_parent_node(cur, &parent);
+		dom_node_unref(cur);
+		if (exc != DOM_NO_ERR || parent == NULL) break;
+		cur = parent;
+		dom_html_element_type tag_type;
+		tag_type = DOM_HTML_ELEMENT_TYPE__UNKNOWN;
+		exc = dom_html_element_get_tag_type(cur, &tag_type);
+		if (exc == DOM_NO_ERR &&
+		    tag_type == DOM_HTML_ELEMENT_TYPE_FORM) {
+			dukky_push_node(ctx, cur);
+			dom_node_unref(cur);
+			return 1;
+		}
+	}
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter HTMLSelectElement::autocomplete()
+%{
+	dom_string *val = NULL;
+	dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_autocomplete, &val);
+	if (val == NULL) { duk_push_lstring(ctx, "", 0); return 1; }
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLSelectElement::autocomplete()
+%{
+	dom_string *str = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_autocomplete, str);
+		dom_string_unref(str);
+	}
+	return 0;
+%}
+
+getter HTMLSelectElement::required()
+%{
+	bool has = false;
+	dom_element_has_attribute(
+		(dom_element *)((node_private_t *)priv)->node,
+		corestring_dom_required, &has);
+	duk_push_boolean(ctx, has);
+	return 1;
+%}
+
+setter HTMLSelectElement::required()
+%{
+	bool val = duk_to_boolean(ctx, 0);
+	if (val) {
+		dom_string *empty = NULL;
+		if (dom_string_create((const uint8_t *)"", 0, &empty) == DOM_NO_ERR) {
+			dom_element_set_attribute(
+				(dom_element *)((node_private_t *)priv)->node,
+				corestring_dom_required, empty);
+			dom_string_unref(empty);
+		}
+	} else {
+		dom_element_remove_attribute(
+			(dom_element *)((node_private_t *)priv)->node,
+			corestring_dom_required);
+	}
+	return 0;
+%}
+
+getter HTMLSelectElement::options()
+%{
+	dom_html_options_collection *opts = NULL;
+	dom_exception exc;
+
+	exc = dom_html_select_element_get_options(SELECT_NODE, &opts);
+	if (exc != DOM_NO_ERR || opts == NULL) {
+		duk_push_array(ctx);
+		return 1;
+	}
+
+	dukky_push_generics(ctx, "makeListProxy");
+	duk_push_pointer(ctx, opts);
+	dukky_create_object(ctx, PROTO_NAME(HTMLOPTIONSCOLLECTION), 1);
+	dom_html_collection_unref((dom_html_collection *)opts);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		duk_push_array(ctx);
+		return 1;
+	}
+	return 1;
+%}
+
+getter HTMLSelectElement::labels()
+%{
+	duk_push_array(ctx);
+	return 1;
+%}
+
+getter HTMLSelectElement::willValidate()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+getter HTMLSelectElement::validationMessage()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+method HTMLSelectElement::checkValidity()
+%{
+	duk_push_boolean(ctx, true);
+	return 1;
+%}
+
+method HTMLSelectElement::reportValidity()
+%{
+	duk_push_boolean(ctx, true);
 	return 1;
 %}

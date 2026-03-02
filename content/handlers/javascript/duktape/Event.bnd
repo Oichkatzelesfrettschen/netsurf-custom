@@ -258,6 +258,25 @@ getter Event::composed ()
 	return 1;
 %}
 
+method Event::composedPath()
+%{
+	/* Return array containing just the target; no shadow DOM support */
+	dom_node *et = NULL;
+	dom_exception exc;
+
+	duk_push_array(ctx);
+
+	exc = dom_event_get_target(priv->evt, &et);
+	if (exc == DOM_NO_ERR && et != NULL) {
+		if (dukky_push_node(ctx, et)) {
+			duk_put_prop_index(ctx, -2, 0);
+		}
+		dom_node_unref(et);
+	}
+
+	return 1;
+%}
+
 method Event::initEvent ()
 %{
 	dom_exception exc;

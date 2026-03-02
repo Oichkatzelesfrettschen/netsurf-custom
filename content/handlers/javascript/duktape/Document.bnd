@@ -18,6 +18,7 @@ prologue Document()
 #include "content/urldb.h"
 #include <dom/html/html_document.h>
 #include <dom/html/html_collection.h>
+#include <strings.h>
 
 #define HANDLER_MAGIC MAGIC(HANDLER_MAP)
 %}
@@ -441,7 +442,33 @@ method Document::createEvent ()
 	exc = dom_event_set_is_trusted(evt, false);
 	if (exc != DOM_NO_ERR) { dom_event_unref(evt); return 0; }
 
-	dukky_push_event(ctx, evt);
+	/* WHY: The spec says createEvent(interface) must return an object
+	 * with the prototype of the named interface. dukky_push_event uses
+	 * dukky_event_proto which only detects keyboard events by type.
+	 * For CustomEvent, we need the CustomEvent prototype so that
+	 * initCustomEvent is available. */
+	const char *iface = duk_safe_to_string(ctx, 0);
+	const char *proto = PROTO_NAME(EVENT);
+	if (iface != NULL) {
+		if (strcasecmp(iface, "CustomEvent") == 0 ||
+		    strcasecmp(iface, "customevent") == 0) {
+			proto = PROTO_NAME(CUSTOMEVENT);
+		} else if (strcasecmp(iface, "MouseEvent") == 0 ||
+			   strcasecmp(iface, "MouseEvents") == 0) {
+			proto = PROTO_NAME(MOUSEEVENT);
+		} else if (strcasecmp(iface, "KeyboardEvent") == 0) {
+			proto = PROTO_NAME(KEYBOARDEVENT);
+		} else if (strcasecmp(iface, "UIEvent") == 0 ||
+			   strcasecmp(iface, "UIEvents") == 0) {
+			proto = PROTO_NAME(UIEVENT);
+		}
+	}
+
+	duk_push_pointer(ctx, evt);
+	if (dukky_create_object(ctx, proto, 1) != DUK_EXEC_SUCCESS) {
+		dom_event_unref(evt);
+		return 0;
+	}
 
 	dom_event_unref(evt);
 	return 1;
@@ -524,6 +551,33 @@ setter Document::title()
 	exc = dom_nodelist_item(nodes, 0, &title_node);
 	dom_nodelist_unref(nodes);
 	if (exc != DOM_NO_ERR || title_node == NULL) {
+		/* No <title> exists -- create one and append to <head> */
+		dom_node *new_title = NULL;
+		exc = dom_document_create_element(
+			priv->parent.node, corestring_dom_TITLE,
+			(dom_element **)&new_title);
+		if (exc != DOM_NO_ERR || new_title == NULL) {
+			dom_string_unref(val);
+			return 0;
+		}
+		struct dom_nodelist *heads = NULL;
+		exc = dom_document_get_elements_by_tag_name(
+			priv->parent.node, corestring_dom_HEAD, &heads);
+		if (exc == DOM_NO_ERR && heads != NULL) {
+			dom_node *head_node = NULL;
+			exc = dom_nodelist_item(heads, 0, &head_node);
+			dom_nodelist_unref(heads);
+			if (exc == DOM_NO_ERR && head_node != NULL) {
+				dom_node *result = NULL;
+				dom_node_append_child(head_node, new_title,
+						      &result);
+				if (result != NULL)
+					dom_node_unref(result);
+				dom_node_unref(head_node);
+			}
+		}
+		dom_node_set_text_content(new_title, val);
+		dom_node_unref(new_title);
 		dom_string_unref(val);
 		return 0;
 	}
@@ -729,6 +783,618 @@ getter Document::defaultView()
 %{
 	duk_push_global_object(ctx);
 	return 1;
+%}
+
+getter Document::inputEncoding()
+%{
+	/* Alias of characterSet; NetSurf uses UTF-8 internally */
+	duk_push_lstring(ctx, "UTF-8", 5);
+	return 1;
+%}
+
+getter Document::doctype()
+%{
+	dom_document_type *dtd = NULL;
+	dom_exception exc;
+
+	exc = dom_document_get_doctype(priv->parent.node, &dtd);
+	if (exc != DOM_NO_ERR || dtd == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	dukky_push_node(ctx, (dom_node *)dtd);
+	dom_node_unref(dtd);
+	return 1;
+%}
+
+method Document::getElementsByClassName()
+%{
+	dom_string *classname;
+	dom_exception exc;
+	duk_size_t len;
+	const char *str = duk_safe_to_lstring(ctx, 0, &len);
+
+	exc = dom_string_create((const uint8_t *)str, len, &classname);
+	if (exc != DOM_NO_ERR) return 0;
+
+	/* Use getElementsByTagName("*") then filter by class as libdom
+	 * does not expose dom_document_get_elements_by_class_name. */
+	dom_nodelist *nodes = NULL;
+	dom_string *star = NULL;
+	exc = dom_string_create((const uint8_t *)"*", 1, &star);
+	if (exc != DOM_NO_ERR) {
+		dom_string_unref(classname);
+		return 0;
+	}
+
+	exc = dom_document_get_elements_by_tag_name(
+		((node_private_t *)priv)->node, star, &nodes);
+	dom_string_unref(star);
+	if (exc != DOM_NO_ERR || nodes == NULL) {
+		dom_string_unref(classname);
+		return 0;
+	}
+
+	uint32_t nlen = 0;
+	dom_nodelist_get_length(nodes, &nlen);
+
+	duk_push_array(ctx);
+	uint32_t idx = 0;
+	for (uint32_t i = 0; i < nlen; i++) {
+		dom_node *item = NULL;
+		exc = dom_nodelist_item(nodes, i, &item);
+		if (exc != DOM_NO_ERR || item == NULL) continue;
+
+		dom_string *cls = NULL;
+		dom_element_get_attribute((dom_element *)item,
+					  corestring_dom_class, &cls);
+		if (cls != NULL) {
+			/* Check if any class token matches */
+			const char *cd = dom_string_data(cls);
+			size_t cl = dom_string_length(cls);
+			const char *nd = dom_string_data(classname);
+			size_t nl = dom_string_length(classname);
+			const char *p = cd;
+			const char *end = cd + cl;
+			bool found = false;
+			while (p < end) {
+				while (p < end && (*p == ' ' || *p == '\t'
+						|| *p == '\n' || *p == '\r'))
+					p++;
+				const char *tok = p;
+				while (p < end && *p != ' ' && *p != '\t'
+						&& *p != '\n' && *p != '\r')
+					p++;
+				if ((size_t)(p - tok) == nl &&
+				    strncmp(tok, nd, nl) == 0) {
+					found = true;
+					break;
+				}
+			}
+			dom_string_unref(cls);
+			if (found) {
+				if (dukky_push_node(ctx, item)) {
+					duk_put_prop_index(ctx, -2, idx++);
+				}
+			}
+		}
+		dom_node_unref(item);
+	}
+
+	dom_nodelist_unref(nodes);
+	dom_string_unref(classname);
+	return 1;
+%}
+
+method Document::createAttribute()
+%{
+	dom_string *name_str = NULL;
+	dom_exception exc;
+	duk_size_t len;
+	const char *name = duk_safe_to_lstring(ctx, 0, &len);
+
+	exc = dom_string_create((const uint8_t *)name, len, &name_str);
+	if (exc != DOM_NO_ERR) return 0;
+
+	dom_attr *attr = NULL;
+	exc = dom_document_create_attribute(priv->parent.node,
+					     name_str, &attr);
+	dom_string_unref(name_str);
+	if (exc != DOM_NO_ERR || attr == NULL) return 0;
+
+	dukky_push_node(ctx, (dom_node *)attr);
+	dom_node_unref(attr);
+	return 1;
+%}
+
+method Document::importNode()
+%{
+	if (duk_get_top(ctx) < 1 || !duk_is_object(ctx, 0)) return 0;
+
+	duk_get_prop_string(ctx, 0, dukky_magic_string_private);
+	node_private_t *other_priv = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+	if (other_priv == NULL || other_priv->node == NULL) return 0;
+
+	bool deep = (duk_get_top(ctx) >= 2) ? duk_to_boolean(ctx, 1) : false;
+
+	dom_node *imported = NULL;
+	dom_exception exc;
+	exc = dom_document_import_node(priv->parent.node,
+				       other_priv->node, deep, &imported);
+	if (exc != DOM_NO_ERR || imported == NULL) return 0;
+
+	dukky_push_node(ctx, imported);
+	dom_node_unref(imported);
+	return 1;
+%}
+
+method Document::adoptNode()
+%{
+	if (duk_get_top(ctx) < 1 || !duk_is_object(ctx, 0)) return 0;
+
+	duk_get_prop_string(ctx, 0, dukky_magic_string_private);
+	node_private_t *other_priv = duk_get_pointer(ctx, -1);
+	duk_pop(ctx);
+	if (other_priv == NULL || other_priv->node == NULL) return 0;
+
+	dom_node *adopted = NULL;
+	dom_exception exc;
+	exc = dom_document_adopt_node(priv->parent.node,
+				      other_priv->node, &adopted);
+	if (exc != DOM_NO_ERR || adopted == NULL) return 0;
+
+	dukky_push_node(ctx, adopted);
+	dom_node_unref(adopted);
+	return 1;
+%}
+
+method Document::getElementsByTagNameNS()
+%{
+	dom_exception exc;
+	duk_size_t ns_len, tag_len;
+	const char *ns_str = duk_safe_to_lstring(ctx, 0, &ns_len);
+	const char *tag_str = duk_safe_to_lstring(ctx, 1, &tag_len);
+	dom_string *ns_dom = NULL, *tag_dom = NULL;
+
+	exc = dom_string_create((const uint8_t *)ns_str, ns_len, &ns_dom);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_string_create((const uint8_t *)tag_str, tag_len, &tag_dom);
+	if (exc != DOM_NO_ERR) {
+		dom_string_unref(ns_dom);
+		return 0;
+	}
+
+	dom_nodelist *nodes = NULL;
+	exc = dom_document_get_elements_by_tag_name_ns(
+		((node_private_t *)priv)->node, ns_dom, tag_dom, &nodes);
+	dom_string_unref(ns_dom);
+	dom_string_unref(tag_dom);
+	if (exc != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		NSLOG(dukky, DEBUG, "Unable to construct nodelist?");
+		return 0;
+	}
+	return 1;
+%}
+
+getter Document::referrer()
+%{
+	dom_string *val = NULL;
+	dom_exception exc;
+
+	exc = dom_html_document_get_referrer(
+		(dom_html_document *)((node_private_t *)priv)->node, &val);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+getter Document::lastModified()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+getter Document::domain()
+%{
+	struct html_content *htmlc = NULL;
+	dom_exception err;
+
+	err = dom_node_get_user_data(priv->parent.node,
+				     corestring_dom___ns_key_html_content_data,
+				     &htmlc);
+	if (err == DOM_NO_ERR && htmlc != NULL) {
+		nsurl *url = llcache_handle_get_url(htmlc->base.llcache);
+		if (url != NULL) {
+			lwc_string *host = nsurl_get_component(url,
+							NSURL_HOST);
+			if (host != NULL) {
+				duk_push_string(ctx, lwc_string_data(host));
+				lwc_string_unref(host);
+				return 1;
+			}
+		}
+	}
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+getter Document::dir()
+%{
+	/* dir attribute on the <html> element */
+	dom_element *html = NULL;
+	dom_exception exc;
+
+	exc = dom_document_get_document_element(
+		((node_private_t *)priv)->node, &html);
+	if (exc != DOM_NO_ERR || html == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+
+	dom_string *val = NULL;
+	dom_string *dir_str = NULL;
+	exc = dom_string_create((const uint8_t *)"dir", 3, &dir_str);
+	if (exc == DOM_NO_ERR) {
+		dom_element_get_attribute(html, dir_str, &val);
+		dom_string_unref(dir_str);
+	}
+	dom_node_unref(html);
+
+	if (val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+	} else {
+		duk_push_lstring(ctx, dom_string_data(val),
+				 dom_string_length(val));
+		dom_string_unref(val);
+	}
+	return 1;
+%}
+
+setter Document::dir()
+%{
+	dom_element *html = NULL;
+	dom_exception exc;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	exc = dom_document_get_document_element(
+		((node_private_t *)priv)->node, &html);
+	if (exc != DOM_NO_ERR || html == NULL) return 0;
+
+	dom_string *dir_str = NULL, *val = NULL;
+	exc = dom_string_create((const uint8_t *)"dir", 3, &dir_str);
+	if (exc != DOM_NO_ERR) { dom_node_unref(html); return 0; }
+
+	exc = dom_string_create((const uint8_t *)s, slen, &val);
+	if (exc == DOM_NO_ERR) {
+		dom_element_set_attribute(html, dir_str, val);
+		dom_string_unref(val);
+	}
+	dom_string_unref(dir_str);
+	dom_node_unref(html);
+	return 0;
+%}
+
+getter Document::embeds()
+%{
+	dom_nodelist *nodes = NULL;
+	dom_exception exc;
+	dom_string *embed_str = NULL;
+
+	exc = dom_string_create((const uint8_t *)"EMBED", 5, &embed_str);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_document_get_elements_by_tag_name(
+		((node_private_t *)priv)->node, embed_str, &nodes);
+	dom_string_unref(embed_str);
+	if (exc != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	return 1;
+%}
+
+getter Document::plugins()
+%{
+	/* Alias for embeds per spec */
+	dom_nodelist *nodes = NULL;
+	dom_exception exc;
+	dom_string *embed_str = NULL;
+
+	exc = dom_string_create((const uint8_t *)"EMBED", 5, &embed_str);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_document_get_elements_by_tag_name(
+		((node_private_t *)priv)->node, embed_str, &nodes);
+	dom_string_unref(embed_str);
+	if (exc != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	return 1;
+%}
+
+getter Document::scripts()
+%{
+	dom_nodelist *nodes = NULL;
+	dom_exception exc;
+
+	exc = dom_document_get_elements_by_tag_name(
+		((node_private_t *)priv)->node,
+		corestring_dom_SCRIPT, &nodes);
+	if (exc != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	return 1;
+%}
+
+method Document::getElementsByName()
+%{
+	dom_nodelist *nodes = NULL;
+	dom_exception exc;
+	duk_size_t len;
+	const char *str = duk_safe_to_lstring(ctx, 0, &len);
+	dom_string *name_str;
+
+	exc = dom_string_create((const uint8_t *)str, len, &name_str);
+	if (exc != DOM_NO_ERR) return 0;
+
+	exc = dom_html_document_get_elements_by_name(
+		(dom_html_document *)((node_private_t *)priv)->node,
+		name_str, &nodes);
+	dom_string_unref(name_str);
+	if (exc != DOM_NO_ERR || nodes == NULL) return 0;
+
+	dukky_push_generics(ctx, "makeListProxy");
+
+	duk_push_pointer(ctx, nodes);
+	dukky_create_object(ctx, PROTO_NAME(NODELIST), 1);
+	dom_nodelist_unref(nodes);
+
+	if (dukky_pcall(ctx, 1, false) != 0) {
+		return 0;
+	}
+	return 1;
+%}
+
+method Document::hasFocus()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+method Document::close()
+%{
+	/* No-op: parser already completed */
+	return 0;
+%}
+
+method Document::open()
+%{
+	/* No-op: no live document.open support */
+	duk_push_this(ctx);
+	return 1;
+%}
+
+getter Document::anchors()
+%{
+	/* Legacy: returns <a> elements with a name attribute */
+	dom_nodelist *nodes = NULL;
+	dom_exception exc;
+
+	exc = dom_document_get_elements_by_tag_name(
+		((node_private_t *)priv)->node,
+		corestring_dom_a, &nodes);
+	if (exc != DOM_NO_ERR || nodes == NULL) {
+		duk_push_array(ctx);
+		return 1;
+	}
+
+	uint32_t nlen = 0;
+	dom_nodelist_get_length(nodes, &nlen);
+
+	duk_push_array(ctx);
+	uint32_t idx = 0;
+	for (uint32_t i = 0; i < nlen; i++) {
+		dom_node *item = NULL;
+		exc = dom_nodelist_item(nodes, i, &item);
+		if (exc != DOM_NO_ERR || item == NULL) continue;
+
+		bool has_name = false;
+		dom_element_has_attribute((dom_element *)item,
+					  corestring_dom_name, &has_name);
+		if (has_name) {
+			if (dukky_push_node(ctx, item)) {
+				duk_put_prop_index(ctx, -2, idx++);
+			}
+		}
+		dom_node_unref(item);
+	}
+	dom_nodelist_unref(nodes);
+	return 1;
+%}
+
+getter Document::designMode()
+%{
+	duk_push_this(ctx);
+	duk_get_prop_string(ctx, -1, MAGIC(designMode));
+	if (duk_is_undefined(ctx, -1)) {
+		duk_pop_2(ctx);
+		duk_push_lstring(ctx, "off", 3);
+	} else {
+		duk_remove(ctx, -2);
+	}
+	return 1;
+%}
+
+setter Document::designMode()
+%{
+	const char *s = duk_safe_to_string(ctx, 0);
+	duk_push_this(ctx);
+	if (strcasecmp(s, "on") == 0) {
+		duk_push_lstring(ctx, "on", 2);
+	} else {
+		duk_push_lstring(ctx, "off", 3);
+	}
+	duk_put_prop_string(ctx, -2, MAGIC(designMode));
+	return 0;
+%}
+
+getter Document::currentScript()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Document::activeElement()
+%{
+	/* Return <body> or null (simplified -- no focus tracking) */
+	struct dom_nodelist *nodes = NULL;
+	struct dom_node *retnode = NULL;
+	dom_exception exc;
+
+	exc = dom_document_get_elements_by_tag_name(priv->parent.node,
+						    corestring_dom_BODY,
+						    &nodes);
+	if (exc != DOM_NO_ERR || nodes == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	exc = dom_nodelist_item(nodes, 0, &retnode);
+	dom_nodelist_unref(nodes);
+	if (exc != DOM_NO_ERR || retnode == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
+
+	dukky_push_node(ctx, retnode);
+	dom_node_unref(retnode);
+	return 1;
+%}
+
+method Document::prepend()
+%{
+	dom_node *doc_node = ((node_private_t *)priv)->node;
+	dom_node *first = NULL;
+	dom_exception exc;
+	duk_idx_t argc = duk_get_top(ctx);
+
+	exc = dom_node_get_first_child(doc_node, &first);
+	if (exc != DOM_NO_ERR) return 0;
+
+	for (duk_idx_t i = 0; i < argc; i++) {
+		if (duk_is_object(ctx, i)) {
+			duk_get_prop_string(ctx, i, dukky_magic_string_private);
+			node_private_t *np = duk_get_pointer(ctx, -1);
+			duk_pop(ctx);
+			if (np == NULL || np->node == NULL) continue;
+			dom_node *ref = NULL;
+			if (first != NULL) {
+				exc = dom_node_insert_before(doc_node,
+					np->node, first, &ref);
+			} else {
+				exc = dom_node_append_child(doc_node,
+					np->node, &ref);
+			}
+			if (exc == DOM_NO_ERR && ref != NULL)
+				dom_node_unref(ref);
+		}
+	}
+	if (first != NULL) dom_node_unref(first);
+	return 0;
+%}
+
+method Document::append()
+%{
+	dom_node *doc_node = ((node_private_t *)priv)->node;
+	dom_exception exc;
+	duk_idx_t argc = duk_get_top(ctx);
+
+	for (duk_idx_t i = 0; i < argc; i++) {
+		if (duk_is_object(ctx, i)) {
+			duk_get_prop_string(ctx, i, dukky_magic_string_private);
+			node_private_t *np = duk_get_pointer(ctx, -1);
+			duk_pop(ctx);
+			if (np == NULL || np->node == NULL) continue;
+			dom_node *ref = NULL;
+			exc = dom_node_append_child(doc_node, np->node, &ref);
+			if (exc == DOM_NO_ERR && ref != NULL)
+				dom_node_unref(ref);
+		}
+	}
+	return 0;
+%}
+
+method Document::replaceChildren()
+%{
+	dom_node *doc_node = ((node_private_t *)priv)->node;
+	dom_exception exc;
+	duk_idx_t argc = duk_get_top(ctx);
+
+	/* Remove all existing children */
+	dom_node *child = NULL;
+	exc = dom_node_get_first_child(doc_node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node *cref = NULL;
+		exc = dom_node_remove_child(doc_node, child, &cref);
+		if (exc == DOM_NO_ERR && cref != NULL) dom_node_unref(cref);
+		dom_node_unref(child);
+		child = NULL;
+		exc = dom_node_get_first_child(doc_node, &child);
+	}
+
+	/* Append new children */
+	for (duk_idx_t i = 0; i < argc; i++) {
+		if (duk_is_object(ctx, i)) {
+			duk_get_prop_string(ctx, i, dukky_magic_string_private);
+			node_private_t *np = duk_get_pointer(ctx, -1);
+			duk_pop(ctx);
+			if (np == NULL || np->node == NULL) continue;
+			dom_node *ref = NULL;
+			exc = dom_node_append_child(doc_node, np->node, &ref);
+			if (exc == DOM_NO_ERR && ref != NULL)
+				dom_node_unref(ref);
+		}
+	}
+	return 0;
 %}
 
 getter Document::onabort();
