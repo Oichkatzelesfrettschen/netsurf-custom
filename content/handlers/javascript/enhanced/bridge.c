@@ -603,6 +603,19 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv,
 		duk_pop(CTX); /* Win */
 	}
 
+	/* Set enhanced mode flag so generics.js can skip Proxy wrapping.
+	 * WHY: QuickJS Proxy objects wrapping compat-shim DOM objects
+	 * cause SIGSEGV when the Proxy handler calls target[key] and the
+	 * trampoline receives the Proxy as `this` instead of the raw DOM
+	 * object.  Skipping Proxy for list/map objects is safe because
+	 * .length and .item() work directly on the NodeList/NamedNodeMap. */
+	{
+		JSContext *qctx = ret->compat_ctx->qjs;
+		JSValue ng = JS_GetGlobalObject(qctx);
+		JS_SetPropertyStr(qctx, ng, "__ns_enhanced", JS_TRUE);
+		JS_FreeValue(qctx, ng);
+	}
+
 	/* Load generics.js */
 	duk_push_string(CTX, "generics.js");
 	if (duk_pcompile_lstring_filename(CTX, DUK_COMPILE_EVAL,
@@ -631,12 +644,24 @@ nserror js_newthread(jsheap *heap, void *win_priv, void *doc_priv,
 	duk_pop(CTX); /* result */
 
 	/* Store NetSurf generics table as GENERICS_MAGIC and remove from
-	 * the visible global namespace. */
-	duk_push_global_object(CTX);
-	duk_get_prop_string(CTX, -1, "NetSurf");
+	 * the visible global namespace.
+	 *
+	 * WHY: generics.js uses `var NetSurf = {...}` which defines NetSurf
+	 * on the native QuickJS global (where var declarations live), NOT
+	 * on Window (the prototype).  duk_push_global_object returns Window,
+	 * so we must use duk_get_global_string (which reads from native
+	 * global via JS_GetGlobalObject) to find NetSurf. */
+	duk_get_global_string(CTX, "NetSurf");
 	duk_put_global_string(CTX, GENERICS_MAGIC);
-	duk_del_prop_string(CTX, -1, "NetSurf");
-	duk_pop(CTX); /* Win */
+	/* Delete NetSurf from native global to keep namespace clean */
+	{
+		JSContext *qctx = ret->compat_ctx->qjs;
+		JSValue ng = JS_GetGlobalObject(qctx);
+		JSAtom atom = JS_NewAtom(qctx, "NetSurf");
+		JS_DeleteProperty(qctx, ng, atom, 0);
+		JS_FreeAtom(qctx, atom);
+		JS_FreeValue(qctx, ng);
+	}
 
 	dukky_log_stack_frame(CTX, "New thread created");
 	NSLOG(dukky, DEBUG, "New enhanced thread is %p in heap %p",
@@ -735,9 +760,22 @@ bool js_exec(jsthread *thread, const uint8_t *txt, size_t txtlen,
 
 	enhanced_reset_start_time(thread->heap);
 
-	result = JS_Eval(thread->ctx, (const char *)txt, txtlen,
+	/* WHY: QuickJS-NG's tokenizer requires null-terminated input.
+	 * The txt buffer from monkey EXEC or DOM scripts may not have
+	 * a null byte at txt[txtlen]. Ensure null termination. */
+	char *ntsrc = malloc(txtlen + 1);
+	if (ntsrc == NULL) {
+		enhanced_leave_thread(thread);
+		return false;
+	}
+	memcpy(ntsrc, txt, txtlen);
+	ntsrc[txtlen] = '\0';
+
+	result = JS_Eval(thread->ctx, ntsrc, txtlen,
 			 name ? name : "<input>",
 			 JS_EVAL_TYPE_GLOBAL);
+
+	free(ntsrc);
 
 	if (JS_IsException(result)) {
 		JSValue exc = JS_GetException(thread->ctx);

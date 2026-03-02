@@ -8,8 +8,13 @@
  */
 
 var NetSurf = {
-    /* The make-proxy call for list-type objects */
+    /* The make-proxy call for list-type objects.
+     * WHY: In enhanced mode (QuickJS-NG), Proxy wrapping compat-shim
+     * DOM objects causes crashes because the trampoline receives the
+     * Proxy as `this` instead of the raw DOM object.  Skip Proxy there;
+     * .length and .item() work directly on NodeList. */
     makeListProxy: function(inner) {
+	if (typeof __ns_enhanced !== "undefined") return inner;
 	return new Proxy(inner, {
 	    has: function(target, key) {
 		if (typeof key == 'number') {
@@ -29,6 +34,7 @@ var NetSurf = {
     },
     /* The make-proxy call for nodemap-type objects */
     makeNodeMapProxy: function(inner) {
+	if (typeof __ns_enhanced !== "undefined") return inner;
 	return new Proxy(inner, {
 	    has: function(target, key) {
 		if (typeof key == 'number') {

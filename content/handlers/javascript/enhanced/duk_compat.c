@@ -908,8 +908,27 @@ duk_int_t duk_pcompile_lstring_filename(duk_context *ctx, unsigned int flags,
 
 	int eval_flags = JS_EVAL_TYPE_GLOBAL | JS_EVAL_FLAG_COMPILE_ONLY;
 
-	JSValue result = JS_Eval(ctx->qjs, src, len,
+	/* WHY: QuickJS-NG's tokenizer (next_token) reads *p then checks
+	 * for buf_end only when it sees '\0'. If the source buffer is
+	 * not null-terminated, the tokenizer reads one byte past the
+	 * end (global-buffer-overflow). The xxd-generated .js.inc
+	 * arrays lack a null terminator, so we must provide one. */
+	char *ntsrc = malloc(len + 1);
+	if (ntsrc == NULL) {
+		if (filename)
+			JS_FreeCString(ctx->qjs, filename);
+		duk__ensure_stack(ctx, 1);
+		ctx->vstack[ctx->top++] = JS_NewString(ctx->qjs,
+			"out of memory compiling script");
+		return DUK_EXEC_ERROR;
+	}
+	memcpy(ntsrc, src, len);
+	ntsrc[len] = '\0';
+
+	JSValue result = JS_Eval(ctx->qjs, ntsrc, len,
 				 filename ? filename : "<input>", eval_flags);
+
+	free(ntsrc);
 
 	if (filename)
 		JS_FreeCString(ctx->qjs, filename);

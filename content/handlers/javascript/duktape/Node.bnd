@@ -78,6 +78,10 @@ getter Node::parentNode()
 	dom_node *pnode = NULL;
 	exc = dom_node_get_parent_node(priv->node, &pnode);
 	if (exc != DOM_NO_ERR) return 0;
+	if (pnode == NULL) {
+		duk_push_null(ctx);
+		return 1;
+	}
 	dukky_push_node(ctx, pnode);
 	dom_node_unref(pnode);
 	return 1;
@@ -94,7 +98,12 @@ getter Node::parentElement()
 		exc = dom_node_get_node_type(pnode, &ntype);
 		if (exc != DOM_NO_ERR) { dom_node_unref(pnode); return 0; }
 	}
-	dukky_push_node(ctx, (ntype == DOM_ELEMENT_NODE) ? pnode : NULL);
+	if (pnode == NULL || ntype != DOM_ELEMENT_NODE) {
+		if (pnode != NULL) dom_node_unref(pnode);
+		duk_push_null(ctx);
+		return 1;
+	}
+	dukky_push_node(ctx, pnode);
 	dom_node_unref(pnode);
 	return 1;
 %}
@@ -143,6 +152,7 @@ getter Node::firstChild()
 	dom_node *n;
 	exc = dom_node_get_first_child(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
+	if (n == NULL) { duk_push_null(ctx); return 1; }
 	if (dukky_push_node(ctx, n) == false) {
 		dom_node_unref(n);
 		return 0;
@@ -157,6 +167,7 @@ getter Node::lastChild()
 	dom_node *n;
 	exc = dom_node_get_last_child(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
+	if (n == NULL) { duk_push_null(ctx); return 1; }
 	if (dukky_push_node(ctx, n) == false) {
 		dom_node_unref(n);
 		return 0;
@@ -171,6 +182,7 @@ getter Node::previousSibling()
 	dom_node *n;
 	exc = dom_node_get_previous_sibling(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
+	if (n == NULL) { duk_push_null(ctx); return 1; }
 	if (dukky_push_node(ctx, n) == false) {
 		dom_node_unref(n);
 		return 0;
@@ -185,6 +197,7 @@ getter Node::nextSibling()
 	dom_node *n;
 	exc = dom_node_get_next_sibling(priv->node, &n);
 	if (exc != DOM_NO_ERR) return 0;
+	if (n == NULL) { duk_push_null(ctx); return 1; }
 	if (dukky_push_node(ctx, n) == false) {
 		dom_node_unref(n);
 		return 0;
