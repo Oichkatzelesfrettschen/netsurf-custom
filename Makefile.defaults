@@ -71,6 +71,12 @@ NETSURF_USE_WEBP := AUTO
 # Valid options: YES, NO
 NETSURF_USE_DUKTAPE := YES
 
+# JavaScript engine mode: standard (Duktape ES5.1) or enhanced (QuickJS-NG ES2023)
+# When set, overrides NETSURF_USE_DUKTAPE. Standard is lighter, enhanced
+# supports modern web features (arrow functions, classes, modules, async/await).
+# Valid options: standard, enhanced (leave unset to use NETSURF_USE_DUKTAPE)
+NETSURF_JS_ENGINE :=
+
 # Enable NetSurf's use of libharu for PDF export and GTK printing support.
 # There is no auto-detection available for this, as it does not have a
 # pkg-config file.

@@ -52,6 +52,12 @@ override NETSURF_USE_UTF8PROC := YES
 # JavaScript engine (Duktape 2.7).
 override NETSURF_USE_DUKTAPE := YES
 
+# JavaScript engine mode selection (overrides NETSURF_USE_DUKTAPE when set):
+#   standard -- Duktape 2.7.0, ES5.1 + polyfills, minimal footprint
+#   enhanced -- QuickJS-NG, ES2023, arrow functions/classes/modules/async
+# Leave commented for default (standard via NETSURF_USE_DUKTAPE=YES above).
+# override NETSURF_JS_ENGINE := enhanced
+
 # Logging and Public Suffix List.
 override NETSURF_USE_NSLOG  := YES
 override NETSURF_USE_NSPSL  := YES
