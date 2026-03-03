@@ -283,7 +283,11 @@ static inline void duk_push_lstring(duk_context *ctx, const char *str,
 {
 	duk__ensure_stack(ctx, 1);
 	if (str == NULL) {
-		ctx->vstack[ctx->top++] = JS_NULL;
+		/* WHY: Real Duktape pushes an empty string when ptr is NULL.
+		 * Multiple .bnd getters (Location, Element, etc.) rely on
+		 * this behavior -- they pass NULL when the underlying value
+		 * is absent and expect "" on the JS stack. */
+		ctx->vstack[ctx->top++] = JS_NewStringLen(ctx->qjs, "", 0);
 	} else {
 		ctx->vstack[ctx->top++] = JS_NewStringLen(ctx->qjs, str, len);
 	}

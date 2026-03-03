@@ -284,6 +284,53 @@ static void enhanced_install_console(JSContext *ctx)
 			  JS_NewCFunction(ctx, enhanced_console_error,
 					  "error", 0));
 
+	/* WHY: Console.bnd provides these methods in standard mode but
+	 * its init fails in enhanced mode (generics/formatter dependency).
+	 * Install them here so typeof checks pass.  All route through
+	 * enhanced_console_log (level 0 = BW_CS_FLAG_LEVEL_LOG). */
+	JS_SetPropertyStr(ctx, console, "dir",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "dir", 0));
+	JS_SetPropertyStr(ctx, console, "dirxml",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "dirxml", 0));
+	JS_SetPropertyStr(ctx, console, "trace",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "trace", 0));
+	JS_SetPropertyStr(ctx, console, "group",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "group", 0));
+	JS_SetPropertyStr(ctx, console, "groupCollapsed",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "groupCollapsed", 0));
+	JS_SetPropertyStr(ctx, console, "groupEnd",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "groupEnd", 0));
+	JS_SetPropertyStr(ctx, console, "time",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "time", 0));
+	JS_SetPropertyStr(ctx, console, "timeEnd",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "timeEnd", 0));
+	JS_SetPropertyStr(ctx, console, "timeLog",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "timeLog", 0));
+	JS_SetPropertyStr(ctx, console, "clear",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "clear", 0));
+	JS_SetPropertyStr(ctx, console, "assert",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "assert", 0));
+	JS_SetPropertyStr(ctx, console, "count",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "count", 0));
+	JS_SetPropertyStr(ctx, console, "countReset",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "countReset", 0));
+	JS_SetPropertyStr(ctx, console, "table",
+			  JS_NewCFunction(ctx, enhanced_console_log,
+					  "table", 0));
+
 	JS_SetPropertyStr(ctx, global, "console", console);
 	JS_FreeValue(ctx, global);
 }

@@ -121,18 +121,18 @@ void duk_push_global_object(duk_context *ctx)
 {
 	duk__ensure_stack(ctx, 1);
 
-	JSValue native_global = JS_GetGlobalObject(ctx->qjs);
-	JSValue window = JS_GetPropertyStr(ctx->qjs, native_global,
-					   NS_WINDOW_KEY);
-	if (!JS_IsUndefined(window)) {
-		/* Window has been set -- return it instead of native global */
-		JS_FreeValue(ctx->qjs, native_global);
-		ctx->vstack[ctx->top++] = window;
-	} else {
-		/* Pre-init state: no Window yet, return native global */
-		JS_FreeValue(ctx->qjs, window);
-		ctx->vstack[ctx->top++] = native_global;
-	}
+	/* WHY: Return the native QuickJS global object.  The native global's
+	 * prototype is set to Window (by duk_set_global_object), so all
+	 * Window properties (document, location, etc.) are accessible via
+	 * prototype chain traversal.
+	 *
+	 * Previously this returned the Window object stored in NS_WINDOW_KEY,
+	 * but that broke identity checks like `window.self === window`:
+	 * JS variable `window` resolves to the native global, while getters
+	 * like self/top/parent called duk_push_global_object and returned
+	 * a different object (Window).  Now both paths return the same
+	 * native global, making === comparisons succeed. */
+	ctx->vstack[ctx->top++] = JS_GetGlobalObject(ctx->qjs);
 }
 
 /* Trampoline data for wrapping duk_c_function as JSCFunction */
@@ -321,6 +321,37 @@ void duk_swap(duk_context *ctx, duk_idx_t a, duk_idx_t b)
 /* Property access                                                     */
 /* ------------------------------------------------------------------ */
 
+/**
+ * Convert a JSValue key to a property atom.
+ *
+ * WHY: Duktape allows pointer values as property keys (used by NODE_MAGIC
+ * and EVENT_MAGIC caches). JS_ToCString on a pointer object returns
+ * "[object Object]" -- all pointers collide to the same key. Instead,
+ * detect pointer objects and use a hex address string like "P:0x7f..."
+ * as a unique key.
+ */
+static JSAtom duk__key_to_atom(duk_context *ctx, JSValue key)
+{
+	/* Check if it's a pointer object */
+	if (JS_IsObject(key) && ns_pointer_class_id != 0) {
+		void *p = JS_GetOpaque(key, ns_pointer_class_id);
+		if (p != NULL) {
+			char buf[32];
+			snprintf(buf, sizeof(buf), "P:%p", p);
+			return JS_NewAtom(ctx->qjs, buf);
+		}
+	}
+
+	/* Fall back to string conversion */
+	const char *str = JS_ToCString(ctx->qjs, key);
+	if (str) {
+		JSAtom atom = JS_NewAtom(ctx->qjs, str);
+		JS_FreeCString(ctx->qjs, str);
+		return atom;
+	}
+	return JS_ATOM_NULL;
+}
+
 duk_bool_t duk_get_prop(duk_context *ctx, duk_idx_t obj_idx)
 {
 	int norm = duk__norm_idx(ctx, obj_idx);
@@ -332,10 +363,10 @@ duk_bool_t duk_get_prop(duk_context *ctx, duk_idx_t obj_idx)
 	ctx->top--;
 
 	JSValue result;
-	const char *str = JS_ToCString(ctx->qjs, key);
-	if (str) {
-		result = JS_GetPropertyStr(ctx->qjs, ctx->vstack[norm], str);
-		JS_FreeCString(ctx->qjs, str);
+	JSAtom atom = duk__key_to_atom(ctx, key);
+	if (atom != JS_ATOM_NULL) {
+		result = JS_GetProperty(ctx->qjs, ctx->vstack[norm], atom);
+		JS_FreeAtom(ctx->qjs, atom);
 	} else {
 		result = JS_UNDEFINED;
 	}
@@ -385,10 +416,10 @@ void duk_put_prop(duk_context *ctx, duk_idx_t obj_idx)
 	ctx->vstack[ctx->top - 2] = JS_UNDEFINED;
 	ctx->top -= 2;
 
-	const char *str = JS_ToCString(ctx->qjs, key);
-	if (str) {
-		JS_SetPropertyStr(ctx->qjs, ctx->vstack[norm], str, val);
-		JS_FreeCString(ctx->qjs, str);
+	JSAtom atom = duk__key_to_atom(ctx, key);
+	if (atom != JS_ATOM_NULL) {
+		JS_SetProperty(ctx->qjs, ctx->vstack[norm], atom, val);
+		JS_FreeAtom(ctx->qjs, atom);
 	} else {
 		JS_FreeValue(ctx->qjs, val);
 	}
@@ -405,7 +436,22 @@ void duk_put_prop_string(duk_context *ctx, duk_idx_t obj_idx,
 	ctx->vstack[ctx->top - 1] = JS_UNDEFINED;
 	ctx->top--;
 
-	JS_SetPropertyStr(ctx->qjs, ctx->vstack[norm], key, val);
+	/* WHY: Duktape treats \xFF\xFF-prefixed keys as hidden internal
+	 * properties invisible to enumeration and Object.keys().  QuickJS
+	 * has no equivalent, so define as non-enumerable. */
+	if ((unsigned char)key[0] == 0xFF && (unsigned char)key[1] == 0xFF) {
+		JSAtom atom = JS_NewAtom(ctx->qjs, key);
+		JS_DefineProperty(ctx->qjs, ctx->vstack[norm], atom,
+				  val, JS_UNDEFINED, JS_UNDEFINED,
+				  JS_PROP_HAS_VALUE |
+				  JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE |
+				  JS_PROP_HAS_CONFIGURABLE | JS_PROP_CONFIGURABLE |
+				  JS_PROP_HAS_ENUMERABLE /* enumerable=0 */);
+		JS_FreeValue(ctx->qjs, val);
+		JS_FreeAtom(ctx->qjs, atom);
+	} else {
+		JS_SetPropertyStr(ctx->qjs, ctx->vstack[norm], key, val);
+	}
 }
 
 void duk_put_prop_index(duk_context *ctx, duk_idx_t obj_idx,
@@ -430,14 +476,12 @@ duk_bool_t duk_del_prop(duk_context *ctx, duk_idx_t obj_idx)
 	ctx->vstack[ctx->top - 1] = JS_UNDEFINED;
 	ctx->top--;
 
-	const char *str = JS_ToCString(ctx->qjs, key);
+	JSAtom atom = duk__key_to_atom(ctx, key);
 	int ret = 0;
-	if (str) {
-		JSAtom atom = JS_NewAtom(ctx->qjs, str);
+	if (atom != JS_ATOM_NULL) {
 		ret = JS_DeleteProperty(ctx->qjs, ctx->vstack[norm],
 					atom, 0);
 		JS_FreeAtom(ctx->qjs, atom);
-		JS_FreeCString(ctx->qjs, str);
 	}
 	JS_FreeValue(ctx->qjs, key);
 
@@ -1275,7 +1319,24 @@ void duk_put_prop_lstring(duk_context *ctx, duk_idx_t obj_idx,
 	ctx->top--;
 
 	JSAtom atom = JS_NewAtomLen(ctx->qjs, key, key_len);
-	JS_SetProperty(ctx->qjs, ctx->vstack[norm], atom, val);
+
+	/* WHY: Duktape treats \xFF\xFF-prefixed keys as hidden internal
+	 * properties invisible to enumeration and Object.keys().  QuickJS
+	 * has no equivalent, so we use JS_DefineProperty with
+	 * non-enumerable + configurable + writable to hide them. */
+	if (key_len >= 2 && (unsigned char)key[0] == 0xFF &&
+	    (unsigned char)key[1] == 0xFF) {
+		JS_DefineProperty(ctx->qjs, ctx->vstack[norm], atom,
+				  val, JS_UNDEFINED, JS_UNDEFINED,
+				  JS_PROP_HAS_VALUE |
+				  JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE |
+				  JS_PROP_HAS_CONFIGURABLE | JS_PROP_CONFIGURABLE |
+				  JS_PROP_HAS_ENUMERABLE /* enumerable=0 */);
+		JS_FreeValue(ctx->qjs, val);
+	} else {
+		JS_SetProperty(ctx->qjs, ctx->vstack[norm], atom, val);
+	}
+
 	JS_FreeAtom(ctx->qjs, atom);
 }
 
@@ -1298,13 +1359,11 @@ duk_bool_t duk_has_prop(duk_context *ctx, duk_idx_t obj_idx)
 	ctx->vstack[ctx->top - 1] = JS_UNDEFINED;
 	ctx->top--;
 
-	const char *str = JS_ToCString(ctx->qjs, key);
+	JSAtom atom = duk__key_to_atom(ctx, key);
 	int ret = 0;
-	if (str) {
-		JSAtom atom = JS_NewAtom(ctx->qjs, str);
+	if (atom != JS_ATOM_NULL) {
 		ret = JS_HasProperty(ctx->qjs, ctx->vstack[norm], atom);
 		JS_FreeAtom(ctx->qjs, atom);
-		JS_FreeCString(ctx->qjs, str);
 	}
 	JS_FreeValue(ctx->qjs, key);
 
