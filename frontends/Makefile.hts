@@ -121,3 +121,11 @@ VLDTARGET := amiga atari beos framebuffer gtk monkey qt riscos windows
 ifeq ($(filter $(VLDTARGET),$(TARGET)),)
   $(error Unknown TARGET "$(TARGET)", Must be one of $(VLDTARGET))
 endif
+
+# WHY: enhanced mode (NETSURF_JS_ENGINE=enhanced) changes include paths for
+# all nsgenbind-generated .o files.  Giving each mode its own OBJROOT
+# directory prevents stale standard-mode .o files from being linked into an
+# enhanced build (and vice versa) when switching modes without `make clean`.
+ifeq ($(NETSURF_JS_ENGINE),enhanced)
+  SUBTARGET := $(SUBTARGET)-enhanced
+endif
