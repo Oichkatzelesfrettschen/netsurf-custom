@@ -69,6 +69,14 @@ These three issues will silently break builds if missed:
    librosprite is installed in the workspace.  `ns-make-libs` does not build it
    by default.  Keep `NETSURF_USE_ROSPRITE := NO` in `Makefile.config`.
 
+5. **Standard/enhanced modes share the same `nsmonkey` binary**: Each mode has
+   its own build directory (`build/Linux-monkey/` vs `build/Linux-monkey-enhanced/`)
+   so no `make clean` is needed when switching modes -- both are warm in ccache.
+   The binary is always written to `./nsmonkey`; the last mode built is what runs.
+   ccache is auto-detected by `Makefile.tools` and provides ~74% hit rate.
+   Switching: `make -j$(nproc) TARGET=monkey` (standard) or
+   `make -j$(nproc) TARGET=monkey NETSURF_JS_ENGINE=enhanced` (enhanced).
+
 ## Common issues
 
 1. **HOST set to hostname**: `unset HOST` before sourcing env.sh
