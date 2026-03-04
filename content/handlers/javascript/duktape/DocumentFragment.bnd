@@ -229,3 +229,10 @@ method DocumentFragment::replaceChildren()
 	}
 	return 0;
 %}
+
+method DocumentFragment::moveBefore()
+%{
+	/* WHY: Stub -- ordered node movement not needed by current sites. */
+	duk_push_undefined(ctx);
+	return 1;
+%}

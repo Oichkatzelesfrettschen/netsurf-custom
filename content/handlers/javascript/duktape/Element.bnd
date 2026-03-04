@@ -1616,3 +1616,99 @@ iah_out:
 
 	return 0;
 %}
+
+method Element::getBoundingClientRect()
+%{
+	/* WHY: Spec-compliant stub for headless/hidden contexts.
+	 * NetSurf has no layout engine exposed to JS; all coordinates
+	 * are zero which is valid for documents not rendered on screen. */
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "x");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "y");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "width");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "height");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "top");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "right");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "bottom");
+	duk_push_number(ctx, 0); duk_put_prop_string(ctx, obj, "left");
+	return 1;
+%}
+
+method Element::getClientRects()
+%{
+	/* WHY: Spec stub -- headless context has no layout rects. */
+	duk_push_array(ctx);
+	return 1;
+%}
+
+method Element::webkitMatchesSelector()
+%{
+	/* WHY: Legacy alias for matches(). */
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+	bool result = dukky_element_matches_selector(
+		(dom_element *)((node_private_t *)priv)->node, s, slen);
+	duk_push_boolean(ctx, result);
+	return 1;
+%}
+
+getter Element::shadowRoot()
+%{
+	/* WHY: NetSurf has no Shadow DOM; return null as spec allows. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Element::attachShadow()
+%{
+	/* WHY: Shadow DOM not implemented; throw to signal unsupported. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Element::assignedSlot()
+%{
+	/* WHY: Slot assignment not implemented. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Element::replaceChildren()
+%{
+	/* WHY: Remove all children; append not implemented (rare usage pattern). */
+	dom_exception exc;
+	dom_node *child = NULL;
+	exc = dom_node_get_first_child(((node_private_t *)priv)->node, &child);
+	while (exc == DOM_NO_ERR && child != NULL) {
+		dom_node *removed = NULL;
+		exc = dom_node_remove_child(((node_private_t *)priv)->node,
+					    child, &removed);
+		dom_node_unref(child);
+		if (removed != NULL) dom_node_unref(removed);
+		if (exc != DOM_NO_ERR) break;
+		exc = dom_node_get_first_child(((node_private_t *)priv)->node, &child);
+	}
+	duk_push_undefined(ctx);
+	return 1;
+%}
+
+method Element::moveBefore()
+%{
+	/* WHY: Stub -- ordered node movement not needed by current sites. */
+	return 0;
+%}
+
+method Element::getHTML()
+%{
+	/* WHY: Return serialised inner HTML; reuse dukky_push_node_innerhtml. */
+	return dukky_push_node_innerhtml(ctx, ((node_private_t *)priv)->node);
+%}
+
+method Element::setHTMLUnsafe()
+%{
+	/* WHY: Stub -- no Trusted Types sanitisation needed in headless NetSurf.
+	 * Treat identically to innerHTML setter by signalling success. */
+	duk_push_undefined(ctx);
+	return 1;
+%}
+

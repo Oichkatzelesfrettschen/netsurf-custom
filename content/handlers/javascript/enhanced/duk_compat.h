@@ -116,7 +116,15 @@ typedef unsigned char duk_uint8_t;
 /* Emulated Duktape context                                            */
 /* ------------------------------------------------------------------ */
 
-#define DUK_COMPAT_INITIAL_STACK 64
+/* WHY: 256 initial slots avoids realloc for typical benchmark pages.
+ * The previous value of 64 caused ~3-4 reallocations per page. */
+#define DUK_COMPAT_INITIAL_STACK 256
+
+/* WHY: 16-slot LRU cache avoids repeated JS_NewAtom calls for the same
+ * property name strings (e.g. "prototype", "length", corestring names).
+ * JS_NewAtom does a hash lookup + possible string intern on every call;
+ * caching the resulting JSAtom eliminates that work for hot names. */
+#define DUK_ATOM_CACHE_SIZE 16
 
 /**
  * Emulated duk_context backed by a QuickJS JSContext.
@@ -136,6 +144,16 @@ typedef struct duk_context {
 	JSValue this_val;     /**< current 'this' for C function dispatch */
 	int argc;             /**< argument count for current C call */
 	bool is_constructor_call; /**< true when invoked via `new` */
+	/* Atom LRU cache: maps C string pointer to JSAtom.
+	 * WHY: duk__key_to_atom is called for every non-string-literal
+	 * property access (e.g. pointer-keyed NODE_MAGIC lookups).
+	 * The LRU cache avoids repeated JS_NewAtom calls for the same
+	 * key within a page's JS execution lifetime. */
+	struct {
+		const char *key; /**< C string (not owned); NULL = empty slot */
+		JSAtom atom;     /**< cached atom; JS_ATOM_NULL if empty */
+	} atom_cache[DUK_ATOM_CACHE_SIZE];
+	int atom_cache_next; /**< next eviction index (round-robin) */
 } duk_context;
 
 /* ------------------------------------------------------------------ */
@@ -163,8 +181,72 @@ static inline int duk__norm_idx(duk_context *ctx, duk_idx_t idx)
 
 /**
  * Ensure the stack has room for at least n more values.
+ * WHY: Declared before the inline accessors below that use it.
  */
 void duk__ensure_stack(duk_context *ctx, int extra);
+
+/* ------------------------------------------------------------------ */
+/* Inline hot property accessors (most-called paths)                  */
+/* ------------------------------------------------------------------ */
+
+/**
+ * Get named property from object at obj_idx, push result on stack.
+ *
+ * WHY: This is the hottest non-trivial property-access path -- called
+ * hundreds of times per benchmark page. Moving it inline eliminates the
+ * call overhead and the JS_ToCString/FreeCString pair that the general
+ * duk__key_to_atom path would require for a plain C-string literal key.
+ * JS_GetPropertyStr already accepts a raw C string directly.
+ */
+static inline duk_bool_t duk_get_prop_string(duk_context *ctx,
+					     duk_idx_t obj_idx,
+					     const char *key)
+{
+	int norm = duk__norm_idx(ctx, obj_idx);
+	JSValue result = JS_GetPropertyStr(ctx->qjs, ctx->vstack[norm], key);
+
+	duk__ensure_stack(ctx, 1);
+	ctx->vstack[ctx->top++] = result;
+
+	return !JS_IsUndefined(result);
+}
+
+/**
+ * Pop value from top of stack and set it as named property of obj_idx.
+ *
+ * WHY: Symmetric hot path to duk_get_prop_string. Inlining avoids the
+ * duk__key_to_atom dispatch for the common case of a plain C-string key.
+ * The hidden-property (\xFF\xFF prefix) branch is kept because init code
+ * uses it for MAGIC/NODE_MAGIC cache keys.
+ */
+static inline void duk_put_prop_string(duk_context *ctx,
+				       duk_idx_t obj_idx,
+				       const char *key)
+{
+	int norm = duk__norm_idx(ctx, obj_idx);
+	assert(ctx->top > 0);
+
+	JSValue val = ctx->vstack[ctx->top - 1];
+	ctx->vstack[ctx->top - 1] = JS_UNDEFINED;
+	ctx->top--;
+
+	/* WHY: Duktape treats \xFF\xFF-prefixed keys as hidden internal
+	 * properties invisible to enumeration and Object.keys().  QuickJS
+	 * has no equivalent, so define as non-enumerable. */
+	if ((unsigned char)key[0] == 0xFF && (unsigned char)key[1] == 0xFF) {
+		JSAtom atom = JS_NewAtom(ctx->qjs, key);
+		JS_DefineProperty(ctx->qjs, ctx->vstack[norm], atom,
+				  val, JS_UNDEFINED, JS_UNDEFINED,
+				  JS_PROP_HAS_VALUE |
+				  JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE |
+				  JS_PROP_HAS_CONFIGURABLE | JS_PROP_CONFIGURABLE |
+				  JS_PROP_HAS_ENUMERABLE /* enumerable=0 */);
+		JS_FreeValue(ctx->qjs, val);
+		JS_FreeAtom(ctx->qjs, atom);
+	} else {
+		JS_SetPropertyStr(ctx->qjs, ctx->vstack[norm], key, val);
+	}
+}
 
 /**
  * Get the QuickJS JSContext from a duk_context.
@@ -360,13 +442,11 @@ void duk_swap(duk_context *ctx, duk_idx_t a, duk_idx_t b);
 /* ------------------------------------------------------------------ */
 
 duk_bool_t duk_get_prop(duk_context *ctx, duk_idx_t obj_idx);
-duk_bool_t duk_get_prop_string(duk_context *ctx, duk_idx_t obj_idx,
-			       const char *key);
+/* duk_get_prop_string: static inline above */
 duk_bool_t duk_get_prop_index(duk_context *ctx, duk_idx_t obj_idx,
 			      duk_uarridx_t idx);
 void duk_put_prop(duk_context *ctx, duk_idx_t obj_idx);
-void duk_put_prop_string(duk_context *ctx, duk_idx_t obj_idx,
-			 const char *key);
+/* duk_put_prop_string: static inline above */
 void duk_put_prop_index(duk_context *ctx, duk_idx_t obj_idx,
 			duk_uarridx_t idx);
 duk_bool_t duk_del_prop(duk_context *ctx, duk_idx_t obj_idx);

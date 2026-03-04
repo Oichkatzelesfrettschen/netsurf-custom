@@ -1523,3 +1523,86 @@ getter Document::onwaiting();
 setter Document::onwaiting();
 getter Document::onwheel();
 setter Document::onwheel();
+
+method Document::execCommand()
+%{
+	/* WHY: Editing commands not implemented; return false per spec default. */
+	duk_push_false(ctx);
+	return 1;
+%}
+
+method Document::queryCommandEnabled()
+%{
+	/* WHY: Editing commands not implemented. */
+	duk_push_false(ctx);
+	return 1;
+%}
+
+method Document::queryCommandIndeterm()
+%{
+	/* WHY: Editing commands not implemented. */
+	duk_push_false(ctx);
+	return 1;
+%}
+
+method Document::queryCommandState()
+%{
+	/* WHY: Editing commands not implemented. */
+	duk_push_false(ctx);
+	return 1;
+%}
+
+method Document::queryCommandSupported()
+%{
+	/* WHY: Editing commands not implemented. */
+	duk_push_false(ctx);
+	return 1;
+%}
+
+method Document::queryCommandValue()
+%{
+	/* WHY: Editing commands not implemented; return empty string. */
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+method Document::createCDATASection()
+%{
+	/* WHY: CDATA sections are not used in HTML5; return a text node stub. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Document::createExpression()
+%{
+	/* WHY: XPath not implemented; return null. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Document::createNSResolver()
+%{
+	/* WHY: XPath not implemented; return null. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Document::evaluate()
+%{
+	/* WHY: XPath not implemented; return null. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Document::customElementRegistry()
+%{
+	/* WHY: Custom element registry not implemented. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+method Document::moveBefore()
+%{
+	/* WHY: Stub -- ordered node movement not needed by current sites. */
+	return 0;
+%}

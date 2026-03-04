@@ -147,6 +147,22 @@ interface HTMLElement : Element {
   readonly attribute boolean? commandHidden;
   readonly attribute boolean? commandDisabled;
   readonly attribute boolean? commandChecked;
+
+  // additional interaction/form attributes
+  attribute DOMString autocapitalize;
+  attribute boolean autocorrect;
+  attribute boolean autofocus;
+  attribute DOMString enterKeyHint;
+  attribute DOMString inputMode;
+  attribute DOMString outerText;
+  attribute DOMString? popover;
+  attribute DOMString writingSuggestions;
+  void showPopover();
+  void hidePopover();
+  boolean togglePopover();
+  ElementInternals attachInternals();
+  readonly attribute DOMString headingOffset;
+  attribute boolean headingReset;
 };
 HTMLElement implements GlobalEventHandlers;
 HTMLElement implements ElementContentEditable;
@@ -1429,8 +1445,17 @@ dictionary DragEventInit : MouseEventInit {
   readonly attribute Navigator navigator;
   readonly attribute Navigator clientInformation;
   readonly attribute boolean originAgentCluster;
+  readonly attribute boolean isSecureContext;
+  readonly attribute boolean crossOriginIsolated;
+  void queueMicrotask(Function callback);
   [Replaceable, SameObject] readonly attribute External external;
   readonly attribute ApplicationCache applicationCache;
+  readonly attribute CustomElementRegistry? customElements;
+  readonly attribute Navigation? navigation;
+  readonly attribute DOMString origin;
+  readonly attribute any event;
+  any structuredClone(any value);
+  void reportError(any e);
 
   // user prompts
   void alert();

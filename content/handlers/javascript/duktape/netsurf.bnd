@@ -216,5 +216,6 @@ init HTMLPropertiesCollection(struct dom_html_collection *coll);
 
 /* CSS Object model */
 
+#include "CSSStyleDeclaration.bnd"
 #include "CSSRule.bnd"
 #include "CSSStyleSheet.bnd"

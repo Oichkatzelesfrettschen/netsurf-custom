@@ -1,0 +1,64 @@
+/* CSSStyleDeclaration binding for browser using duktape and libdom
+ *
+ * Copyright 2026 NetSurf Custom Contributors
+ *
+ * This file is part of NetSurf, http://www.netsurf-browser.org/
+ *
+ * Released under the terms of the MIT License,
+ *         http://www.opensource.org/licenses/mit-license
+ */
+
+/* WHY: HTMLElement.style returns a CSSStyleDeclaration object.
+ * NetSurf has no CSS OM write-back or computed style engine exposed
+ * to JS.  These stubs return empty/zero values, which is spec-compliant
+ * for a hidden/headless context and sufficient for feature detection. */
+
+init CSSStyleDeclaration();
+
+getter CSSStyleDeclaration::cssText()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+setter CSSStyleDeclaration::cssText()
+%{
+	/* no-op: no CSS OM write-back */
+	return 0;
+%}
+
+getter CSSStyleDeclaration::length()
+%{
+	duk_push_int(ctx, 0);
+	return 1;
+%}
+
+method CSSStyleDeclaration::item()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+method CSSStyleDeclaration::getPropertyValue()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+method CSSStyleDeclaration::getPropertyPriority()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+method CSSStyleDeclaration::setProperty()
+%{
+	/* no-op */
+	return 0;
+%}
+
+method CSSStyleDeclaration::removeProperty()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}

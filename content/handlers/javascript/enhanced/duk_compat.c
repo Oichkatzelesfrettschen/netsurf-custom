@@ -329,6 +329,9 @@ void duk_swap(duk_context *ctx, duk_idx_t a, duk_idx_t b)
  * "[object Object]" -- all pointers collide to the same key. Instead,
  * detect pointer objects and use a hex address string like "P:0x7f..."
  * as a unique key.
+ *
+ * For JS string keys, JS_ValueToAtom is used directly when available;
+ * otherwise we fall back to JS_ToCString + JS_NewAtom.
  */
 static JSAtom duk__key_to_atom(duk_context *ctx, JSValue key)
 {
@@ -378,17 +381,7 @@ duk_bool_t duk_get_prop(duk_context *ctx, duk_idx_t obj_idx)
 	return !JS_IsUndefined(result);
 }
 
-duk_bool_t duk_get_prop_string(duk_context *ctx, duk_idx_t obj_idx,
-			       const char *key)
-{
-	int norm = duk__norm_idx(ctx, obj_idx);
-	JSValue result = JS_GetPropertyStr(ctx->qjs, ctx->vstack[norm], key);
-
-	duk__ensure_stack(ctx, 1);
-	ctx->vstack[ctx->top++] = result;
-
-	return !JS_IsUndefined(result);
-}
+/* duk_get_prop_string: static inline in duk_compat.h */
 
 duk_bool_t duk_get_prop_index(duk_context *ctx, duk_idx_t obj_idx,
 			      duk_uarridx_t arr_idx)
@@ -426,33 +419,7 @@ void duk_put_prop(duk_context *ctx, duk_idx_t obj_idx)
 	JS_FreeValue(ctx->qjs, key);
 }
 
-void duk_put_prop_string(duk_context *ctx, duk_idx_t obj_idx,
-			 const char *key)
-{
-	int norm = duk__norm_idx(ctx, obj_idx);
-	assert(ctx->top > 0);
-
-	JSValue val = ctx->vstack[ctx->top - 1];
-	ctx->vstack[ctx->top - 1] = JS_UNDEFINED;
-	ctx->top--;
-
-	/* WHY: Duktape treats \xFF\xFF-prefixed keys as hidden internal
-	 * properties invisible to enumeration and Object.keys().  QuickJS
-	 * has no equivalent, so define as non-enumerable. */
-	if ((unsigned char)key[0] == 0xFF && (unsigned char)key[1] == 0xFF) {
-		JSAtom atom = JS_NewAtom(ctx->qjs, key);
-		JS_DefineProperty(ctx->qjs, ctx->vstack[norm], atom,
-				  val, JS_UNDEFINED, JS_UNDEFINED,
-				  JS_PROP_HAS_VALUE |
-				  JS_PROP_HAS_WRITABLE | JS_PROP_WRITABLE |
-				  JS_PROP_HAS_CONFIGURABLE | JS_PROP_CONFIGURABLE |
-				  JS_PROP_HAS_ENUMERABLE /* enumerable=0 */);
-		JS_FreeValue(ctx->qjs, val);
-		JS_FreeAtom(ctx->qjs, atom);
-	} else {
-		JS_SetPropertyStr(ctx->qjs, ctx->vstack[norm], key, val);
-	}
-}
+/* duk_put_prop_string: static inline in duk_compat.h */
 
 void duk_put_prop_index(duk_context *ctx, duk_idx_t obj_idx,
 			duk_uarridx_t arr_idx)
@@ -1879,6 +1846,16 @@ void duk_compat_destroy(duk_context *ctx)
 
 	if (ctx->qjs && !JS_IsUndefined(ctx->this_val))
 		JS_FreeValue(ctx->qjs, ctx->this_val);
+
+	/* Free any cached atoms */
+	if (ctx->qjs) {
+		for (int i = 0; i < DUK_ATOM_CACHE_SIZE; i++) {
+			if (ctx->atom_cache[i].key != NULL) {
+				JS_FreeAtom(ctx->qjs, ctx->atom_cache[i].atom);
+				ctx->atom_cache[i].key = NULL;
+			}
+		}
+	}
 
 	free(ctx);
 }

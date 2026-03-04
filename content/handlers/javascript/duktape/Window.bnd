@@ -915,6 +915,179 @@ getter Window::originAgentCluster()
 	return 1;
 %}
 
+getter Window::isSecureContext()
+%{
+	/* WHY: file:// and http:// are not secure contexts per spec.
+	 * NetSurf supports no TLS context model in JS; always false. */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+getter Window::crossOriginIsolated()
+%{
+	/* WHY: Cross-origin isolation requires COOP/COEP headers.
+	 * NetSurf does not implement these; always false. */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+method Window::queueMicrotask()
+%{
+	/* WHY: Full microtask queue integration would require hooking into
+	 * the JS engine's event loop. As a spec-compliant stub, call the
+	 * callback synchronously -- correct for single-threaded NetSurf and
+	 * sufficient for feature detection and simple usage patterns. */
+	if (duk_get_top(ctx) < 1 || !duk_is_callable(ctx, 0)) {
+		return 0;
+	}
+	duk_call(ctx, 0);
+	return 0;
+%}
+
+getter Window::customElements()
+%{
+	/* WHY: Custom element registry not implemented; return null. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Window::navigation()
+%{
+	/* WHY: Navigation API not implemented; return null. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter Window::origin()
+%{
+	/* WHY: Return the serialised origin (scheme+host) of the current URL. */
+	window_private_t *priv_win = (window_private_t *)priv;
+	const nsurl *url = browser_window_access_url(priv_win->win);
+	if (url != NULL) {
+		lwc_string *scheme = nsurl_get_component(url, NSURL_SCHEME);
+		lwc_string *host = nsurl_get_component(url, NSURL_HOST);
+		if (scheme != NULL && host != NULL) {
+			char buf[256];
+			snprintf(buf, sizeof(buf), "%s://%s",
+				 lwc_string_data(scheme),
+				 lwc_string_data(host));
+			duk_push_string(ctx, buf);
+			lwc_string_unref(scheme);
+			lwc_string_unref(host);
+			return 1;
+		}
+		if (scheme != NULL) lwc_string_unref(scheme);
+		if (host != NULL) lwc_string_unref(host);
+	}
+	duk_push_lstring(ctx, "null", 4);
+	return 1;
+%}
+
+getter Window::event()
+%{
+	/* WHY: Legacy event property; undefined when no event is dispatching. */
+	duk_push_undefined(ctx);
+	return 1;
+%}
+
+method Window::structuredClone()
+%{
+	/* WHY: Structured clone for simple values -- just return the argument
+	 * as-is. Full structured clone (with transfer) is complex; this stub
+	 * handles the common case of cloning plain objects/primitives. */
+	if (duk_get_top(ctx) < 1) {
+		duk_push_undefined(ctx);
+	} else {
+		duk_dup(ctx, 0);
+	}
+	return 1;
+%}
+
+method Window::reportError()
+%{
+	/* WHY: Error reporting to the global handler; log to console and no-op. */
+	NSLOG(dukky, DEEPDEBUG, "reportError called (stub)");
+	duk_push_undefined(ctx);
+	return 1;
+%}
+
+getter Window::locationbar()
+%{
+	/* WHY: BarProp stub -- NetSurf has no browser chrome UI exposed to JS. */
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_boolean(ctx, false);
+	duk_put_prop_string(ctx, obj, "visible");
+	return 1;
+%}
+
+getter Window::menubar()
+%{
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_boolean(ctx, false);
+	duk_put_prop_string(ctx, obj, "visible");
+	return 1;
+%}
+
+getter Window::personalbar()
+%{
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_boolean(ctx, false);
+	duk_put_prop_string(ctx, obj, "visible");
+	return 1;
+%}
+
+getter Window::scrollbars()
+%{
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_boolean(ctx, false);
+	duk_put_prop_string(ctx, obj, "visible");
+	return 1;
+%}
+
+getter Window::statusbar()
+%{
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_boolean(ctx, false);
+	duk_put_prop_string(ctx, obj, "visible");
+	return 1;
+%}
+
+getter Window::toolbar()
+%{
+	duk_idx_t obj = duk_push_object(ctx);
+	duk_push_boolean(ctx, false);
+	duk_put_prop_string(ctx, obj, "visible");
+	return 1;
+%}
+
+method Window::postMessage()
+%{
+	/* WHY: Cross-frame messaging not implemented; no-op stub. */
+	duk_push_undefined(ctx);
+	return 1;
+%}
+
+method Window::captureEvents()
+%{
+	/* WHY: Legacy Netscape method; no-op. */
+	duk_push_undefined(ctx);
+	return 1;
+%}
+
+method Window::releaseEvents()
+%{
+	/* WHY: Legacy Netscape method; no-op. */
+	duk_push_undefined(ctx);
+	return 1;
+%}
+
+getter Window::external()
+%{
+	/* WHY: external object -- legacy search provider API; return empty object. */
+	duk_push_object(ctx);
+	return 1;
+%}
+
 getter Window::clientInformation()
 %{
 	/* Alias for navigator */

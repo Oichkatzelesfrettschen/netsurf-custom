@@ -115,6 +115,21 @@ getter KeyboardEvent::metaKey ()
 	return 1;
 %}
 
+getter KeyboardEvent::repeat ()
+%{
+	/* WHY: libdom does not expose a get_repeat accessor.
+	 * NetSurf synthesises key events without repeat info; stub false. */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+getter KeyboardEvent::isComposing ()
+%{
+	/* WHY: NetSurf has no IME composition support; always false. */
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
 method KeyboardEvent::getModifierState ()
 %{
 	dom_string *modifier;

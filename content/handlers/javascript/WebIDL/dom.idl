@@ -86,6 +86,7 @@ interface ParentNode {
   [Unscopeable] void prepend((Node or DOMString)... nodes);
   [Unscopeable] void append((Node or DOMString)... nodes);
   [Unscopeable] void replaceChildren((Node or DOMString)... nodes);
+  void moveBefore(Node node, Node? child);
 
   [Unscopeable] Element? query(DOMString relativeSelectors);
   [NewObject, Unscopeable] Elements queryAll(DOMString relativeSelectors);
@@ -268,6 +269,13 @@ interface Document : Node {
   // NodeFilter.SHOW_ALL = 0xFFFFFFFF
   [NewObject] NodeIterator createNodeIterator(Node root, optional unsigned long whatToShow = 0xFFFFFFFF, optional NodeFilter? filter = null);
   [NewObject] TreeWalker createTreeWalker(Node root, optional unsigned long whatToShow = 0xFFFFFFFF, optional NodeFilter? filter = null);
+
+  CDATASection createCDATASection(DOMString data);
+  XPathExpression createExpression(DOMString expression);
+  XPathNSResolver createNSResolver(Node nodeResolver);
+  XPathResult evaluate(DOMString expression, Node contextNode, XPathNSResolver? resolver, unsigned short type, XPathResult? result);
+  readonly attribute CustomElementRegistry? customElementRegistry;
+  void moveBefore(Node node, Node? child);
 };
 
 [Exposed=Window]
@@ -334,6 +342,18 @@ interface Element : Node {
 
   Element? insertAdjacentElement(DOMString where, Element element);
   void insertAdjacentText(DOMString where, DOMString data);
+
+  DOMRect getBoundingClientRect();
+  sequence<DOMRect> getClientRects();
+
+  boolean webkitMatchesSelector(DOMString selectors);
+  readonly attribute ShadowRoot? shadowRoot;
+  ShadowRoot attachShadow(ShadowRootInit init);
+  readonly attribute Element? assignedSlot;
+  void replaceChildren((Node or DOMString)... nodes);
+  void moveBefore(Node node, Node? child);
+  DOMString getHTML();
+  void setHTMLUnsafe(DOMString html);
 };
 [Exposed=Window]
 interface NamedNodeMap {

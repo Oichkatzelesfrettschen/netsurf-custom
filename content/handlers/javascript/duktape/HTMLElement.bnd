@@ -640,6 +640,47 @@ setter HTMLElement::nonce()
 	return 0;
 %}
 
+/* -- accessKey: string attribute via generic element attribute -- */
+
+getter HTMLElement::accessKey()
+%{
+	dom_exception exc;
+	dom_string *val = NULL;
+	dom_string *attr = NULL;
+
+	exc = dom_string_create((const uint8_t *)"accesskey", 9, &attr);
+	if (exc != DOM_NO_ERR) { duk_push_lstring(ctx, "", 0); return 1; }
+
+	exc = dom_element_get_attribute(
+		(dom_element *)((node_private_t *)priv)->node, attr, &val);
+	dom_string_unref(attr);
+	if (exc != DOM_NO_ERR || val == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(val), dom_string_length(val));
+	dom_string_unref(val);
+	return 1;
+%}
+
+setter HTMLElement::accessKey()
+%{
+	dom_string *str = NULL;
+	dom_string *attr = NULL;
+	duk_size_t slen;
+	const char *s = duk_safe_to_lstring(ctx, 0, &slen);
+
+	if (dom_string_create((const uint8_t *)"accesskey", 9, &attr) != DOM_NO_ERR)
+		return 0;
+	if (dom_string_create((const uint8_t *)s, slen, &str) == DOM_NO_ERR) {
+		dom_element_set_attribute(
+			(dom_element *)((node_private_t *)priv)->node, attr, str);
+		dom_string_unref(str);
+	}
+	dom_string_unref(attr);
+	return 0;
+%}
+
 getter HTMLElement::dataset()
 %{
 	/* Return a cached plain object as minimal DOMStringMap stub. */
@@ -663,4 +704,147 @@ getter HTMLElement::style()
 		return 0;
 	}
 	return 1;
+%}
+
+getter HTMLElement::autocapitalize()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+setter HTMLElement::autocapitalize()
+%{
+	return 0;
+%}
+
+getter HTMLElement::autocorrect()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+setter HTMLElement::autocorrect()
+%{
+	return 0;
+%}
+
+getter HTMLElement::autofocus()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+setter HTMLElement::autofocus()
+%{
+	return 0;
+%}
+
+getter HTMLElement::enterKeyHint()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+setter HTMLElement::enterKeyHint()
+%{
+	return 0;
+%}
+
+getter HTMLElement::inputMode()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+setter HTMLElement::inputMode()
+%{
+	return 0;
+%}
+
+getter HTMLElement::outerText()
+%{
+	/* WHY: outerText getter returns same as innerText per spec. */
+	dom_exception exc;
+	dom_string *text = NULL;
+	exc = dom_node_get_text_content(
+		((node_private_t *)priv)->node, &text);
+	if (exc != DOM_NO_ERR || text == NULL) {
+		duk_push_lstring(ctx, "", 0);
+		return 1;
+	}
+	duk_push_lstring(ctx, dom_string_data(text), dom_string_length(text));
+	dom_string_unref(text);
+	return 1;
+%}
+
+setter HTMLElement::outerText()
+%{
+	return 0;
+%}
+
+getter HTMLElement::popover()
+%{
+	duk_push_null(ctx);
+	return 1;
+%}
+
+setter HTMLElement::popover()
+%{
+	return 0;
+%}
+
+getter HTMLElement::writingSuggestions()
+%{
+	duk_push_lstring(ctx, "", 0);
+	return 1;
+%}
+
+setter HTMLElement::writingSuggestions()
+%{
+	return 0;
+%}
+
+method HTMLElement::showPopover()
+%{
+	return 0;
+%}
+
+method HTMLElement::hidePopover()
+%{
+	return 0;
+%}
+
+method HTMLElement::togglePopover()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+method HTMLElement::attachInternals()
+%{
+	/* WHY: ElementInternals not implemented. */
+	duk_push_null(ctx);
+	return 1;
+%}
+
+getter HTMLElement::headingOffset()
+%{
+	duk_push_int(ctx, 0);
+	return 1;
+%}
+
+setter HTMLElement::headingOffset()
+%{
+	return 0;
+%}
+
+getter HTMLElement::headingReset()
+%{
+	duk_push_boolean(ctx, false);
+	return 1;
+%}
+
+setter HTMLElement::headingReset()
+%{
+	return 0;
 %}
