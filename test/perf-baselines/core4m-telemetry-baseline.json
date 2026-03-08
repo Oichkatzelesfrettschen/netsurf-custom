@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "scenario": "core4m-profile-telemetry",
+  "tool": "time",
+  "target": "core4m-monkey",
+  "thresholds": {
+    "elapsed_s_max": 0.5,
+    "max_resident_kib_max": 20000
+  },
+  "notes": "Host-side guardrail for the core4m monkey acceptance suite. This is a regression ceiling, not the final 386SX emulator acceptance budget."
+}

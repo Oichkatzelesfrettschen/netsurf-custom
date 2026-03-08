@@ -42,15 +42,13 @@ jobs:
         key: ${{ github.job }}
         max-size: 128M
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         REPO_BASE_URI: https://github.com/netsurf-browser
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        NS_BRANCH: ${{ github.ref_name }}
       run: |
-          export TARGET_WORKSPACE="$(pwd)/projects"
-          source docs/env.sh
-          ns-clone -d -s -b ${GITHUB_REF_NAME}
-          ns-make-tools install
-          ns-make-libs install
+          make bootstrap
 
     - name: Initialize CodeQL
       uses: github/codeql-action/init@v4
@@ -58,10 +56,10 @@ jobs:
         languages: ${{ matrix.language }}
 
     - name: Build NetSurf
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-          export TARGET_WORKSPACE="$(pwd)/projects"
-          source docs/env.sh
-          make -j"$(nproc)"
+          make build-gtk
 
     - name: Perform CodeQL Analysis
       uses: github/codeql-action/analyze@v4
@@ -83,16 +81,4 @@ jobs:
       # Suppress duktape.c (large vendored file with intentional patterns)
       # and generated binding files which are auto-generated from WebIDL
       run: |
-        cppcheck \
-          --error-exitcode=1 \
-          --force \
-          --suppress=*:content/handlers/javascript/duktape/duktape.c \
-          --inline-suppr \
-          -j "$(nproc)" \
-          --std=c99 \
-          -I include \
-          -I . \
-          content/ \
-          desktop/ \
-          utils/ \
-          2>&1
+        make static-analysis

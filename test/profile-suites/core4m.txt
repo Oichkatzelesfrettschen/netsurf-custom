@@ -1,0 +1,4 @@
+# No-JS render-core smoke coverage for the low-memory profile.
+test/monkey-tests/start-stop.yaml
+test/monkey-tests/start-stop-no-js.yaml
+test/monkey-tests/resource-scheme.yaml

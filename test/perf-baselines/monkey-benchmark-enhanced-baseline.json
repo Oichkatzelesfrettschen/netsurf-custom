@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "scenario": "monkey-web-standards-enhanced",
+  "tool": "benchmark",
+  "target": "monkey-enhanced",
+  "thresholds": {
+    "score_min": 100.0,
+    "fail_max": 0,
+    "skip_max": 0,
+    "elapsed_s_max": 0.5
+  },
+  "notes": "Enhanced QuickJS-NG monkey benchmark floor and elapsed-time ceiling for repo-root comparison runs."
+}

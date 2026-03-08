@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "scenario": "core4m-profile-suite",
+  "tool": "profile-suite",
+  "target": "core4m-monkey",
+  "thresholds": {
+    "pass_min": 3,
+    "fail_max": 0,
+    "total_min": 3,
+    "elapsed_s_max": 0.5
+  },
+  "notes": "No-JS render-core acceptance floor for the core4m profile on the repo-root monkey harness."
+}

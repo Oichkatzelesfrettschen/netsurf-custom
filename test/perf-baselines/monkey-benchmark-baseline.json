@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "scenario": "monkey-web-standards",
+  "tool": "benchmark",
+  "target": "monkey",
+  "thresholds": {
+    "score_min": 100.0,
+    "fail_max": 0,
+    "skip_max": 0
+  },
+  "notes": "Web-standards benchmark floor for repo-root monkey runs."
+}

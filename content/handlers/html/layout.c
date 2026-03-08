@@ -237,7 +237,7 @@ static int layout_text_indent(
 	css_computed_text_indent(style, &value, &unit);
 
 	if (unit == CSS_UNIT_PCT) {
-		return FPCT_OF_INT_TOINT(value, width);
+		return layout_fpct_of_int_to_int(value, width);
 	} else {
 		return FIXTOINT(css_unit_len2device_px(style, unit_len_ctx,
 				value, unit));
@@ -400,7 +400,7 @@ static void layout_minmax_table(struct box *table,
 	}
 
 	/* fixed width takes priority, unless it is too narrow */
-	if (css_computed_width_px(table->style, &content->unit_len_ctx,
+	if (layout_css_width_px(table->style, &content->unit_len_ctx,
 			-1, &width) == CSS_WIDTH_SET) {
 		if (table_min < width)
 			table_min = width;
@@ -666,7 +666,7 @@ layout_minmax_line(struct box *first,
 		bs = css_computed_box_sizing(block->style);
 
 		/* calculate box width */
-		wtype = css_computed_width_px(b->style,
+		wtype = layout_css_width_px(b->style,
 				&content->unit_len_ctx, -1, &width);
 		if (wtype == CSS_WIDTH_SET) {
 			if (bs == CSS_BOX_SIZING_BORDER_BOX) {
@@ -1038,7 +1038,7 @@ static void layout_minmax_block(
 		css_fixed value = 0;
 		int width;
 
-		if (css_computed_width_px(block->style, &content->unit_len_ctx,
+		if (layout_css_width_px(block->style, &content->unit_len_ctx,
 				-1, &width) == CSS_WIDTH_SET) {
 			min = max = width;
 			using_max_border_box = border_box;
@@ -1693,7 +1693,7 @@ bool layout_table(
 	}
 
 	/* find specified table width, or available width if auto-width */
-	if (css_computed_width_px(style, &content->unit_len_ctx,
+	if (layout_css_width_px(style, &content->unit_len_ctx,
 			available_width, &table_width) == CSS_WIDTH_SET) {
 		/* specified width includes border */
 		table_width -= table->border[LEFT].width +
@@ -1764,7 +1764,7 @@ bool layout_table(
 				/* Table is absolutely positioned or its
 				 * containing block has a valid specified
 				 * height. (CSS 2.1 Section 10.5) */
-				min_height = FPCT_OF_INT_TOINT(value,
+				min_height = layout_fpct_of_int_to_int(value,
 						containing_block->height);
 			}
 		} else {
@@ -2209,7 +2209,7 @@ static bool layout_apply_minmax_height(
 					 * containing block has a valid
 					 * specified height. (CSS 2.1
 					 * Section 10.5) */
-					h = FPCT_OF_INT_TOINT(value,
+					h = layout_fpct_of_int_to_int(value,
 						containing_block->height);
 					if (h < box->height) {
 						box->height = h;
@@ -2240,7 +2240,7 @@ static bool layout_apply_minmax_height(
 					 * containing block has a valid
 					 * specified height. (CSS 2.1
 					 * Section 10.5) */
-					h = FPCT_OF_INT_TOINT(value,
+					h = layout_fpct_of_int_to_int(value,
 						containing_block->height);
 					if (h > box->height) {
 						box->height = h;
@@ -4486,7 +4486,7 @@ layout_compute_offsets(const css_unit_ctx *unit_len_ctx,
 	type = css_computed_left(box->style, &value, &unit);
 	if (type == CSS_LEFT_SET) {
 		if (unit == CSS_UNIT_PCT) {
-			*left = FPCT_OF_INT_TOINT(value,
+			*left = layout_fpct_of_int_to_int(value,
 					containing_block->width);
 		} else {
 			*left = FIXTOINT(css_unit_len2device_px(
@@ -4501,7 +4501,7 @@ layout_compute_offsets(const css_unit_ctx *unit_len_ctx,
 	type = css_computed_right(box->style, &value, &unit);
 	if (type == CSS_RIGHT_SET) {
 		if (unit == CSS_UNIT_PCT) {
-			*right = FPCT_OF_INT_TOINT(value,
+			*right = layout_fpct_of_int_to_int(value,
 					containing_block->width);
 		} else {
 			*right = FIXTOINT(css_unit_len2device_px(
@@ -4516,7 +4516,7 @@ layout_compute_offsets(const css_unit_ctx *unit_len_ctx,
 	type = css_computed_top(box->style, &value, &unit);
 	if (type == CSS_TOP_SET) {
 		if (unit == CSS_UNIT_PCT) {
-			*top = FPCT_OF_INT_TOINT(value,
+			*top = layout_fpct_of_int_to_int(value,
 					containing_block->height);
 		} else {
 			*top = FIXTOINT(css_unit_len2device_px(
@@ -4531,7 +4531,7 @@ layout_compute_offsets(const css_unit_ctx *unit_len_ctx,
 	type = css_computed_bottom(box->style, &value, &unit);
 	if (type == CSS_BOTTOM_SET) {
 		if (unit == CSS_UNIT_PCT) {
-			*bottom = FPCT_OF_INT_TOINT(value,
+			*bottom = layout_fpct_of_int_to_int(value,
 					containing_block->height);
 		} else {
 			*bottom = FIXTOINT(css_unit_len2device_px(

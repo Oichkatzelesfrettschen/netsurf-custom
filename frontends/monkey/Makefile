@@ -9,9 +9,12 @@
 
 CWARNFLAGS += -Werror
 
-CFLAGS += -std=c99 \
+MONKEY_FRONTEND_CFLAGS := -std=c99 \
 	  -Dmonkey -Dnsmonkey -g \
 	  -DMONKEY_RESPATH=\"$(NETSURF_MONKEY_RESOURCES)\"
+
+CFLAGS += $(MONKEY_FRONTEND_CFLAGS)
+CXXFLAGS += $(MONKEY_FRONTEND_CFLAGS)
 
 LDFLAGS += -lm
 
@@ -33,16 +36,19 @@ MESSAGES_TARGET=$(MONKEY_RESOURCES_DIR)
 # enable POSIX and XSI features.
 # everywhere but freebsd where the default set already has them enabled
 ifneq ($(HOST),FreeBSD)
-  CFLAGS += -D_POSIX_C_SOURCE=200809L \
+  MONKEY_POSIX_CFLAGS := -D_POSIX_C_SOURCE=200809L \
 	    -D_XOPEN_SOURCE=700 \
 	    -D_BSD_SOURCE \
 	    -D_DEFAULT_SOURCE \
 	    -D_NETBSD_SOURCE
+  CFLAGS += $(MONKEY_POSIX_CFLAGS)
+  CXXFLAGS += $(MONKEY_POSIX_CFLAGS)
 endif
 
 # Windows flag setup
 ifeq ($(HOST),Windows_NT)
   CFLAGS += -U__STRICT_ANSI__
+  CXXFLAGS += -U__STRICT_ANSI__
 endif
 
 # ----------------------------------------------------------------------------

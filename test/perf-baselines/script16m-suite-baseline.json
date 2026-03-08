@@ -1,0 +1,13 @@
+{
+  "schema": 1,
+  "scenario": "script16m-profile-suite",
+  "tool": "profile-suite",
+  "target": "script16m-monkey",
+  "thresholds": {
+    "pass_min": 5,
+    "fail_max": 0,
+    "total_min": 5,
+    "elapsed_s_max": 0.75
+  },
+  "notes": "Scripted DOM/event smoke floor for the script16m profile using the explicit suite choices overlay."
+}

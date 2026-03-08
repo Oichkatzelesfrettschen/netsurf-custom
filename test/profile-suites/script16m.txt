@@ -1,0 +1,6 @@
+# Optional scripted profile smoke coverage.
+test/monkey-tests/start-stop.yaml
+test/monkey-tests/document-title.yaml
+test/monkey-tests/history-api.yaml
+test/monkey-tests/innerHTML-correctness.yaml
+test/monkey-tests/polyfill-es6.yaml

@@ -899,6 +899,7 @@ static void *dukky_realloc_function(void *udata, void *ptr, duk_size_t size)
 {
 	jsheap *heap = (jsheap *)udata;
 	size_t *hdr;
+	size_t *new_hdr;
 	size_t old_size;
 
 	if (ptr == NULL && size == 0)
@@ -923,9 +924,10 @@ static void *dukky_realloc_function(void *udata, void *ptr, duk_size_t size)
 		return NULL;
 	}
 
-	hdr = realloc(hdr, ALLOC_HDR_SIZE + size);
-	if (hdr == NULL)
+	new_hdr = realloc(hdr, ALLOC_HDR_SIZE + size);
+	if (new_hdr == NULL)
 		return NULL;
+	hdr = new_hdr;
 
 	heap->heap_allocated -= old_size + ALLOC_HDR_SIZE;
 	*hdr = size;

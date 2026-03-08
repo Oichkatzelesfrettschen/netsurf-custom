@@ -57,6 +57,7 @@ $(eval $(call pkg_config_find_and_add,gmodule-2.0,GModule2))
 
 
 CFLAGS += $(GTKCFLAGS)
+CXXFLAGS += $(GTKCFLAGS)
 LDFLAGS += -lm
 
 # ---------------------------------------------------------------------------
@@ -79,6 +80,7 @@ MESSAGES_TARGET=$(NSGTK_RESOURCES_DIR)
 
 ifeq ($(HOST),Windows_NT)
     CFLAGS += -U__STRICT_ANSI__
+    CXXFLAGS += -U__STRICT_ANSI__
 endif
 
 # ----------------------------------------------------------------------------
@@ -109,6 +111,7 @@ NETSURF_FEATURE_GRESOURCE_ENABLED := yes
 #resource compiler tool
 GLIB_COMPILE_RESOURCES := glib-compile-resources
 CFLAGS += -DWITH_GRESOURCE
+CXXFLAGS += -DWITH_GRESOURCE
 
 NETSURF_GRESOURCE_XML := $(NSGTK_RESOURCES_DIR)/netsurf.gresource.xml
 UI_GRESOURCE_XML := $(NSGTK_RESOURCES_DIR)/ui.gresource.xml
@@ -144,6 +147,7 @@ ifneq (,$(filter $(NETSURF_USE_INLINE_PIXBUF),AUTO YES))
 ifneq ($(NETSURF_FEATURE_GRESOURCE_ENABLED),yes)
 
 CFLAGS += -DWITH_BUILTIN_PIXBUF
+CXXFLAGS += -DWITH_BUILTIN_PIXBUF
 
 GTK_IMAGE_favicon := favicon.png
 GTK_IMAGE_netsurf := netsurf.xpm

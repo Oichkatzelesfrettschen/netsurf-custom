@@ -1,0 +1,19 @@
+# Low-memory framebuffer profile for 386SX-class systems.
+memory_cache_size:262144
+disc_cache_size:0
+max_fetchers:2
+max_fetchers_per_host:1
+max_cached_fetch_handles:0
+enable_javascript:0
+background_images:0
+animate_images:0
+incremental_reflow:0
+url_suggestion:0
+window_width:640
+window_height:480
+fb_depth:8
+fb_furniture_size:12
+fb_toolbar_size:18
+fb_font_monochrome:1
+fb_font_cachesize:128
+js_heap_limit:0

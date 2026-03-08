@@ -58,21 +58,19 @@ jobs:
         key: wpt-${{ matrix.suite }}
         max-size: 128M
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         REPO_BASE_URI: https://github.com/netsurf-browser
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        NS_BRANCH: ${{ github.ref_name }}
       run: |
-        export TARGET_WORKSPACE="$(pwd)/projects"
-        source docs/env.sh
-        ns-clone -d -s -b ${GITHUB_REF_NAME}
-        ns-make-tools install
-        ns-make-libs install
+        make bootstrap
 
     - name: Build nsmonkey
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-        export TARGET_WORKSPACE="$(pwd)/projects"
-        source docs/env.sh
-        make -j"$(nproc)" TARGET=monkey
+        make build-monkey
 
     - name: Fetch WPT subset (${{ matrix.suite }})
       run: |
@@ -89,14 +87,14 @@ jobs:
         git -C test/wpt checkout --quiet master
 
     - name: Run WPT ${{ matrix.suite }}
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-        export TARGET_WORKSPACE="$(pwd)/projects"
-        source docs/env.sh
-        python3 test/run-wpt.py \
+        tools/with-netsurf-env.sh --shell 'python3 test/run-wpt.py \
           --monkey ./nsmonkey \
           --suite ${{ matrix.suite }} \
           --out test/wpt-results-${{ matrix.suite }}.json \
-          --timeout 20
+          --timeout 20'
       # WHY: Exit code is non-zero only for assertion failures, not for
       #      harness-errors or timeouts (unimplemented features).
       continue-on-error: false

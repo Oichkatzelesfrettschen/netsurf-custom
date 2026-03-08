@@ -396,7 +396,7 @@ fbtk_set_ptr(fbtk_widget_t *widget, fbtk_callback_info *cbi)
 	struct fbtk_bitmap *bm = cbi->context;
 
 	nsfb_cursor_set(root->u.root.fb,
-			(nsfb_colour_t *)bm->pixdata,
+			bm->pixdata,
 			bm->width,
 			bm->height,
 			bm->width,

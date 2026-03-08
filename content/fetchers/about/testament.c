@@ -31,6 +31,18 @@
 #include "private.h"
 #include "atestament.h"
 
+#ifndef WT_BRANCHPATH
+#define WT_BRANCHPATH "unknown"
+#endif
+
+#ifndef WT_TAGIS
+#define WT_TAGIS "unknown"
+#endif
+
+#ifndef CI_BUILD
+#define CI_BUILD "unknown"
+#endif
+
 typedef struct {
 	const char *leaf;
 	const char *modtype;

@@ -1,0 +1,2 @@
+# Deterministic repo-root profile defaults for host development runs.
+enable_javascript:0

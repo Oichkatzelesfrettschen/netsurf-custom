@@ -47,22 +47,22 @@ jobs:
         key: ${{ github.job }}
         max-size: 128M
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         REPO_BASE_URI: https://github.com/netsurf-browser
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        NS_BRANCH: ${{ github.ref_name }}
       run: |
-          export TARGET_WORKSPACE="$(pwd)/projects"
-          source docs/env.sh
-          ns-clone -d -s -b ${GITHUB_REF_NAME}
-          ns-make-tools install
-          ns-make-libs install
+          make bootstrap
 
     - name: Build NetSurf Monkey
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-          export TARGET_WORKSPACE="$(pwd)/projects"
-          source docs/env.sh
-          make -j"$(nproc)" TARGET=monkey
+          make build-monkey
 
     - name: Run Monkey Test
+      env:
+        TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-          LC_ALL=C.UTF-8 test/monkey-see-monkey-do -v -d ${{ matrix.test }}
+          make test-monkey-division MONKEY_DIVISION=${{ matrix.test }}

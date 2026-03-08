@@ -239,6 +239,7 @@ def main():
         with open(args.json, "w") as f:
             json.dump(
                 {
+                    "elapsed_s": round(elapsed, 6),
                     "score": parsed["summary"]["score"]
                     if parsed["summary"]
                     else round(

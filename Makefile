@@ -119,6 +119,31 @@ include Makefile.defaults
 # Pull in the user configuration
 -include Makefile.config
 
+PROFILE ?= hostdev
+KNOWN_PROFILES := hostdev core4m script16m
+ifeq ($(filter $(PROFILE),$(KNOWN_PROFILES)),)
+$(error Unknown PROFILE '$(PROFILE)'. Expected one of: $(KNOWN_PROFILES))
+endif
+PROFILE_MAKEFILE := profiles/$(PROFILE).mk
+-include $(PROFILE_MAKEFILE)
+
+# Keep the workspace pkg-config path visible to $(shell pkg-config ...)
+# during parse-time feature detection, not just to recipe shells.
+export PKG_CONFIG_PATH
+
+MINIMAL_PARSE_GOALS := \
+	doctor doctor-i386 bootstrap-tools bootstrap-libs bootstrap \
+	build-native package-native build-gtk build-monkey build-monkey-enhanced build-framebuffer build-matrix-native \
+	build-profile build-monkey-profile \
+	test-unit sanitize-unit test-monkey-smoke test-monkey-division benchmark-monkey benchmark-monkey-enhanced \
+	benchmark-profile profile-profile verify-profile \
+	measure-monkey-engines measure-bootstrap-costs measure-i386-denominator \
+	rebuild-i386-libs build-i386-denominator verify-i386-denominator \
+	profile-valgrind-monkey profile-heaptrack-monkey profile-perf-monkey \
+	static-analysis verify-native verify-matrix
+SKIP_BUILD_CONFIG := $(filter $(MINIMAL_PARSE_GOALS),$(MAKECMDGOALS))
+
+ifeq ($(SKIP_BUILD_CONFIG),)
 # libraries enabled by feature switch without pkgconfig file 
 $(eval $(call feature_switch,JPEG,JPEG (libjpeg),-DWITH_JPEG,-ljpeg,-UWITH_JPEG,))
 $(eval $(call feature_switch,HARU_PDF,PDF export (haru),-DWITH_PDF_EXPORT,-lhpdf -lpng,-UWITH_PDF_EXPORT,))
@@ -164,6 +189,7 @@ $(eval $(call pkg_config_find_and_add_enabled,NSSVG,libsvgtiny,SVG))
 $(eval $(call pkg_config_find_and_add_enabled,ROSPRITE,librosprite,Sprite))
 $(eval $(call pkg_config_find_and_add_enabled,NSPSL,libnspsl,PSL))
 $(eval $(call pkg_config_find_and_add_enabled,NSLOG,libnslog,LOG))
+endif
 
 # List of directories in which headers are searched for
 INCLUDE_DIRS :=. include $(OBJROOT)
@@ -179,6 +205,12 @@ CXXFLAGS += -DNETSURF_HOMEPAGE=\"$(NETSURF_HOMEPAGE)\"
 # set the logging level
 CFLAGS += -DNETSURF_LOG_LEVEL=$(NETSURF_LOG_LEVEL)
 CXXFLAGS += -DNETSURF_LOG_LEVEL=$(NETSURF_LOG_LEVEL)
+
+ifneq ($(PREFIX),)
+CFLAGS += -I$(PREFIX)/include
+CXXFLAGS += -I$(PREFIX)/include
+LDFLAGS += -L$(PREFIX)/lib
+endif
 
 # If we're building the sanitize goal, override things
 ifneq ($(filter-out sanitize,$(MAKECMDGOALS)),$(MAKECMDGOALS))
@@ -243,6 +275,7 @@ POSTEXES :=
 # Target specific setup
 # ----------------------------------------------------------------------------
 
+ifeq ($(SKIP_BUILD_CONFIG),)
 include frontends/Makefile
 
 # ----------------------------------------------------------------------------
@@ -462,6 +495,8 @@ messages-fetch-tfx:
 messages-import-tfx: messages-fetch-tfx
 	for tfxlang in $(FAT_LANGUAGES);do $(PERL) ./utils/import-messages.pl -l $${tfxlang} -p any -f transifex -o resources/FatMessages -i resources/FatMessages -I Messages.any.$${tfxlang}.tfx ; $(RM) Messages.any.$${tfxlang}.tfx; done
 
+endif
+
 # ----------------------------------------------------------------------------
 # compile_commands.json (for clangd, clang-tidy, scan-build)
 # WHY: A compilation database lets editors and static-analysis tools find
@@ -469,12 +504,281 @@ messages-import-tfx: messages-fetch-tfx
 #      bear wraps the build and records every compilation command.
 # WHAT: Produces compile_commands.json in the repository root.
 # HOW:  Requires bear >= 3.0 (installed as 'bear' on Arch/Ubuntu).
-#       Run in a shell that has already sourced docs/env.sh so that
-#       PKG_CONFIG_PATH points at the workspace libraries.
+#       The repo-root wrapper will source docs/env.sh automatically.
 # ----------------------------------------------------------------------------
 .PHONY: compile-db
+ENV_HELPER := tools/with-netsurf-env.sh
+DOCTOR_TOOL := tools/build-doctor.py
+PERF_BASELINE_TOOL := test/perf-baseline.py
+PROFILE_SUITE_TOOL := test/run-profile-suite.py
+MEASURE_WORKFLOW_TOOL := tools/measure-workflow.py
+I386_GATE_TOOL := tools/i386_emulator_gate.py
+I386_BUILD_TOOL := tools/i386_build_attempt.py
+I386_REBUILD_TOOL := tools/rebuild_i386_workspace.py
+PROFILE_DIR := build/profiles
+PERF_BASELINE_DIR := test/perf-baselines
+BOOTSTRAP_BRANCH_ARG := $(if $(NS_BRANCH),-b $(NS_BRANCH),)
+WORKSPACE_MARKER := build/.workspace-path
+JS_ENGINE_MARKER := build/.js-engine-mode
+PROFILE_MARKER := build/.build-profile
+BUILD_FLAVOUR_MARKER := build/.build-flavour
+PROFILE_CHOICES := $(CURDIR)/profiles/Choices.$(PROFILE)
+PROFILE_SUITE_CHOICES := $(CURDIR)/profiles/Choices.$(PROFILE).suite
+PROFILE_SUITE := $(CURDIR)/test/profile-suites/$(PROFILE).txt
+BUILD_FLAVOUR ?= native
+
+define PROFILE_RUNTIME_ENV
+profile_choices="$(PROFILE_CHOICES)"; \
+if [ ! -f "$$profile_choices" ]; then \
+	echo "Missing profile Choices file: $$profile_choices"; \
+	exit 1; \
+fi; \
+export NETSURF_CHOICES="$$profile_choices"; \
+export NETSURF_BUILD_PROFILE="$(PROFILE)"
+endef
+
+define PROFILE_SUITE_RUNTIME_ENV
+profile_choices="$(PROFILE_CHOICES)"; \
+suite_choices="$(PROFILE_SUITE_CHOICES)"; \
+if [ -f "$$suite_choices" ]; then \
+	profile_choices="$$suite_choices"; \
+fi; \
+if [ ! -f "$$profile_choices" ]; then \
+	echo "Missing profile Choices file: $$profile_choices"; \
+	exit 1; \
+fi; \
+export NETSURF_CHOICES="$$profile_choices"; \
+export NETSURF_BUILD_PROFILE="$(PROFILE)"
+endef
+
+define PREPARE_WORKSPACE_BUILD
+marker="$(WORKSPACE_MARKER)"; \
+mode_marker="$(JS_ENGINE_MARKER)"; \
+profile_marker="$(PROFILE_MARKER)"; \
+flavour_marker="$(BUILD_FLAVOUR_MARKER)"; \
+current="$$TARGET_WORKSPACE"; \
+current_mode="$${NETSURF_JS_ENGINE:-standard}"; \
+current_profile="$(PROFILE)"; \
+current_flavour="$(BUILD_FLAVOUR)"; \
+clean_args=""; \
+if [ -n "$$build_target" ]; then \
+	clean_args=" TARGET=$$build_target"; \
+fi; \
+if [ -d build ] && [ ! -f "$$marker" ]; then \
+	echo "Cleaning stale build/ because no workspace marker is present"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -f "$$marker" ] && [ "$$(cat "$$marker")" != "$$current" ]; then \
+	echo "Cleaning stale build/ for workspace $$current"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -d build ] && [ ! -f "$$mode_marker" ]; then \
+	echo "Cleaning stale build/ because no JS engine marker is present"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -f "$$mode_marker" ] && [ "$$(cat "$$mode_marker")" != "$$current_mode" ]; then \
+	echo "Cleaning stale build/ for JS engine $$current_mode"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -d build ] && [ ! -f "$$profile_marker" ]; then \
+	echo "Cleaning stale build/ because no profile marker is present"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -f "$$profile_marker" ] && [ "$$(cat "$$profile_marker")" != "$$current_profile" ]; then \
+	echo "Cleaning stale build/ for profile $$current_profile"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -d build ] && [ ! -f "$$flavour_marker" ]; then \
+	echo "Cleaning stale build/ because no build flavour marker is present"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+if [ -f "$$flavour_marker" ] && [ "$$(cat "$$flavour_marker")" != "$$current_flavour" ]; then \
+	echo "Cleaning stale build/ for build flavour $$current_flavour"; \
+	eval "$$MAKE clean$$clean_args"; \
+fi; \
+mkdir -p build; \
+printf "%s\n" "$$current" > "$$marker"; \
+printf "%s\n" "$$current_mode" > "$$mode_marker"; \
+printf "%s\n" "$$current_profile" > "$$profile_marker"; \
+printf "%s\n" "$$current_flavour" > "$$flavour_marker"
+endef
+
 compile-db:
-	bear -- $(MAKE) -j$(shell nproc) TARGET=gtk
+	$(ENV_HELPER) --shell 'bear -- $$MAKE $$USE_CPUS TARGET=gtk PROFILE=$(PROFILE)'
+
+
+# ----------------------------------------------------------------------------
+# Repo-root bootstrap, build, profiling, and verification
+# WHY: Centralize the native build and profiling workflow behind reproducible
+#      GNU Make targets so developers and CI do not have to hand-assemble
+#      env.sh calls, workspace paths, or profiler arguments.
+# ----------------------------------------------------------------------------
+.PHONY: \
+	doctor doctor-i386 bootstrap-tools bootstrap-libs bootstrap \
+	build-native package-native build-gtk build-monkey build-monkey-enhanced build-framebuffer build-matrix-native \
+	build-profile build-monkey-profile \
+	test-unit sanitize-unit test-monkey-smoke test-monkey-division benchmark-monkey benchmark-monkey-enhanced \
+	benchmark-profile profile-profile verify-profile \
+	measure-monkey-engines measure-bootstrap-costs measure-i386-denominator \
+	rebuild-i386-libs build-i386-denominator verify-i386-denominator \
+	profile-valgrind-monkey profile-heaptrack-monkey profile-perf-monkey \
+	static-analysis verify-native verify-matrix
+
+doctor:
+	python3 $(DOCTOR_TOOL)
+
+doctor-i386:
+	python3 $(I386_GATE_TOOL)
+
+bootstrap-tools:
+	$(ENV_HELPER) --shell 'ns-clone -d $(BOOTSTRAP_BRANCH_ARG) && ns-make-tools install'
+
+bootstrap-libs:
+	$(ENV_HELPER) --shell 'ns-clone -d $(BOOTSTRAP_BRANCH_ARG) && ns-make-libs install'
+
+bootstrap:
+	$(ENV_HELPER) --shell 'ns-clone -d $(BOOTSTRAP_BRANCH_ARG) && ns-make-tools install && ns-make-libs install'
+
+build-native:
+	$(ENV_HELPER) --shell 'build_target="$(TARGET)"; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS $(if $(TARGET),TARGET=$(TARGET),) PROFILE=$(PROFILE)'
+
+package-native:
+	$(ENV_HELPER) --shell '$$MAKE package $(if $(TARGET),TARGET=$(TARGET),) PROFILE=$(PROFILE)'
+
+build-gtk:
+	$(ENV_HELPER) --shell 'build_target=gtk; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS TARGET=gtk PROFILE=$(PROFILE)'
+
+build-monkey:
+	$(ENV_HELPER) --shell 'build_target=monkey; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS TARGET=monkey PROFILE=$(PROFILE)'
+
+build-monkey-enhanced:
+	$(ENV_HELPER) --shell 'export NETSURF_JS_ENGINE=enhanced; build_target=monkey; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS TARGET=monkey PROFILE=$(PROFILE) NETSURF_JS_ENGINE=enhanced'
+
+build-framebuffer:
+	$(ENV_HELPER) --shell 'build_target=framebuffer; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS TARGET=framebuffer PROFILE=$(PROFILE)'
+
+build-profile:
+ifeq ($(PROFILE),hostdev)
+	$(MAKE) build-native $(if $(TARGET),TARGET=$(TARGET),) PROFILE=$(PROFILE)
+else
+	$(ENV_HELPER) --shell 'build_target=framebuffer; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS TARGET=framebuffer PROFILE=$(PROFILE)'
+endif
+
+build-monkey-profile:
+	$(ENV_HELPER) --shell 'build_target=monkey; $(PREPARE_WORKSPACE_BUILD) && $$MAKE $$USE_CPUS TARGET=monkey PROFILE=$(PROFILE)'
+
+build-matrix-native:
+	$(MAKE) build-gtk
+	$(MAKE) build-monkey
+	$(MAKE) build-framebuffer
+	$(MAKE) test-unit
+
+test-unit:
+	$(ENV_HELPER) --shell '$$MAKE test PROFILE=$(PROFILE) $(if $(SKIP_MALLOC_LIMIT_TESTS),SKIP_MALLOC_LIMIT_TESTS=$(SKIP_MALLOC_LIMIT_TESTS),)'
+
+sanitize-unit:
+	$(ENV_HELPER) --shell '$$MAKE sanitize PROFILE=$(PROFILE)'
+
+test-monkey-smoke: build-monkey
+	$(ENV_HELPER) --shell 'LC_ALL=C.UTF-8; for plan in test/monkey-tests/history-api.yaml test/monkey-tests/polyfill-es6.yaml test/monkey-tests/innerHTML-correctness.yaml; do echo "=== $$plan ==="; python3 test/monkey-see-monkey-do ./nsmonkey $$plan || exit 1; done'
+
+MONKEY_DIVISION ?= short-internet
+test-monkey-division: build-monkey
+	$(ENV_HELPER) --shell 'LC_ALL=C.UTF-8 test/monkey-see-monkey-do -v -d $(MONKEY_DIVISION)'
+
+benchmark-monkey: build-monkey
+	$(ENV_HELPER) --shell 'mkdir -p $(PROFILE_DIR) && python3 test/run-benchmark.py -m ./nsmonkey --json $(PROFILE_DIR)/monkey-benchmark.raw.json && python3 $(PERF_BASELINE_TOOL) summarize-benchmark --input $(PROFILE_DIR)/monkey-benchmark.raw.json --output $(PROFILE_DIR)/monkey-benchmark.json --scenario monkey-web-standards --target monkey --command "python3 test/run-benchmark.py -m ./nsmonkey" --environment "TARGET_WORKSPACE=$$TARGET_WORKSPACE HOST=$$HOST" && python3 $(PERF_BASELINE_TOOL) check --actual $(PROFILE_DIR)/monkey-benchmark.json --baseline $(PERF_BASELINE_DIR)/monkey-benchmark-baseline.json'
+
+benchmark-monkey-enhanced: build-monkey-enhanced
+	$(ENV_HELPER) --shell 'export NETSURF_JS_ENGINE=enhanced; mkdir -p $(PROFILE_DIR) && python3 test/run-benchmark.py -m ./nsmonkey --json $(PROFILE_DIR)/monkey-benchmark-enhanced.raw.json && python3 $(PERF_BASELINE_TOOL) summarize-benchmark --input $(PROFILE_DIR)/monkey-benchmark-enhanced.raw.json --output $(PROFILE_DIR)/monkey-benchmark-enhanced.json --scenario monkey-web-standards-enhanced --target monkey-enhanced --command "NETSURF_JS_ENGINE=enhanced python3 test/run-benchmark.py -m ./nsmonkey" --environment "TARGET_WORKSPACE=$$TARGET_WORKSPACE HOST=$$HOST NETSURF_JS_ENGINE=$$NETSURF_JS_ENGINE" && python3 $(PERF_BASELINE_TOOL) check --actual $(PROFILE_DIR)/monkey-benchmark-enhanced.json --baseline $(PERF_BASELINE_DIR)/monkey-benchmark-enhanced-baseline.json'
+
+benchmark-profile: build-monkey-profile
+	$(ENV_HELPER) --shell '$(PROFILE_SUITE_RUNTIME_ENV); suite="$(PROFILE_SUITE)"; if [ ! -f "$$suite" ]; then echo "Missing profile suite $$suite"; exit 1; fi; mkdir -p $(PROFILE_DIR) && python3 $(PROFILE_SUITE_TOOL) --monkey ./nsmonkey --suite "$$suite" --json $(PROFILE_DIR)/$(PROFILE)-suite.raw.json && python3 $(PERF_BASELINE_TOOL) summarize-suite --input $(PROFILE_DIR)/$(PROFILE)-suite.raw.json --output $(PROFILE_DIR)/$(PROFILE)-suite.json --scenario $(PROFILE)-profile-suite --target $(PROFILE)-monkey --command "python3 $(PROFILE_SUITE_TOOL) --monkey ./nsmonkey --suite $$suite" --environment "TARGET_WORKSPACE=$$TARGET_WORKSPACE HOST=$$HOST PROFILE=$(PROFILE) NETSURF_CHOICES=$$NETSURF_CHOICES" && python3 $(PERF_BASELINE_TOOL) check --actual $(PROFILE_DIR)/$(PROFILE)-suite.json --baseline $(PERF_BASELINE_DIR)/$(PROFILE)-suite-baseline.json'
+
+profile-profile: build-monkey-profile
+	$(ENV_HELPER) --shell '$(PROFILE_SUITE_RUNTIME_ENV); suite="$(PROFILE_SUITE)"; if [ ! -f "$$suite" ]; then echo "Missing profile suite $$suite"; exit 1; fi; mkdir -p $(PROFILE_DIR) && LC_ALL=C /usr/bin/time -v -o $(PROFILE_DIR)/$(PROFILE)-suite.time python3 $(PROFILE_SUITE_TOOL) --monkey ./nsmonkey --suite "$$suite" --json $(PROFILE_DIR)/$(PROFILE)-suite-telemetry.raw.json >/dev/null && python3 $(PERF_BASELINE_TOOL) summarize-time --input $(PROFILE_DIR)/$(PROFILE)-suite.time --output $(PROFILE_DIR)/$(PROFILE)-telemetry.json --scenario $(PROFILE)-profile-telemetry --target $(PROFILE)-monkey --command "/usr/bin/time -v python3 $(PROFILE_SUITE_TOOL) --monkey ./nsmonkey --suite $$suite" --environment "TARGET_WORKSPACE=$$TARGET_WORKSPACE HOST=$$HOST PROFILE=$(PROFILE) NETSURF_CHOICES=$$NETSURF_CHOICES" && python3 $(PERF_BASELINE_TOOL) check --actual $(PROFILE_DIR)/$(PROFILE)-telemetry.json --baseline $(PERF_BASELINE_DIR)/$(PROFILE)-telemetry-baseline.json'
+
+measure-monkey-engines:
+	python3 $(MEASURE_WORKFLOW_TOOL) compare-monkey-engines --restore-standard
+
+measure-bootstrap-costs:
+	python3 $(MEASURE_WORKFLOW_TOOL) measure-bootstrap-costs
+
+measure-i386-denominator:
+	python3 $(I386_GATE_TOOL)
+
+rebuild-i386-libs:
+	python3 $(I386_REBUILD_TOOL)
+
+build-i386-denominator:
+	python3 $(I386_BUILD_TOOL)
+
+verify-i386-denominator:
+	python3 $(I386_GATE_TOOL) --strict && python3 $(I386_BUILD_TOOL) --strict
+
+profile-valgrind-monkey: build-monkey
+	$(ENV_HELPER) --shell 'mkdir -p $(PROFILE_DIR) && python3 test/monkey_driver.py -m ./nsmonkey -w "valgrind --quiet --tool=memcheck --xml=yes --xml-file=$(PROFILE_DIR)/monkey-valgrind.xml --leak-check=full --track-origins=yes --suppressions=tools/valgrind.supp" -t test/monkey-tests/start-stop.yaml && python3 $(PERF_BASELINE_TOOL) summarize-valgrind --input $(PROFILE_DIR)/monkey-valgrind.xml --output $(PROFILE_DIR)/monkey-valgrind.json --scenario monkey-start-stop --target monkey --command "valgrind memcheck nsmonkey start-stop" --environment "TARGET_WORKSPACE=$$TARGET_WORKSPACE HOST=$$HOST" && python3 $(PERF_BASELINE_TOOL) check --actual $(PROFILE_DIR)/monkey-valgrind.json --baseline $(PERF_BASELINE_DIR)/monkey-valgrind-baseline.json'
+
+profile-heaptrack-monkey: build-monkey
+	$(ENV_HELPER) --shell 'mkdir -p $(PROFILE_DIR) && python3 test/monkey_driver.py -m ./nsmonkey -w "heaptrack --record-only -o $(PROFILE_DIR)/monkey-heaptrack" -t test/monkey-tests/start-stop.yaml > $(PROFILE_DIR)/monkey-heaptrack.log 2>&1 && heaptrack_print -f $(PROFILE_DIR)/monkey-heaptrack.zst --print-peaks --print-allocators --print-temporary --peak-limit 10 > $(PROFILE_DIR)/monkey-heaptrack-report.txt 2>> $(PROFILE_DIR)/monkey-heaptrack.log && python3 $(PERF_BASELINE_TOOL) summarize-heaptrack --input $(PROFILE_DIR)/monkey-heaptrack.log --profile-file $(PROFILE_DIR)/monkey-heaptrack.zst --output $(PROFILE_DIR)/monkey-heaptrack.json --scenario monkey-start-stop --target monkey --command "heaptrack --record-only nsmonkey start-stop" --environment "TARGET_WORKSPACE=$$TARGET_WORKSPACE HOST=$$HOST"'
+
+profile-perf-monkey: build-monkey
+	$(ENV_HELPER) --shell 'mkdir -p $(PROFILE_DIR); if perf stat true >/dev/null 2>$(PROFILE_DIR)/monkey-perf.stderr; then python3 test/monkey_driver.py -m ./nsmonkey -w "perf stat -x, -o $(PROFILE_DIR)/monkey-perf.csv" -t test/monkey-tests/start-stop.yaml && printf "{\n  \"tool\": \"perf\",\n  \"status\": \"supported\",\n  \"csv\": \"$(PROFILE_DIR)/monkey-perf.csv\"\n}\n" > $(PROFILE_DIR)/monkey-perf.json; else reason=$$(awk '\''NF { line=$$0 } END { print line }'\'' $(PROFILE_DIR)/monkey-perf.stderr 2>/dev/null); printf "{\n  \"tool\": \"perf\",\n  \"status\": \"unsupported\",\n  \"reason\": \"%s\"\n}\n" "$$reason" > $(PROFILE_DIR)/monkey-perf.json; cat $(PROFILE_DIR)/monkey-perf.json; fi'
+
+static-analysis:
+	cppcheck \
+	  --error-exitcode=1 \
+	  --force \
+	  --suppress=*:content/handlers/javascript/duktape/duktape.c \
+	  --suppress=*:content/handlers/javascript/enhanced/engine.c \
+	  --suppress=syntaxError:content/handlers/javascript/duktape/duk_config.h \
+	  --suppress=internalAstError:content/handlers/html/box_special.c \
+	  --suppress=syntaxError:content/handlers/html/redraw.c \
+	  --suppress=syntaxError:content/handlers/image/rsvg.c \
+	  --suppress=memleak:content/handlers/css/css.c \
+	  --suppress=memleak:content/handlers/image/bmp.c \
+	  --suppress=memleak:content/handlers/image/gif.c \
+	  --suppress=memleak:content/handlers/image/ico.c \
+	  --suppress=memleak:content/handlers/image/nssprite.c \
+	  --suppress=memleak:content/handlers/image/png.c \
+	  --suppress=memleak:content/handlers/image/rsvg246.c \
+	  --suppress=memleak:content/handlers/image/svg.c \
+	  --suppress=memleak:content/handlers/javascript/content.c \
+	  --suppress=memleak:content/handlers/text/textplain.c \
+	  --suppress=doubleFree:desktop/cookie_manager.c \
+	  --suppress=doubleFree:desktop/global_history.c \
+	  --suppress=doubleFree:desktop/hotlist.c \
+	  --suppress=unknownMacro:utils/talloc.c \
+	  --suppress=va_list_usedBeforeStarted:utils/talloc.c \
+	  --suppress=memleak:utils/talloc.c \
+	  --inline-suppr \
+	  -j "$(shell nproc)" \
+	  --std=c99 \
+	  -I include \
+	  -I . \
+	  -i content/handlers/javascript/duktape/duktape.c \
+	  -i content/handlers/javascript/enhanced/engine.c \
+	  -i utils/talloc.c \
+	  content/ \
+	  desktop/ \
+	  utils/
+
+verify-native:
+	$(MAKE) doctor
+	$(MAKE) build-matrix-native
+	$(MAKE) test-monkey-smoke
+	$(MAKE) benchmark-monkey
+	$(MAKE) static-analysis
+
+verify-profile:
+	$(MAKE) doctor PROFILE=$(PROFILE)
+	$(MAKE) build-profile PROFILE=$(PROFILE) $(if $(TARGET),TARGET=$(TARGET),)
+	$(MAKE) test-unit PROFILE=$(PROFILE)
+	$(MAKE) benchmark-profile PROFILE=$(PROFILE)
+	$(MAKE) profile-profile PROFILE=$(PROFILE)
+
+verify-matrix:
+	$(MAKE) verify-native
 
 
 # ----------------------------------------------------------------------------

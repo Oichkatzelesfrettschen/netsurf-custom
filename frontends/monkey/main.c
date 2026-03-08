@@ -434,9 +434,14 @@ main(int argc, char **argv)
 	if (ret != NSERROR_OK) {
 		die("Options failed to initialise");
 	}
-	options = filepath_find(respaths, "Choices");
-	nsoption_read(options, nsoptions);
-	free(options);
+	options = getenv("NETSURF_CHOICES");
+	if ((options != NULL) && (options[0] != '\0')) {
+		nsoption_read(options, nsoptions);
+	} else {
+		options = filepath_find(respaths, "Choices");
+		nsoption_read(options, nsoptions);
+		free(options);
+	}
 	nsoption_commandline(&argc, argv, nsoptions);
 
 	messages = filepath_find(respaths, "Messages");

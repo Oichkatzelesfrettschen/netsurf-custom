@@ -1,0 +1,12 @@
+{
+  "schema": 1,
+  "scenario": "monkey-start-stop",
+  "tool": "heaptrack",
+  "target": "monkey",
+  "reference_metrics": {
+    "allocations": 11793,
+    "leaked_allocations": 165,
+    "temporary_allocations": 312
+  },
+  "notes": "Informational reference only. No gating thresholds yet because allocation counts may drift with harmless startup changes."
+}

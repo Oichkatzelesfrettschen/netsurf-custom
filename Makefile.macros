@@ -206,7 +206,7 @@ $$(OBJROOT)/$(2): $(1) $$(OBJROOT)/created $$(DEPROOT)/created
 	$$(VQ)echo " COMPILE: $(1)"
 	$$(Q)$$(RM) $$(DEPROOT)/$(3)
 	$$(Q)$$(RM) $$(OBJROOT)/$(2)
-	$$(Q)$$(CC) $$(COMMON_WARNFLAGS) $$(CWARNFLAGS) $$(IFLAGS) $$(CFLAGS) $(CFLAGS_ENV) \
+	$$(Q)$$(CC) $$(COMMON_WARNFLAGS) $$(CWARNFLAGS) $$(IFLAGS) $$(CFLAGS) $$(CXXFLAGS) $(CFLAGS_ENV) \
 		    -MMD -MP -MT '$$(DEPROOT)/$(3) $$(OBJROOT)/$(2)' \
 		    -MF $$(DEPROOT)/$(3) -o $$(OBJROOT)/$(2) -c $(1)
 

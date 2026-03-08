@@ -9,6 +9,17 @@ Building NetSurf
 
 Read the [Quick Start](docs/quick-start.md) document for instructions.
 
+For repo-root development, the new shared entrypoints are:
+
+* `make doctor`
+* `make bootstrap`
+* `make verify-native`
+* `make static-analysis`
+* `make benchmark-monkey`
+* `make benchmark-monkey-enhanced`
+* `make profile-valgrind-monkey`
+* `make profile-heaptrack-monkey`
+
 
 Creating a new port
 -------------------

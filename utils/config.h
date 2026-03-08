@@ -21,6 +21,14 @@
 
 #include <stddef.h>
 
+#ifndef __NetBSD_Prereq__
+#define __NetBSD_Prereq__(a, b, c) 0
+#endif
+
+#ifndef __GLIBC_PREREQ
+#define __GLIBC_PREREQ(maj, min) 0
+#endif
+
 #if defined(__NetBSD__)
 #include <sys/param.h>
 #if (defined(__NetBSD_Version__) && __NetBSD_Prereq__(8,0,0))

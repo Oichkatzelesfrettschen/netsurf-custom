@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "scenario": "script16m-profile-telemetry",
+  "tool": "time",
+  "target": "script16m-monkey",
+  "thresholds": {
+    "elapsed_s_max": 0.75,
+    "max_resident_kib_max": 20000
+  },
+  "notes": "Host-side guardrail for the script16m scripted acceptance suite. This is a regression ceiling, not the final 16 MiB target-machine acceptance budget."
+}

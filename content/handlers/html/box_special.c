@@ -270,7 +270,12 @@ box_create_frameset(struct content_html_frames *f,
 	f->rows = rows;
 	f->scrolling = BW_SCROLLING_NO;
 	f->children = talloc_array(content->bctx, struct content_html_frames,
-								(rows * cols));
+									(rows * cols));
+	if (f->children == NULL) {
+		free(row_height);
+		free(col_width);
+		return false;
+	}
 
 	talloc_set_destructor(f->children, box_frames_talloc_destructor);
 

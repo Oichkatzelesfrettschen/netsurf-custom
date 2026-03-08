@@ -678,6 +678,9 @@ static bool urldb__host_is_ip_address(const char *host)
 		sane_host = host;
 	} else {
 		char *c = strdup(host);
+		if (c == NULL) {
+			return false;
+		}
 		c[slash - host] = '\0';
 		sane_host = c;
 		host_len = slash - host;
@@ -2026,7 +2029,8 @@ urldb_parse_cookie(nsurl *url, const char **cookie)
 
 	if (c->path == NULL) {
 		const char *path_data;
-		char *path, *slash;
+		const char *slash;
+		char *path;
 		lwc_string *path_lwc;
 
 		path_lwc = nsurl_get_component(url, NSURL_PATH);
@@ -2039,18 +2043,20 @@ urldb_parse_cookie(nsurl *url, const char **cookie)
 		/* Strip leafname and trailing slash (4.3.1) */
 		slash = strrchr(path_data, '/');
 		if (slash != NULL) {
+			size_t path_len;
+
 			/* Special case: retain first slash in path */
 			if (slash == path_data)
-				slash++;
+				path_len = 1;
+			else
+				path_len = (size_t)(slash - path_data);
 
-			slash = strndup(path_data, slash - path_data);
-			if (slash == NULL) {
+			path = strndup(path_data, path_len);
+			if (path == NULL) {
 				lwc_string_unref(path_lwc);
 				urldb_free_cookie(c);
 				return NULL;
 			}
-
-			path = slash;
 			lwc_string_unref(path_lwc);
 		} else {
 			path = strdup(lwc_string_data(path_lwc));
@@ -2101,6 +2107,9 @@ urldb_add_path(lwc_string *scheme,
 
 	/* skip leading '/' */
 	segment = buf;
+	if (segment == NULL) {
+		return NULL;
+	}
 	if (*segment == '/')
 		segment++;
 
@@ -3552,21 +3561,22 @@ void urldb_set_auth_details(nsurl *url, const char *realm, const char *auth)
 		/* Overrule existing auth. */
 		free(space->auth);
 		space->auth = strdup(auth);
-	} else {
-		/* Create a new protection space. */
-		space = space_alloc = malloc(sizeof(struct prot_space_data));
-		realm_alloc = strdup(realm);
-		auth_alloc = strdup(auth);
+		} else {
+			/* Create a new protection space. */
+			space_alloc = malloc(sizeof(struct prot_space_data));
+			realm_alloc = strdup(realm);
+			auth_alloc = strdup(auth);
 
-		if (!space_alloc || !realm_alloc || !auth_alloc) {
-			free(space_alloc);
+			if (!space_alloc || !realm_alloc || !auth_alloc) {
+				free(space_alloc);
 			free(realm_alloc);
 			free(auth_alloc);
-			return;
-		}
+				return;
+			}
 
-		space->scheme = lwc_string_ref(p->scheme);
-		space->port = p->port;
+			space = space_alloc;
+			space->scheme = lwc_string_ref(p->scheme);
+			space->port = p->port;
 		space->realm = realm_alloc;
 		space->auth = auth_alloc;
 		space->next = h->prot_space;

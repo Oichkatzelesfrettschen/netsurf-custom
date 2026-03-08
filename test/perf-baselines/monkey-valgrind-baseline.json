@@ -1,0 +1,10 @@
+{
+  "schema": 1,
+  "scenario": "monkey-start-stop",
+  "tool": "valgrind",
+  "target": "monkey",
+  "thresholds": {
+    "error_count_max": 0
+  },
+  "notes": "Start-stop smoke test under memcheck should remain free of reported errors."
+}

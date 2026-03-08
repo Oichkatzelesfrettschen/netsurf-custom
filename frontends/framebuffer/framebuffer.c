@@ -44,6 +44,12 @@
 /* netsurf framebuffer library handle */
 static nsfb_t *nsfb;
 
+static inline const nsfb_colour_t *
+framebuffer_colour_buffer(const unsigned char *buffer)
+{
+	return (const nsfb_colour_t *)(const void *)buffer;
+}
+
 
 /**
  * \brief Sets a clip rectangle for subsequent plot operations.
@@ -346,9 +352,11 @@ framebuffer_plot_bitmap(const struct redraw_context *ctx,
 	/* Optimise tiled plots of 1x1 bitmaps by replacing with a flat fill
 	 * of the area.  Can only be done when image is fully opaque. */
 	if ((bmwidth == 1) && (bmheight == 1)) {
-		if ((*(nsfb_colour_t *)bmptr & 0xff000000) != 0) {
+		const nsfb_colour_t *colours = framebuffer_colour_buffer(bmptr);
+
+		if ((colours[0] & 0xff000000) != 0) {
 			if (!nsfb_plot_rectangle_fill(nsfb, &clipbox,
-						      *(nsfb_colour_t *)bmptr)) {
+						      colours[0])) {
 				return NSERROR_INVALID;
 			}
 			return NSERROR_OK;
@@ -360,10 +368,12 @@ framebuffer_plot_bitmap(const struct redraw_context *ctx,
 	 * opaque. */
 	if ((width == 1) && (height == 1)) {
 		if (framebuffer_bitmap_get_opaque(bm)) {
+			const nsfb_colour_t *colours = framebuffer_colour_buffer(bmptr);
+
 			/** TODO: Currently using top left pixel. Maybe centre
 			 *        pixel or average value would be better. */
 			if (!nsfb_plot_rectangle_fill(nsfb, &clipbox,
-						      *(nsfb_colour_t *)bmptr)) {
+						      colours[0])) {
 				return NSERROR_INVALID;
 			}
 			return NSERROR_OK;
@@ -390,7 +400,7 @@ framebuffer_plot_bitmap(const struct redraw_context *ctx,
 	nsfb_plot_bitmap_tiles(nsfb, &loc,
 			repeat_x ? ((clipbox.x1 - x) + width  - 1) / width  : 1,
 			repeat_y ? ((clipbox.y1 - y) + height - 1) / height : 1,
-			(nsfb_colour_t *)bmptr, bmwidth, bmheight,
+			framebuffer_colour_buffer(bmptr), bmwidth, bmheight,
 			bmstride * 8 / 32, bmformat == NSFB_FMT_ABGR8888);
 
 	return NSERROR_OK;
@@ -643,7 +653,7 @@ framebuffer_finalise(void)
 bool
 framebuffer_set_cursor(struct fbtk_bitmap *bm)
 {
-    return nsfb_cursor_set(nsfb, (nsfb_colour_t *)bm->pixdata, bm->width, bm->height, bm->width, bm->hot_x, bm->hot_y);
+    return nsfb_cursor_set(nsfb, bm->pixdata, bm->width, bm->height, bm->width, bm->hot_x, bm->hot_y);
 }
 
 nsfb_t *framebuffer_set_surface(nsfb_t *new_nsfb)

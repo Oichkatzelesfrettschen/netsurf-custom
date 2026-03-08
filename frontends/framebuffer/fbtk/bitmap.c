@@ -56,7 +56,7 @@ fb_redraw_bitmap(fbtk_widget_t *widget, fbtk_callback_info *cbi)
 	/* plot the image */
 	nsfb_plot_bitmap(nsfb,
 			 &rect,
-			 (nsfb_colour_t *)widget->u.bitmap.bitmap->pixdata,
+			 widget->u.bitmap.bitmap->pixdata,
 			 widget->u.bitmap.bitmap->width,
 			 widget->u.bitmap.bitmap->height,
 			 widget->u.bitmap.bitmap->width,

@@ -525,7 +525,7 @@ table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cel
 
 	/* Initialise to computed top border for cell */
 	a.style = css_computed_border_top_style(cell->style);
-	css_computed_border_top_color(cell->style, &a.c);
+	a.color = css_computed_border_top_color(cell->style, &a.c);
 	css_computed_border_top_width(cell->style, &a.width, &a.unit);
 	a.width = css_unit_len2device_px(cell->style, unit_len_ctx,
 			a.width, a.unit);
@@ -534,7 +534,7 @@ table_used_top_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *cel
 
 	/* Top border of row */
 	b.style = css_computed_border_top_style(row->style);
-	css_computed_border_top_color(row->style, &b.c);
+	b.color = css_computed_border_top_color(row->style, &b.c);
 	css_computed_border_top_width(row->style, &b.width, &b.unit);
 	b.width = css_unit_len2device_px(row->style, unit_len_ctx,
 			b.width, b.unit);
@@ -625,7 +625,7 @@ table_used_right_border_for_cell(const css_unit_ctx *unit_len_ctx, struct box *c
 
 	/* Initialise to computed right border for cell */
 	a.style = css_computed_border_right_style(cell->style);
-	css_computed_border_right_color(cell->style, &a.c);
+	a.color = css_computed_border_right_color(cell->style, &a.c);
 	css_computed_border_right_width(cell->style, &a.width, &a.unit);
 	a.width = css_unit_len2device_px(cell->style, unit_len_ctx,
 			a.width, a.unit);
@@ -730,7 +730,7 @@ table_used_bottom_border_for_cell(const css_unit_ctx *unit_len_ctx,
 
 	/* Initialise to computed bottom border for cell */
 	a.style = css_computed_border_bottom_style(cell->style);
-	css_computed_border_bottom_color(cell->style, &a.c);
+	a.color = css_computed_border_bottom_color(cell->style, &a.c);
 	css_computed_border_bottom_width(cell->style, &a.width, &a.unit);
 	a.width = css_unit_len2device_px(cell->style, unit_len_ctx,
 			a.width, a.unit);

@@ -21,7 +21,34 @@ export TARGET_TOOLKIT=gtk3   # or qt6, framebuffer
 ns-package-install
 ```
 
-## 2. Build NetSurf libraries
+## 2. Recommended repo-root workflow
+
+From the repository root, use the centralized build entrypoints:
+
+```sh
+make doctor
+make bootstrap
+make verify-native
+```
+
+That flow defaults `TARGET_WORKSPACE` to `$(pwd)/projects`, unsets
+`HOST` before sourcing `docs/env.sh`, and matches the repo-root path
+used in CI.
+
+Useful follow-up commands:
+
+```sh
+make static-analysis
+make benchmark-monkey
+make benchmark-monkey-enhanced
+make profile-valgrind-monkey
+make profile-heaptrack-monkey
+```
+
+`make profile-heaptrack-monkey` stays terminal-only by using
+`heaptrack --record-only` plus `heaptrack_print`.
+
+## 3. Manual workspace flow
 
 Several libraries (libnspsl, libnslog, libdom, etc.) are not in the
 Arch repos. Use the env.sh workspace to build them:
@@ -42,7 +69,7 @@ ns-make-libs install  # build all libraries
 This installs headers and static libraries under
 `$TARGET_WORKSPACE/inst-$(cc -dumpmachine)/`.
 
-## 3. Build NetSurf
+## 4. Build NetSurf manually
 
 Source env.sh in the same shell session (it sets `PKG_CONFIG_PATH` and
 `LD_LIBRARY_PATH`):
@@ -66,14 +93,14 @@ make -j$(nproc) TARGET=gtk
 The binary is produced in the current directory: `nsgtk3`, `nsqt`, or
 `nsfb`.
 
-## 4. Run tests
+## 5. Run tests manually
 
 ```sh
 # Same shell session with env.sh sourced
 make test
 ```
 
-## 5. Makefile.config
+## 6. Makefile.config
 
 The repository includes a `Makefile.config` that enables `-Werror` and
 sets all optional features to `YES` (avoiding the AUTO evaluation-order

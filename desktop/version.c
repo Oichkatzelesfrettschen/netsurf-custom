@@ -20,6 +20,10 @@
 
 #include "desktop/version.h"
 
+#ifndef CI_BUILD
+#define CI_BUILD "unknown"
+#endif
+
 const char * const netsurf_version = "3.12 (Dev"
 #if defined(CI_BUILD)
 	" CI #" CI_BUILD

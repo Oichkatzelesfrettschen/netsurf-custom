@@ -262,11 +262,12 @@ main(int argc, char **argv)
 	fprintf(f, "#include <stdint.h>\n\n");
 	fprintf(f, "#include <stdbool.h>\n\n");
 	fprintf(f, "#include <libnsfb.h>\n\n");
+	fprintf(f, "#include <libnsfb_plot.h>\n\n");
 	fprintf(f, "#include \"netsurf/plot_style.h\"\n");
 	fprintf(f, "#include \"framebuffer/gui.h\"\n");
 	fprintf(f, "#include \"framebuffer/fbtk.h\"\n\n");
 
-	fprintf(f, "static uint8_t %s_pixdata[] = {\n", argv[3]);
+	fprintf(f, "static const nsfb_colour_t %s_pixdata[] = {\n", argv[3]);
 	for (y = 0; y < HEIGHT; ++y) {
 		unsigned char *rowptr = bitmap_data + (rowstride * y);
 		if (is_cursor) {
@@ -275,10 +276,12 @@ main(int argc, char **argv)
 		}
 		fprintf(f, "\t");
 		for (x = 0; x < WIDTH; ++x) {
+			unsigned int pixel = 0;
 			for (c = 0; c < 4; ++c) {
 				unsigned char b = *rowptr++;
-				fprintf(f, "0x%02x, ", b);
+				pixel |= ((unsigned int)b) << (c * 8);
 			}
+			fprintf(f, "0x%08xU, ", pixel);
 		}
 		fprintf(f, "\n");
 	}

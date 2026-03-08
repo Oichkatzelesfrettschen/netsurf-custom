@@ -19,6 +19,26 @@ This shell script is used by the NetSurf Developers but you should
 Native build
 ============
 
+Repo-root shortcut
+------------------
+
+If you are building from a NetSurf checkout and want the shared repo-root
+entrypoints used by CI, start in the repository root and run:
+
+     $ make doctor
+     $ make bootstrap
+
+After bootstrap, the repo-root native build and verification entrypoints are:
+
+     $ make verify-native
+     $ make static-analysis
+     $ make benchmark-monkey
+     $ make benchmark-monkey-enhanced
+
+The repo-root flow defaults `TARGET_WORKSPACE` to `./projects` and
+sources `docs/env.sh` for you. The manual `env.sh` flow below remains
+useful when you want to work directly inside the shared workspace shell.
+
 Grab a temporary env.sh
 -----------------------
 
@@ -144,4 +164,3 @@ Not working?
 If the above steps are inapplicable, or don't work, you can build
   manually. Follow the instructions in the BUILDING-* documents in the
   docs/ directory the NetSurf browser source tree.
-

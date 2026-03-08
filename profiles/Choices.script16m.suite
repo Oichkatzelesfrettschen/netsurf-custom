@@ -1,0 +1,18 @@
+# Scripted acceptance suite overlay for the 16 MiB profile.
+memory_cache_size:1048576
+disc_cache_size:0
+max_fetchers:4
+max_fetchers_per_host:2
+max_cached_fetch_handles:1
+enable_javascript:1
+background_images:1
+animate_images:0
+incremental_reflow:0
+window_width:640
+window_height:480
+fb_depth:16
+fb_furniture_size:14
+fb_toolbar_size:20
+fb_font_monochrome:0
+fb_font_cachesize:256
+js_heap_limit:2097152

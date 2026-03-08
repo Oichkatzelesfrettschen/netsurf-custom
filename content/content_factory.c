@@ -55,12 +55,24 @@ void content_factory_fini(void)
 	content_handler_entry *victim;
 
 	while (content_handlers != NULL) {
+		bool has_later_handler = false;
+		content_handler_entry *entry;
+
 		victim = content_handlers;
 
 		content_handlers = content_handlers->next;
 
-		if (victim->handler->fini != NULL)
+		for (entry = content_handlers; entry != NULL; entry = entry->next) {
+			if (entry->handler == victim->handler) {
+				has_later_handler = true;
+				break;
+			}
+		}
+
+		if ((has_later_handler == false) &&
+		    (victim->handler->fini != NULL)) {
 			victim->handler->fini();
+		}
 
 		lwc_string_unref(victim->mime_type);
 
@@ -203,4 +215,3 @@ struct content *content_factory_create_content(llcache_handle *llcache,
 
 	return c;
 }
-

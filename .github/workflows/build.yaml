@@ -55,19 +55,17 @@ jobs:
         key: ${{ github.job }}-${{ matrix.os }}-${{ matrix.compiler.vendor }}
         max-size: 128M
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         CC: ${{ matrix.compiler.CC }}
         CXX: ${{ matrix.compiler.CXX }}
         REPO_BASE_URI: https://github.com/netsurf-browser
         TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
+        NS_BRANCH: ${{ github.ref_name }}
       run: |
-          source docs/env.sh
-          ns-clone -d -s -b ${GITHUB_REF_NAME}
-          ns-make-tools install
-          ns-make-libs install
+          make bootstrap
 
-    - name: Unit Tests
+    - name: Verify native workflow
       # WHY SKIP_MALLOC_LIMIT_TESTS: malloc_fig.c overrides malloc() via
       # dlsym(RTLD_NEXT,"malloc"). Under Clang on Linux the interception
       # fails (malloc may be inlined or the dynamic interposition is absent),
@@ -80,50 +78,27 @@ jobs:
         TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
         SKIP_MALLOC_LIMIT_TESTS: ${{ matrix.compiler.vendor == 'llvm' && '1' || '0' }}
       run: |
-          source docs/env.sh
-          make test SKIP_MALLOC_LIMIT_TESTS=${SKIP_MALLOC_LIMIT_TESTS}
+          make verify-native SKIP_MALLOC_LIMIT_TESTS=${SKIP_MALLOC_LIMIT_TESTS}
 
-    - name: Build NetSurf GTK
-      env:
-        CC: ${{ matrix.compiler.CC }}
-        CXX: ${{ matrix.compiler.CXX }}
-        TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
-      run: |
-          source docs/env.sh
-          make -j"$(nproc)" TARGET=gtk
-
-    - name: Build NetSurf Monkey
-      env:
-        CC: ${{ matrix.compiler.CC }}
-        CXX: ${{ matrix.compiler.CXX }}
-        TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
-      run: |
-          source docs/env.sh
-          make -j"$(nproc)" TARGET=monkey
-
-    - name: Run monkey smoke tests
+    - name: Capture monkey memcheck baseline
       if: matrix.os == 'ubuntu-24.04' && matrix.compiler.vendor == 'gnu'
       env:
         CC: ${{ matrix.compiler.CC }}
         TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-          source docs/env.sh
-          MONKEY=./build/$(uname -m)-pc-linux-gnu-monkey/nsmonkey
-          for plan in test/monkey-tests/history-api.yaml \
-                      test/monkey-tests/polyfill-es6.yaml \
-                      test/monkey-tests/innerHTML-correctness.yaml; do
-            echo "=== $plan ==="
-            python3 test/monkey-see-monkey-do "$MONKEY" "$plan" || exit 1
-          done
+          make profile-valgrind-monkey
 
-    - name: Build NetSurf Framebuffer
-      env:
-        CC: ${{ matrix.compiler.CC }}
-        CXX: ${{ matrix.compiler.CXX }}
-        TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
-      run: |
-          source docs/env.sh
-          make -j"$(nproc)" TARGET=framebuffer
+    - name: Upload monkey baseline artifacts
+      if: matrix.os == 'ubuntu-24.04' && matrix.compiler.vendor == 'gnu' && always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: monkey-baselines-${{ matrix.os }}-${{ matrix.compiler.vendor }}-${{ github.sha }}
+        path: |
+          build/profiles/monkey-benchmark.raw.json
+          build/profiles/monkey-benchmark.json
+          build/profiles/monkey-valgrind.xml
+          build/profiles/monkey-valgrind.json
+        retention-days: 30
 
   # Cross compile using toolchains built in the toolchains repo.
   cross:
@@ -222,80 +197,29 @@ jobs:
         echo "Toolchain testament:"
         cat /opt/netsurf/${{ matrix.build.toolchain }}/BUILD_INFO.txt
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         HOST: "${{ matrix.build.toolchain }}"
         REPO_BASE_URI: https://github.com/netsurf-browser
         TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
+        NS_BRANCH: ${{ github.ref_name }}
         Q:
       run: |
-        echo "HOST=$HOST"
-        echo "TARGET_WORKSPACE=$TARGET_WORKSPACE"
-        
-        echo "Looking for cross-compiler tools..."
-        echo "Expected path: /opt/netsurf/${HOST}/cross/bin/"
-        if [ -f "/opt/netsurf/${HOST}/cross/bin/${HOST}-gcc" ]; then
-          echo "Found: /opt/netsurf/${HOST}/cross/bin/${HOST}-gcc"
-          echo "Testing if it's executable:"
-          /opt/netsurf/${HOST}/cross/bin/${HOST}-gcc --version || echo "Failed to execute gcc --version"
-          echo "Testing dumpmachine output:"
-          /opt/netsurf/${HOST}/cross/bin/${HOST}-gcc -dumpmachine || echo "Failed to execute gcc -dumpmachine"
-        else
-          echo "NOT FOUND: /opt/netsurf/${HOST}/cross/bin/${HOST}-gcc"
-        fi
-        
-        echo "Sourcing env.sh with error checking..."
-        set -e  # Exit on any error
-        if ! source docs/env.sh; then
-          echo "env.sh failed with exit code $?"
-          exit 1
-        fi
-        echo "env.sh sourced successfully"
-        echo "BUILD=$BUILD"
-        echo "HOST=$HOST"
-        echo "TARGET_WORKSPACE=$TARGET_WORKSPACE"
-        echo "USE_CPUS=$USE_CPUS"
-
-        echo "Cloning libs..."
-        ns-clone -d -s -b ${GITHUB_REF_NAME}
-        echo "Building and installing tools..."
-        ns-make-tools install
-        echo "Building and installing libs..."
-        ns-make-libs install
+        make bootstrap TARGET=${{ matrix.build.frontend }} Q=
 
     - name: Build NetSurf
       env:
         HOST: "${{ matrix.build.toolchain }}"
         TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
       run: |
-        set -e
-        if ! source docs/env.sh; then
-          echo "env.sh failed with exit code $?"
-          exit 1
-        fi
-        echo "env.sh sourced successfully"
-        echo "BUILD=$BUILD"
-        echo "HOST=$HOST"
-        echo "TARGET_WORKSPACE=$TARGET_WORKSPACE"
-        echo "USE_CPUS=$USE_CPUS"
-        make -j"$(nproc)" TARGET=${{ matrix.build.frontend }} Q=
+        make build-native TARGET=${{ matrix.build.frontend }} Q=
 
     - name: Make package
       env:
         HOST: "${{ matrix.build.toolchain }}"
         TARGET_WORKSPACE: "${{ github.workspace }}/projects" # Same as "$(pwd)/projects"
       run: |
-        set -e
-        if ! source docs/env.sh; then
-          echo "env.sh failed with exit code $?"
-          exit 1
-        fi
-        echo "env.sh sourced successfully"
-        echo "BUILD=$BUILD"
-        echo "HOST=$HOST"
-        echo "TARGET_WORKSPACE=$TARGET_WORKSPACE"
-        echo "USE_CPUS=$USE_CPUS"
-        make package TARGET=${{ matrix.build.frontend }} Q=
+        make package-native TARGET=${{ matrix.build.frontend }} Q=
 
     # Can't avoid `upload-artifact` zipping the package
     # https://github.com/actions/upload-artifact/issues/426
@@ -326,35 +250,28 @@ jobs:
           libpng libjpeg-turbo libutf8proc openssl flex bison \
           perl-html-parser ccache check gtk3 librsvg
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         REPO_BASE_URI: https://github.com/netsurf-browser
         TARGET_WORKSPACE: "${{ github.workspace }}/projects"
         TARGET_TOOLKIT: gtk3
+        NS_BRANCH: ${{ github.ref_name }}
       run: |
-        unset HOST
-        source docs/env.sh
-        ns-clone -d -b ${GITHUB_REF_NAME} || ns-clone -d
-        ns-make-tools install
-        ns-make-libs install
+        make bootstrap
 
     - name: Build NetSurf GTK3
       env:
         TARGET_WORKSPACE: "${{ github.workspace }}/projects"
         TARGET_TOOLKIT: gtk3
       run: |
-        unset HOST
-        source docs/env.sh
-        make -j"$(nproc)" TARGET=gtk
+        make build-gtk
 
     - name: Unit Tests
       env:
         TARGET_WORKSPACE: "${{ github.workspace }}/projects"
         TARGET_TOOLKIT: gtk3
       run: |
-        unset HOST
-        source docs/env.sh
-        make test
+        make test-unit
 
   # ASan + UBSan unit tests (GCC only).
   # WHY: The malloc injection tests rely on dlsym(RTLD_NEXT,"malloc") which
@@ -389,19 +306,16 @@ jobs:
                pkg-config
                wbritish
 
-    - name: Build and install project libs
+    - name: Bootstrap workspace
       env:
         REPO_BASE_URI: https://github.com/netsurf-browser
         TARGET_WORKSPACE: "${{ github.workspace }}/projects"
+        NS_BRANCH: ${{ github.ref_name }}
       run: |
-          source docs/env.sh
-          ns-clone -d -s -b ${GITHUB_REF_NAME}
-          ns-make-tools install
-          ns-make-libs install
+          make bootstrap
 
     - name: Sanitize unit tests
       env:
         TARGET_WORKSPACE: "${{ github.workspace }}/projects"
       run: |
-          source docs/env.sh
-          make sanitize
+          make sanitize-unit

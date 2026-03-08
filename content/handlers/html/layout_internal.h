@@ -24,7 +24,41 @@
 #ifndef NETSURF_HTML_LAYOUT_INTERNAL_H
 #define NETSURF_HTML_LAYOUT_INTERNAL_H
 
+#include <libcss/fpmath.h>
+
 #define AUTO INT_MIN
+
+static inline int layout_fpct_of_int_to_int(css_fixed pct, int value)
+{
+	return FIXTOINT(FDIV((pct * value), F_100));
+}
+
+static inline uint8_t layout_css_width_px(
+		const css_computed_style *style,
+		const css_unit_ctx *unit_len_ctx,
+		int available_width,
+		int *width)
+{
+	css_fixed value = 0;
+	css_unit unit = CSS_UNIT_PX;
+	uint8_t type = css_computed_width(style, &value, &unit);
+
+	if (type != CSS_WIDTH_SET) {
+		return type;
+	}
+
+	if (unit == CSS_UNIT_PCT) {
+		if (available_width < 0) {
+			return CSS_WIDTH_AUTO;
+		}
+		*width = layout_fpct_of_int_to_int(value, available_width);
+	} else {
+		*width = FIXTOINT(css_unit_len2device_px(
+				style, unit_len_ctx, value, unit));
+	}
+
+	return CSS_WIDTH_SET;
+}
 
 /**
  * Layout a block formatting context.
@@ -447,7 +481,7 @@ static inline void layout_find_dimensions(
 	unsigned int i;
 
 	if (width) {
-		if (css_computed_width_px(style, unit_len_ctx,
+		if (layout_css_width_px(style, unit_len_ctx,
 				available_width, width) == CSS_WIDTH_SET) {
 			layout_handle_box_sizing(unit_len_ctx, box,
 					available_width, true, width);
@@ -516,14 +550,14 @@ static inline void layout_find_dimensions(
 					 * containing block has a valid
 					 * specified height.
 					 * (CSS 2.1 Section 10.5) */
-					*height = FPCT_OF_INT_TOINT(value,
+					*height = layout_fpct_of_int_to_int(value,
 						containing_block->height);
 				} else if ((!box->parent ||
 						!box->parent->parent) &&
 						viewport_height >= 0) {
 					/* If root element or it's child
 					 * (HTML or BODY) */
-					*height = FPCT_OF_INT_TOINT(value,
+					*height = layout_fpct_of_int_to_int(value,
 							viewport_height);
 				} else {
 					/* precentage height not permissible
@@ -554,7 +588,7 @@ static inline void layout_find_dimensions(
 
 		if (type == CSS_MAX_WIDTH_SET) {
 			if (unit == CSS_UNIT_PCT) {
-				*max_width = FPCT_OF_INT_TOINT(value,
+				*max_width = layout_fpct_of_int_to_int(value,
 						available_width);
 			} else {
 				*max_width = FIXTOINT(css_unit_len2device_px(
@@ -581,7 +615,7 @@ static inline void layout_find_dimensions(
 
 		if (type == CSS_MIN_WIDTH_SET) {
 			if (unit == CSS_UNIT_PCT) {
-				*min_width = FPCT_OF_INT_TOINT(value,
+				*min_width = layout_fpct_of_int_to_int(value,
 						available_width);
 			} else {
 				*min_width = FIXTOINT(css_unit_len2device_px(
@@ -653,7 +687,7 @@ static inline void layout_find_dimensions(
 
 			if (type == CSS_MARGIN_SET) {
 				if (unit == CSS_UNIT_PCT) {
-					margin[i] = FPCT_OF_INT_TOINT(value,
+					margin[i] = layout_fpct_of_int_to_int(value,
 							available_width);
 				} else {
 					margin[i] = FIXTOINT(css_unit_len2device_px(
@@ -672,7 +706,7 @@ static inline void layout_find_dimensions(
 			padding_funcs[i](style, &value, &unit);
 
 			if (unit == CSS_UNIT_PCT) {
-				padding[i] = FPCT_OF_INT_TOINT(value,
+				padding[i] = layout_fpct_of_int_to_int(value,
 						available_width);
 			} else {
 				padding[i] = FIXTOINT(css_unit_len2device_px(

@@ -1905,7 +1905,9 @@ nserror browser_window_destroy_internal(struct browser_window *bw)
 
 	/* These simply free memory, so are safe here */
 
-	lwc_string_unref(bw->frag_id);
+	if (bw->frag_id != NULL) {
+		lwc_string_unref(bw->frag_id);
+	}
 
 	browser_window_history_destroy(bw);
 
@@ -3397,7 +3399,9 @@ browser_window_navigate(struct browser_window *bw,
 		return error;
 	}
 
-	lwc_string_unref(bw->frag_id);
+	if (bw->frag_id != NULL) {
+		lwc_string_unref(bw->frag_id);
+	}
 	bw->frag_id = NULL;
 
 	if (nsurl_has_component(url, NSURL_FRAGMENT)) {

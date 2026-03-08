@@ -19,6 +19,8 @@
 #ifndef NETSURF_FB_FBTK_H
 #define NETSURF_FB_FBTK_H
 
+#include <libnsfb_plot.h>
+
 #include "netsurf/types.h"
 
 #define FB_SCROLL_COLOUR 0xFFAAAAAA
@@ -63,7 +65,7 @@ typedef struct fbtk_callback_info {
 struct fbtk_bitmap {
         int width;
         int height;
-        uint8_t *pixdata;
+        const nsfb_colour_t *pixdata;
         bool opaque;
 
         /* The following two are only used for cursors */
